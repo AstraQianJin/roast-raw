@@ -1,10 +1,14 @@
-# Roast Raw 0.01
+# Roast Raw
+
+Agents: read [AGENTS.md](AGENTS.md) first, then the active requirements in [TODO.md](TODO.md). Do not rebuild or restore the repository from historical handoff snapshots. Current version comes only from `web/package.json`; its SemVer patch is the product’s hundredth-version label (for example `0.0.2` displays as `0.02`).
 
 Web-only training journal foundation. Vue 3 + Vite + Motion One, FastAPI and SQLite. No login, no offline data cache, no synchronization service. Dates use Asia/Shanghai and missed sessions never shift the calendar.
 
 ## Layout
 
 ```text
+AGENTS.md            Agent rules, evidence and source pointers
+TODO.md              Active user ideas, approved directions and open decisions
 web/                 Vue source, design tokens, anatomy and capacity views
 server/app/          FastAPI, SQLite store, Beijing calendar, validation
 server/app/stats/    Shared classification, prescription and statistics engine
@@ -43,7 +47,7 @@ npm --prefix web run build
 node tests/browser.mjs
 ```
 
-`RR_PYTHON` overrides the test Python path; `CHROME_PATH` overrides Chrome. Browser tests launch isolated loopback servers and temporary databases, use CDP device emulation rather than window dimensions, and save screenshots in `docs/shots/`. They do not write test logs into the working database. The training-day regression uses an explicitly fixed clock; delivery Today screenshots use the real Beijing date.
+`RR_PYTHON` overrides the test Python path; `CHROME_PATH` overrides Chrome. Browser tests launch isolated loopback servers and temporary databases, use CDP device emulation rather than window dimensions, and save screenshots in `docs/shots/`. They do not write test logs into the working database. Regular Today screenshots use the real Beijing date. Additional `today-training-*` screenshots use an explicitly fixed scheduled training-day clock; the date and session badge remain visible so fixture evidence cannot be confused with live Today.
 
 `verify.js` checks exact integer totals, six-group weekly raw values at 1e-9, cycle half-up display values, and 16-leaf weekly values within the supplied 0.1 tolerance. It tests 8/17/21-week plans and a separate child with a deliberately altered bench coefficient: the same fixture assertions must fail with exit code 1. Python tests include strict imports, calendar boundaries, API last-write-wins behavior and an actual server restart/readback.
 
@@ -61,8 +65,8 @@ Six core tables exist: `cycles`, `plans`, `logs`, `readiness`, `archives`, `body
 
 ## Scope and provenance
 
-Today/Plan, default-visible 16-leaf anatomy, deep links, light/dark themes, genuine statistics and minimal persistence are implemented. Full logging/readiness/body-metric forms, plan replacement, archive/review export, questionnaire, AI and deployment remain later milestones. Readiness values never auto-adjust loads. Unknown reference values stay null; back-group ranges are not presented as individual-muscle targets.
+Today/Plan include default-visible compact anatomy and weekly capacity. Analysis owns the full sixteen-muscle list, detailed reference context and cycle capacity board. Day deep links expand, scroll to and focus the selected day. Light/dark themes, genuine statistics and minimal persistence are implemented. Full logging/readiness/body-metric forms, plan replacement, archive/review export, questionnaire, AI and deployment remain later milestones. Readiness values never auto-adjust loads. Unknown reference values stay null; back-group ranges are not presented as individual-muscle targets.
 
 Anatomy paths are the supplied `Ref/02_Stats/muscle_geo.json`, derived from body-muscles 1.0.0 (Apache-2.0). Only coordinates are reused, not its React component; no React dependency is added. See `docs/body-muscles-LICENSE.txt` for upstream notice/license. Five fixed OKLCH bands encode weekly relative volume, not recovery.
 
-Permission files, keys, environment files, databases, virtualenvs and build outputs are Git-ignored. No secret is needed for local 0.01. This repository has no remote configured; nothing is deployed or pushed. The old project and both remote servers are outside this implementation's write scope.
+Keys, environment files, databases, virtualenvs and build outputs are Git-ignored; the secret-free permissions `ACCESS.md` remains trackable. No secret is needed for local development. Check actual remote/publication state with `git remote -v` and the release evidence, not a frozen README claim. Local commits may happen between releases; remote pushes only happen at each 0.10 milestone after validation and destination approval. Deployment remains restricted to the milestones in AGENTS.md. The old project and old server remain outside the write scope.

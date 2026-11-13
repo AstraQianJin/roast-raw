@@ -3,8 +3,8 @@
 > **给接手的 Agent：只读这一份就能开工。** 全文只写四样——唤醒、红线、指针、收尾。
 > 会随发版变的值（版本号、断言条数、容差值、检查 ID）**一律不写**，去 §3 按「路径 + 符号名」查。
 > 分工：本文＝规矩与入口；`README.md`＝setup 与 API 细节；`docs/项目交接.md`＝最终裁决与统计口径；`docs/0.01地基_已验证发现.md`＝已验证的坑。
-> **冲突仲裁序**：代码与 `tests/verify.js` 退出码 ＞ `docs/项目交接.md` §0 ＋ `docs/0.01提示词.md` ＞ 其余文档章节 ＞ `Ref/` 内散句（含 `ACCESS.md`）。
-> Token 纪律：唤醒只读 §0；按任务跳 §4 / §6、按 §3 查指针，**不要通读全文**；本文只写指针，抄值即缺陷。
+> **需求裁决序**：用户最新明确指令 ＞ 本文件协作与安全规则 ＞ `docs/项目交接.md` §0 ＋ `docs/0.01提示词.md` ＞ 其余文档 ＞ `Ref/` 内历史散句。代码与门禁是实测证据，不代替用户决定；有冲突先问用户。
+> Token 纪律：先读 §0、§2、§7 与 `TODO.md` 当前执行区；其余按任务跳 §4 / §6、按 §3 查指针，不重复通读长交接。本文管长期规则，`TODO.md` 管需求与方向，git 管完成历史。
 
 ---
 
@@ -55,7 +55,7 @@ Vue3 / Vite / Motion One / FastAPI / SQLite 已定，不更换；不引 React / 
 |---|---|---|
 | 1 | **只做 Web**：不做 APP / WebView / APK / iOS，不做离线缓存与同步服务 | 产品边界 |
 | 2 | **0.01 不部署**；部署窗口只 0.05 / 0.10，只到新服务器 `82.157.146.30`（先 HTTP）；`项目交接.md` 与 `ACCESS.md` 里「按 0.01 部署」散句无效 | §0 最终裁决 |
-| 3 | **密钥**：`Ref/07_Permissions/RR.pem`、`DeepSeek.key` 只读、环境变量注入（`DEEPSEEK_API_KEY`）；不打印、不进 git、不进前端与构建产物、不改 ACL 强读 | 泄露即事故 |
+| 3 | **密钥**：`Ref/07_Permissions/RR.pem`、`DeepSeek.key`、`Github.key` 只读；AI/GitHub 用进程环境变量，SSH 用密钥文件；不打印、不进 git/前端/构建产物，不改权限绕过拒绝 | 泄露即事故 |
 | 4 | **fail-closed 导入**：失败即拒绝＋逐字段报错（文件/周/日/动作/字段/期望值）；不静默修复；v4 仅经适配器 | 静默修复＝错数据 |
 | 5 | **不编辑计划**：导入新计划＝换数据；不做计划编辑 UI | 计划单源 |
 | 6 | **固定日历不滑期**：时区 Asia/Shanghai；没练成标未完成 | 日历即契约 |
@@ -64,7 +64,7 @@ Vue3 / Vite / Motion One / FastAPI / SQLite 已定，不更换；不引 React / 
 | 9 | **免登录单人**：全站单份数据；写冲突 last-write-wins ＋ append-only  journal | 0.01 边界 |
 | 10 | **视觉基准**：老站是基准不是灵感；不卡片堆、不把统计藏二级标签、不用 16 行热力表替代人体图；不用老 APP 截图 | 第一验收画面＝人体图 |
 
-**不主动做**：部署、push / 加远程、删 `Ref/` 或 `data/` 源、放宽回归判定、打印密钥、`rm -rf`。除非人类点名。
+**不主动做**：未经批准的部署、非 §7 里程碑 push / 加远程、删 `Ref/` 或 `data/` 源、放宽回归判定、打印密钥、`rm -rf`。里程碑推送也必须有已授权的明确目标。
 
 ## 3 · 数字去哪查
 
@@ -72,7 +72,7 @@ Vue3 / Vite / Motion One / FastAPI / SQLite 已定，不更换；不引 React / 
 
 | 想知道 | 去处（路径 + 符号名） |
 |---|---|
-| 当前版本 | `web/package.json` 的 `version` |
+| 当前版本 | `web/package.json` 的 `version`（SemVer 的 patch 对应产品百分位版次）；显示由 `web/src/App.vue` 的 `releaseVersion` 派生 |
 | 现在全绿吗 | `tests/verify.js` 实际退出码 |
 | 有哪些回归 | `tests/verify.js`（fixture / precision / library / synthesis / sabotage ＋ unittest）、`tests/browser.mjs` |
 | 统计口径 / 舍入 / 分类 | `server/app/stats/engine.py` 的 `analyze` / `r1`；`classify.py`；`prescription.py` |
@@ -82,12 +82,13 @@ Vue3 / Vite / Motion One / FastAPI / SQLite 已定，不更换；不引 React / 
 | 适配器 / 合成 | `server/tools/gen_data.py` 的 `adapt`；`server/tools/synth_plan.py` 的 `build` |
 | 现行契约 | `data/schema/RPL-Raw-v1.json`、`RPL-Review-v1.json` |
 | fixture（带 BOM，utf-8-sig） | `Ref/02_Stats/capData.json`、`mmData.json`；口径 `Ref/04_Legacy_Code/day_model.py` |
-| 几何 / 261 动作 / 系数 | `data/muscle_geo.json`、`data/movements.json`；源 `Ref/02_Stats/muscle_map.json`、`coefficient_matrix.csv` |
+| 几何 / 动作库 / 系数 | `data/muscle_geo.json`、`data/movements.json`；源 `Ref/02_Stats/muscle_map.json`、`coefficient_matrix.csv` |
 | 令牌 / 主题 / 导航深链 | `web/src/tokens.css`；`web/src/App.vue` |
 | 人体图 / 色阶 / P-S | `web/src/components/MuscleMap.vue`；许可证 `docs/body-muscles-LICENSE.txt` |
 | 密钥 / 服务器步骤 / 环境变量名 | `Ref/07_Permissions/ACCESS.md`；`DEEPSEEK_API_KEY` |
 | 最终裁决 / 统计口径 / 路线 | `docs/项目交接.md` §0 / §4 / §20；坑 `docs/0.01地基_已验证发现.md` |
 | setup / API / 范围细节 | `README.md` |
+| 用户想法 / 具体方向 / 待决定 | 根 `TODO.md`；只留未完成项，完成证据查 git |
 | 交付截图 | `docs/shots/`（只放本项目 UI） |
 
 **只准查不准记**：版本号、断言条数、容差值（在 `verify.js`）、某文件是否在仓。它们错了不会报错，只会静默骗过你。
@@ -98,7 +99,7 @@ Vue3 / Vite / Motion One / FastAPI / SQLite 已定，不更换；不引 React / 
 |---|---|---|---|
 | UI / 交互 | `web/src/*` | `npm --prefix web run build` → `verify.js` ＋ `browser.mjs` | 退出码 ＋ 320/360/390/412 × 浅/深截图 ＋ 逐位置问题清单 |
 | 统计 | `server/app/stats/*` | `verify.js` | 退出码 ＋ 分层 max diff ＋ sabotage 仍红 |
-| 数据 / 适配器 | `server/tools/gen_data.py`（不手改 `data/*.json`） | `gen_data.py` → `verify.js` | 261 / 2 excluded / tonnage 精确值 |
+| 数据 / 适配器 | `server/tools/gen_data.py`（不手改 `data/*.json`） | `gen_data.py` → `verify.js` | 动作库完整性 / 排除项 / tonnage 实测值 |
 | API / 存储 | `server/app/main.py`、`store.py` | `verify.js`（含真实重启回读） | 退出码 |
 | 契约 | `data/schema/*` | `verify.js`（test_import） | 逐字段报错样例 ＋ 往返 |
 | 只写文档 | 文档本身 | 不需跑 | 只写指针，不写死数字 |
@@ -131,18 +132,21 @@ npm --prefix web run dev                 # 开发态 5173，代理 /api
 | 改了 UI 但回归看到旧页 | `browser.mjs` 吃 `web/dist`，先 build |
 | 16 叶周值恰差 0.1 | 舍入约定差异，不是 bug；容差在 `verify.js` |
 | `format: date` 不校验 | 缺 `jsonschema[format-nongpl]` |
-| 读密钥 EPERM | 正常：ACL 保护。走环境变量注入，不改 ACL、不打印 |
+| 读密钥 EPERM | 只证实当前进程不可读，不据此推断 ACL 或平台原因；按批准的注入方式执行，不重试绕过、不改权限、不打印 |
 | 端口 / 库被占 | 回归自起临时端口；手动跑换端口或 `RR_DB_PATH` |
 | 「按 0.01 部署」字样 | 无效散句，按 §0 裁决：只 0.05 / 0.10 |
 | 重生成想覆盖活周期 | `gen_data.py` 只种空库；换 `RR_DB_PATH` 预览 |
 
-## 7 · 什么时候停手
+## 7 · 歧义、版本与远程
 
-默认自决，不等人：遇歧义取更保守、更可逆、影响面更小的一侧，记进提交信息与回执。
+**遇到歧义优先问用户**：涉及产品行为、统计含义、需求冲突、信息架构、优先级或范围时，先给简短选项、推荐与代价，得到答复后再执行该项；可继续无依赖的明确任务，不用猜测替用户拍板。局部实现细节在已确认目标内取最小可逆方案；技术错误先查证，不把每个定位问题都甩给用户。
 
-**不可逆清单（只有这些必须问）**：部署到任何服务器；`git push` / 加远程；删 `Ref/` 或 `data/` 源；放宽断言 / 容差 / 把 sabotage 改恒真；打印 / 提交 / 前端化密钥；改 ACL 强读密钥；`rm -rf`。
-清单外一律自决；清单内确无替代时停手报人，只报三行：卡在哪、试过什么、要批准哪一步。
-**同一处失败超过三次就换会话**，交接写三行：已试什么 / 错在哪 / 下一步。
+**每推进 0.01 必更新根 `TODO.md`**：保留用户想法与具体执行方向的区别；新增需求当天录入，完成且有证据后从活动区删除；未完成/待裁定保留并注明依赖。完成历史用 git，不另建完成台账；版本号只改 `web/package.json` 并同步 lockfile。
+
+**每到 0.10 的整倍数才推 git 远程**（例如 0.10、0.20、0.30）：其间只做本地新提交；先完成回归、TODO 更新、暂存内容与密钥检查，再向已明确授权的项目远程推送。该节奏不等于授权自建公开仓库、改远程地址或强推；首次远程的仓库名/归属/可见性、授权或凭据缺失时先问用户，未推如实标记，不跳过、不假报。
+
+**危险操作须确认**：部署、加/改远程、非里程碑 push、删参考/数据源、破坏性 git、`rm -rf`；不得泄露密钥、绕过权限拒绝或放松回归判定。只报三行：卡在哪、试过什么、要批准哪一步。
+同一处失败超过三次换方案或交接会话，写三行：已试什么 / 错在哪 / 下一步。
 
 ## 8 · 能力受限与并行
 

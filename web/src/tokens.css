@@ -15,6 +15,7 @@
   --accessory: #1E7A45;
   --anatomy-base: #E0E6EC;
   --anatomy-outline: #75818D;
+  --anatomy-separator: #FFFFFF;
   --heat-0: oklch(94% 0.025 25);
   --heat-1: oklch(84% 0.06 25);
   --heat-2: oklch(74% 0.095 25);
@@ -41,6 +42,7 @@
   --accessory: #4ADE80;
   --anatomy-base: #19222F;
   --anatomy-outline: #8593A6;
+  --anatomy-separator: #343E4D;
   --heat-0: oklch(25% 0.025 25);
   --heat-1: oklch(38% 0.05875 25);
   --heat-2: oklch(51% 0.0925 25);

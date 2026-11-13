@@ -2,6 +2,9 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { animate } from '@motionone/dom';
+import packageInfo from '../package.json';
+const [major, , patch] = packageInfo.version.split('.');
+const releaseVersion = `${major}.${patch.padStart(2, '0')}`;
 import MuscleMap from './components/MuscleMap.vue';
 import ExerciseRows from './components/ExerciseRows.vue';
 import WarmupSuggestions from './components/WarmupSuggestions.vue';
@@ -100,11 +103,19 @@ onMounted(async () => {
 });
 watch(() => route.path, () => { document.title = `${page.value === 'today' ? 'Today' : page.value.charAt(0).toUpperCase() + page.value.slice(1)} — Roast Raw`; }, { immediate: true });
 watch(page, value => { if (value !== 'analysis' && mode.value !== 'plan') changeMode('plan'); });
+watch([() => route.fullPath, loading], async () => {
+  if (loading.value || error.value || !validRoute.value || !route.params.day) return;
+  await nextTick();
+  const target = document.getElementById(`day-${currentWeek.value}-${route.params.day}`);
+  if (!target) return;
+  target.focus({ preventScroll: true });
+  target.scrollIntoView({ block: 'start', behavior: 'instant' });
+}, { flush: 'post' });
 </script>
 
 <template>
   <div class="shell">
-    <header class="masthead"><RouterLink to="/" class="brand" aria-label="Roast Raw, Today">Roast Raw</RouterLink><span class="edition">TRAINING JOURNAL / 0.01</span><button class="theme-toggle" aria-label="Toggle color theme" @click="theme = theme === 'light' ? 'dark' : 'light'">{{ theme === 'light' ? 'DARK' : 'LIGHT' }}</button></header>
+    <header class="masthead"><RouterLink to="/" class="brand" aria-label="Roast Raw, Today">Roast Raw</RouterLink><span class="edition">TRAINING JOURNAL / {{ releaseVersion }}</span><button class="theme-toggle" aria-label="Toggle color theme" @click="theme = theme === 'light' ? 'dark' : 'light'">{{ theme === 'light' ? 'DARK' : 'LIGHT' }}</button></header>
     <nav class="primary-nav" aria-label="Primary"><RouterLink to="/plan">PLAN</RouterLink><RouterLink to="/analysis">ANALYSIS</RouterLink><RouterLink to="/archive">ARCHIVE</RouterLink><RouterLink to="/settings">SETTINGS</RouterLink></nav>
     <main :aria-busy="loading">
       <div v-if="loading" class="empty-state" role="status"><h1>Reading the plan.</h1><p>Loading your training data from the server.</p></div>
@@ -131,7 +142,7 @@ watch(page, value => { if (value !== 'analysis' && mode.value !== 'plan') change
               <ExerciseRows :rows="todayRows" />
             </template>
           </div>
-          <aside><MuscleMap :geometry="geometry" :leaves="leaves" :week-number="currentWeek" :week-count="plan.weeks.length" @week="selectWeek" /><WeekCapacity :week="week" :ranges="analysis.ranges" /></aside>
+          <aside><MuscleMap compact :geometry="geometry" :leaves="leaves" :week-number="currentWeek" :week-count="plan.weeks.length" @week="selectWeek" /><WeekCapacity :week="week" :ranges="analysis.ranges" /></aside>
         </div>
         <template v-else-if="page === 'plan'">
           <div class="eyebrow">{{ plan.meta.weeks }} WEEKS · {{ plan.meta.sessions }} SESSIONS · FIXED CALENDAR</div><h1>The plan.</h1><p class="hero-subtitle">{{ dateLabel(plan.meta.startDate) }} — {{ dateLabel(plan.meta.endDate) }}</p>
@@ -146,7 +157,7 @@ watch(page, value => { if (value !== 'analysis' && mode.value !== 'plan') change
               <p v-if="weekMeta.kind === 'deload'" class="notice">{{ DELOAD_NOTE }}</p>
               <div class="top-intensity"><span>TOP %1RM <b>{{ display(week.topPct) }}%</b></span><span>S {{ display(week.topPctByLift.S) }} · B {{ display(week.topPctByLift.B) }} · D {{ display(week.topPctByLift.D) }}</span></div>
               <p class="breadcrumb">Plan / {{ week.blockId }} / Week {{ currentWeek }}<template v-if="route.params.day"> / Day {{ route.params.day }}</template></p>
-              <div v-for="day in days" :key="day.date">
+              <div v-for="day in days" :id="day.id ? `day-${currentWeek}-${day.id}` : undefined" :key="day.date" :tabindex="route.params.day === day.id ? -1 : undefined" class="plan-day">
                 <template v-if="day.rows.length">
                   <RouterLink class="day-row" :to="route.params.day === day.id ? `/plan/week/${currentWeek}` : `/plan/week/${currentWeek}/day/${day.id}`" :aria-expanded="route.params.day === day.id"><span class="day-date"><strong>{{ day.label }}</strong>{{ day.weekday }}</span><span class="day-letter">{{ day.id }}</span><span class="day-info"><span class="top-load"><small>TOP</small>{{ topLifts(day.rows).map(lift => `${lift.code} ${display(lift.load)}`).join(' · ') || 'ACCESSORY WORK' }}</span><span class="day-title" style="display:block">{{ plan.days.find(item => item.id === day.id).titleEn }}</span><span class="day-status">{{ (calendar.sessionStates[`${currentWeek}|${day.id}`] || 'scheduled').toUpperCase() }}</span></span><span>{{ route.params.day === day.id ? '−' : '›' }}</span></RouterLink>
                   <WarmupSuggestions v-if="route.params.day === day.id" :entries="plan.warmups?.[day.date] || []" />
@@ -155,9 +166,8 @@ watch(page, value => { if (value !== 'analysis' && mode.value !== 'plan') change
                 <div v-else class="rest-row"><span>{{ day.label }} · {{ day.weekday }}</span><span>REST</span></div>
               </div>
               <WeekCapacity :week="week" :ranges="analysis.ranges" />
-              <CapacityBoard :analysis="analysis" :week="week" />
             </div>
-            <aside><MuscleMap :geometry="geometry" :leaves="leaves" :week-number="currentWeek" :week-count="plan.weeks.length" @week="selectWeek" /></aside>
+            <aside><MuscleMap compact :geometry="geometry" :leaves="leaves" :week-number="currentWeek" :week-count="plan.weeks.length" @week="selectWeek" /></aside>
           </div>
         </template>
         <template v-else-if="page === 'analysis'">
@@ -166,9 +176,9 @@ watch(page, value => { if (value !== 'analysis' && mode.value !== 'plan') change
           <div class="workspace"><div><WeekCapacity :week="week" :ranges="analysis.ranges" /><CapacityBoard :analysis="analysis" :week="week" /></div><aside><MuscleMap :geometry="geometry" :leaves="leaves" :week-number="currentWeek" :week-count="plan.weeks.length" @week="selectWeek" /></aside></div>
         </template>
         <template v-else-if="page === 'archive'"><div class="eyebrow">CYCLE HISTORY</div><h1>The archive.</h1><div class="empty-state"><h2>{{ cycles.cycles.some(c => c.status === 'archived') ? 'Archived cycles' : 'No archived cycles.' }}</h2><p>Completed cycles and their reviews will live here. Your current plan remains active.</p><RouterLink to="/plan" class="inline-link">View the active plan →</RouterLink></div></template>
-        <template v-else-if="page === 'settings'"><div class="eyebrow">PREFERENCES / SYSTEM</div><h1>The essentials.</h1><div class="empty-state"><h2>Appearance</h2><p>Light by default. Choose the contrast that suits your session.</p><button class="inline-link" @click="theme = theme === 'light' ? 'dark' : 'light'">Use {{ theme === 'light' ? 'dark' : 'light' }} theme</button></div><div class="empty-state"><h2>Server storage</h2><p>Connected · SQLite · Asia/Shanghai</p><p>{{ plan.schemaVersion }} · {{ plan.meta.weeks }} weeks · {{ plan.meta.sessions }} sessions</p><p>Single-user foundation 0.01. Plan import, review export and full logging screens arrive in later milestones.</p></div></template>
+        <template v-else-if="page === 'settings'"><div class="eyebrow">PREFERENCES / SYSTEM</div><h1>The essentials.</h1><div class="empty-state"><h2>Appearance</h2><p>Light by default. Choose the contrast that suits your session.</p><button class="inline-link" @click="theme = theme === 'light' ? 'dark' : 'light'">Use {{ theme === 'light' ? 'dark' : 'light' }} theme</button></div><div class="empty-state"><h2>Server storage</h2><p>Connected · SQLite · Asia/Shanghai</p><p>{{ plan.schemaVersion }} · {{ plan.meta.weeks }} weeks · {{ plan.meta.sessions }} sessions</p><p>Single-user release {{ releaseVersion }}. Plan import, review export and full logging screens arrive in later milestones.</p></div></template>
       </template>
     </main>
-    <footer class="site-footer"><span>ROAST RAW / TRAIN WITH INTENT</span><span>0.01 · LOCAL PREVIEW</span></footer>
+    <footer class="site-footer"><span>ROAST RAW / TRAIN WITH INTENT</span><span>{{ releaseVersion }} · LOCAL PREVIEW</span></footer>
   </div>
 </template>

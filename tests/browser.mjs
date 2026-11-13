@@ -5,11 +5,16 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { openBrowser } from './cdp.mjs';
+import { readFile } from 'node:fs/promises';
+const packageInfo = JSON.parse(await readFile(new URL('../web/package.json', import.meta.url), 'utf8'));
+const [major, , patch] = packageInfo.version.split('.');
+const releaseVersion = `${major}.${patch.padStart(2, '0')}`;
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const python = process.env.RR_PYTHON || join(root, 'server/.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
 const browser = await openBrowser();
 let checks = 0;
+let screenshots = 0;
 function equal(actual, expected, label) { assert.deepEqual(actual, expected, label); checks++; }
 async function startServer(options = []) {
   const listener = createServer();
@@ -52,6 +57,7 @@ async function screenshot(name, selector) {
   let clip;
   if (selector) clip = await browser.evaluate(`(() => { const r=document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect(); return {x:r.x+scrollX,y:r.y+scrollY,width:r.width,height:r.height,scale:1}; })()`);
   await browser.screenshot(join(root, 'docs/shots', `${name}.png`), clip);
+  screenshots++;
 }
 let server;
 try {
@@ -67,26 +73,43 @@ try {
       await load(base, '/');
       equal(await browser.evaluate('document.documentElement.dataset.theme'), theme, 'theme persists');
       equal(await browser.evaluate('document.querySelector(".gear").open'), false, 'gear starts collapsed');
-      equal(await browser.evaluate('document.querySelectorAll(".leaf-list button").length'), 16, 'Today map visible without tabs');
+      equal(await browser.evaluate('document.querySelectorAll(".muscle-map.compact svg").length'), 2, 'Today anatomy visible without tabs');
+      equal(await browser.evaluate('document.querySelectorAll(".leaf-list button").length'), 0, 'Today does not duplicate full muscle list');
+      equal(await browser.evaluate('document.querySelector(".site-footer").textContent.includes(' + JSON.stringify(releaseVersion) + ')'), true, 'footer version matches package');
+      equal(await browser.evaluate('document.querySelector(".edition").textContent'), `TRAINING JOURNAL / ${releaseVersion}`, 'masthead version matches package');
+      const separator = await browser.evaluate('getComputedStyle(document.querySelector(".anatomy-grid path[data-leaf]")).stroke');
+      equal(separator, theme === 'light' ? 'rgb(255, 255, 255)' : 'rgb(52, 62, 77)', 'anatomy separators follow theme');
       await noOverflow(`Today ${width} ${theme}`);
       await click('.gear summary');
       equal(await browser.evaluate('document.querySelector(".gear").open'), true, 'gear expands');
       await noOverflow(`Today expanded ${width} ${theme}`);
       await click('.gear summary');
-      if ([320, 390].includes(width)) await screenshot(`today-${width}-${theme}`);
+      await screenshot(`today-${width}-${theme}`);
       await click('.primary-nav a[href="/plan"]');
       await browser.waitFor('Boolean(document.querySelector(".plan-metrics"))');
-      equal(await browser.evaluate('document.querySelectorAll(".leaf-list button").length'), 16, 'Plan map default visible');
+      equal(await browser.evaluate('document.querySelectorAll(".muscle-map.compact svg").length'), 2, 'Plan compact anatomy default visible');
+      equal(await browser.evaluate('document.querySelectorAll(".leaf-list button, .capacity-board").length'), 0, 'Plan leaves full list and cycle board to Analysis');
       await noOverflow(`Plan ${width} ${theme}`);
       const targetSizes = await browser.evaluate('[...document.querySelectorAll("button, .primary-nav a, .week-rail a, .block-nav a, .day-row")].filter(e => { const r=e.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).map(e=>e.textContent.trim())');
       equal(targetSizes, [], '44px touch controls');
-      if ([320, 390].includes(width)) { await screenshot(`plan-${width}-${theme}`); await screenshot(`map-${width}-${theme}`, '.muscle-map'); }
+      await screenshot(`plan-${width}-${theme}`);
+      await browser.evaluate('document.querySelector(".muscle-selector select").value = "chest"; document.querySelector(".muscle-selector select").dispatchEvent(new Event("change", { bubbles: true }))');
+      await browser.waitFor('Boolean(document.querySelector(".muscle-numbers"))');
+      equal(await browser.evaluate('document.querySelector(".muscle-numbers b").textContent'), analysis.perWeek[0].leaves.chest.w.toFixed(1), 'compact muscle inspection uses API values');
+      await click('.muscle-map .inline-link');
+      await browser.waitFor('location.pathname === "/analysis"');
+      equal(await browser.evaluate('location.search'), '?week=1', 'full analysis preserves selected week');
+      equal(await browser.evaluate('document.querySelectorAll(".leaf-list button").length'), 16, 'Analysis owns full sixteen-muscle list');
+      equal(await browser.evaluate('document.querySelectorAll(".capacity-board").length'), 1, 'Analysis owns cycle capacity board');
+      await noOverflow(`Analysis ${width} ${theme}`);
+      await screenshot(`analysis-${width}-${theme}`);
+      await screenshot(`map-${width}-${theme}`, '.muscle-map');
       await click('[data-testid="leaf-chest"]');
       equal(await browser.evaluate('document.querySelector(".muscle-numbers b").textContent'), analysis.perWeek[0].leaves.chest.w.toFixed(1), 'leaf weighted details match API');
       await click('[aria-label="Next muscle week"]');
       equal(await browser.evaluate('document.querySelector("[data-testid=muscle-week]").textContent'), 'W02', 'map week advances');
       equal(await browser.evaluate('Number(document.querySelector("[data-testid=weekly-total]").textContent)'), analysis.perWeek[1].total, 'week totals synchronized');
-      equal(await browser.evaluate('location.pathname'), '/plan/week/2', 'map changes deep link');
+      equal(await browser.evaluate('location.pathname + location.search'), '/analysis?week=2', 'analysis map changes week deep link');
       await click('.map-filters button:nth-child(3)');
       equal(await browser.evaluate('document.querySelector(".map-filters button:nth-child(3)").getAttribute("aria-pressed")'), 'true', 'secondary filter selected');
       await noOverflow(`Map selected ${width} ${theme}`);
@@ -97,6 +120,15 @@ try {
       const dayPath = `/plan/week/2/day/${plan.workouts.find(row => row.week === 2).day}`;
       await load(base, dayPath);
       assert.ok(await browser.evaluate('document.querySelectorAll(".exercise").length > 0'), 'day expands after direct reload'); checks++;
+      const focusedDay = `day-2-${plan.workouts.find(row => row.week === 2).day}`;
+      await browser.waitFor(`document.activeElement.id === ${JSON.stringify(focusedDay)}`);
+      const landing = await browser.evaluate(`(() => { const r=document.getElementById(${JSON.stringify(focusedDay)}).getBoundingClientRect(); return { id: document.activeElement.id, top: r.top, scroll: scrollY }; })()`);
+      equal(landing.id, focusedDay, 'day deep link transfers keyboard focus');
+      assert.ok(landing.top >= 0 && landing.top < 60 && landing.scroll > 0, 'deep-linked day lands within viewport'); checks++;
+      await click('[aria-label="Next plan week"]');
+      await browser.evaluate('history.back()');
+      await browser.waitFor(`document.activeElement.id === ${JSON.stringify(focusedDay)}`);
+      equal(await browser.evaluate('Math.round(document.activeElement.getBoundingClientRect().top)'), Math.round(landing.top), 'history back restores day landing');
       await noOverflow(`Day ${width} ${theme}`);
       const dayRow = plan.workouts.find(row => row.week === 2);
       const warmups = plan.warmups?.[dayRow.date] || [];
@@ -108,6 +140,7 @@ try {
         const warmText = await browser.evaluate('document.querySelector("[data-testid=warmups]").textContent');
         assert.ok(warmText.includes('SUGGESTION ONLY') && warmText.includes(`${warmups[0].steps[0].kg} kg`), 'warm-up steps render plan values'); checks++;
         await noOverflow(`Day warm-up expanded ${width} ${theme}`);
+        await screenshot(`day-warmup-${width}-${theme}`);
         await click('[data-testid=warmups] summary');
       }
       console.log(`PASS CDP ${width}px ${theme}: Today, Plan, map, day reload, 44px targets, no page overflow`);
@@ -123,7 +156,7 @@ try {
     equal(await browser.evaluate('document.querySelector("h1").textContent'), 'Not in this plan.', `invalid ${path}`);
   }
   await load(base, '/plan/test');
-  equal(await browser.evaluate('Number(document.querySelector(".week-number").textContent)'), 13, 'test week derived');
+  equal(await browser.evaluate('Number(document.querySelector(".week-number").textContent)'), plan.weeks.find(w => w.kind === 'test').n, 'test week derived');
   await noOverflow('test week');
   const deloadWeek = plan.weeks.find(w => w.kind === 'deload');
   await load(base, `/plan/week/${deloadWeek.n}`);
@@ -138,6 +171,7 @@ try {
   await browser.waitFor('location.pathname === "/plan/week/1"');
   equal(await browser.evaluate('document.querySelector("[data-testid=muscle-week]").textContent'), 'W01', 'browser back restores week');
   for (const path of ['/analysis', '/archive', '/settings']) { await load(base, path); await noOverflow(path); }
+  assert.ok(await browser.evaluate('document.querySelector("main").textContent.includes(' + JSON.stringify(`Single-user release ${releaseVersion}`) + ')'), 'Settings version matches package'); checks++;
   const row = plan.workouts[0];
   const saved = await fetch(`${base}/api/log`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cycle_id: plan.meta.planId, week: row.week, day: row.day, seq: row.seq, load: null, sets: 0, reps: 0, rpe: null, note: 'Browser regression fixture only' }) });
   equal(saved.status, 200, 'API accepts zero-set actual log');
@@ -150,6 +184,22 @@ try {
   equal(await browser.evaluate('Number(document.querySelector("[data-testid=weekly-total]").textContent)'), analysis.perWeek[0].total, 'Plan resets to planned mode');
   equal(browser.errors, [], 'no unexpected browser errors');
   await browser.send('Network.enable');
+  const loggedDayPath = `/plan/week/${row.week}/day/${row.day}`;
+  await load(base, loggedDayPath);
+  await click('.primary-nav a[href="/analysis"]');
+  await click('.map-filters button:nth-child(2)');
+  await browser.waitFor('document.querySelector("main").getAttribute("aria-busy") === "false"');
+  await browser.send('Network.setBlockedURLs', { urls: [`${base}/api/analysis*`] });
+  await browser.evaluate('history.back()');
+  await browser.waitFor(`location.pathname === ${JSON.stringify(loggedDayPath)} && Boolean(document.querySelector(".error-panel"))`);
+  equal(await browser.evaluate('document.querySelectorAll(".plan-day, .muscle-map").length'), 0, 'failed Day refresh hides retained plan and statistics');
+  equal(browser.errors.filter(entry => !entry.source), [], 'failed Day refresh never focuses a missing node');
+  await browser.send('Network.setBlockedURLs', { urls: [] });
+  await click('.error-panel button');
+  await browser.waitFor(`document.activeElement?.id === "day-${row.week}-${row.day}"`);
+  equal(await browser.evaluate('document.activeElement.getBoundingClientRect().top < 60'), true, 'Day retry restores focused viewport landing');
+  equal(browser.errors.filter(entry => !entry.source), [], 'Day retry has no runtime exceptions');
+  browser.errors.splice(0);
   await browser.send('Network.setBlockedURLs', { urls: [`${base}/api/analysis*`] });
   await browser.navigate(`${base}/plan`);
   await browser.waitFor('Boolean(document.querySelector(".error-panel"))');
@@ -171,18 +221,54 @@ try {
     console.log(`PASS dynamic browser: ${count}-week validated plan served by real FastAPI / SQLite; last week and totals match API`);
     await server.stop(); server = null;
   }
-  server = await startServer(['--date', '2026-11-16T10:00:00']);
-  await load(server.base, '/');
-  assert.match(await browser.evaluate('document.querySelector(".badges").textContent'), /TODAY’S SESSION/); checks++;
-  assert.doesNotMatch(await browser.evaluate('document.querySelector(".badges").textContent'), /PREVIEW/); checks++;
-  equal(await browser.evaluate('document.querySelector("[data-testid=warmups]").open'), false, 'training-day warm-up collapsed by default');
-  await click('[data-testid=warmups] summary');
-  assert.match(await browser.evaluate('document.querySelector("[data-testid=warmups]").textContent'), /empty bar/, 'training-day warm-up lists steps'); checks++;
-  await noOverflow('training-day warm-up expanded');
-  await noOverflow('training-day fixture');
-  console.log('PASS training-day clock fixture: today is actual scheduled session, not next-session preview');
+  const trainingDate = plan.workouts[0].date;
+  server = await startServer(['--date', `${trainingDate}T10:00:00`]);
+  const trainingCalendar = await (await fetch(`${server.base}/api/today`)).json();
+  equal(trainingCalendar.date, trainingDate, 'fixture date is explicit Beijing training date');
+  for (const width of [320, 360, 390, 412]) {
+    await browser.viewport(width);
+    for (const theme of ['light', 'dark']) {
+      await load(server.base, '/');
+      await browser.evaluate(`localStorage.setItem('roastraw-theme', '${theme}')`);
+      await load(server.base, '/');
+      assert.match(await browser.evaluate('document.querySelector(".badges").textContent'), /TODAY’S SESSION/); checks++;
+      assert.doesNotMatch(await browser.evaluate('document.querySelector(".badges").textContent'), /PREVIEW/); checks++;
+      assert.ok(await browser.evaluate('document.querySelectorAll(".main-load .load-value b").length > 0'), 'training day exposes hero loads'); checks++;
+      const displayedLoads = await browser.evaluate('[...document.querySelectorAll(".main-load .load-value b")].map(e => Number(e.textContent.replaceAll(",", "")))');
+      const dayRows = plan.workouts.filter(row => row.week === trainingCalendar.week && row.day === trainingCalendar.day);
+      const plannedLoads = ['S', 'B', 'D'].flatMap(lift => {
+        const rows = dayRows.filter(row => row.bucket === 'main' && row.lift === lift && row.loadKg !== null && !(row.sets === 1 && row.reps === 3 && row.mode === 'T1.3x3'));
+        const row = rows.sort((a, b) => (b.pct || 0) - (a.pct || 0))[0];
+        return row ? [row.loadKg] : [];
+      });
+      equal(displayedLoads, plannedLoads, 'training hero matches prescribed loads');
+      await noOverflow(`training-day ${width} ${theme}`);
+      await screenshot(`today-training-${width}-${theme}`);
+      equal(await browser.evaluate('document.querySelector("[data-testid=warmups]").open'), false, 'training-day warm-up collapsed by default');
+      await click('[data-testid=warmups] summary');
+      assert.match(await browser.evaluate('document.querySelector("[data-testid=warmups]").textContent'), /empty bar/, 'training-day warm-up lists steps'); checks++;
+      await noOverflow(`training-day warm-up expanded ${width} ${theme}`);
+    }
+  }
+  console.log('PASS training-day clock fixture: explicit date, hero loads match API, four widths and two themes');
+  await server.stop(); server = null;
+  const deloadDate = plan.workouts.find(row => row.week === deloadWeek.n).date;
+  server = await startServer(['--date', `${deloadDate}T10:00:00`]);
+  for (const width of [320, 360, 390, 412]) {
+    await browser.viewport(width);
+    for (const theme of ['light', 'dark']) {
+      await load(server.base, '/');
+      await browser.evaluate(`localStorage.setItem('roastraw-theme', '${theme}')`);
+      await load(server.base, '/');
+      assert.match(await browser.evaluate('document.querySelector("main .notice")?.textContent || ""'), /lighter loads, same movements/, 'Today deload notice uses scheduled week'); checks++;
+      await noOverflow(`Today deload ${width} ${theme}`);
+      await load(server.base, `/plan/week/${deloadWeek.n}`);
+      await noOverflow(`Plan deload ${width} ${theme}`);
+      await screenshot(`plan-deload-${width}-${theme}`);
+    }
+  }
   equal(browser.errors, [], 'no browser runtime or console errors');
-  console.log(`PASS browser.mjs: ${checks} assertions; 12 delivery screenshots; CDP device metrics at 320/360/390/412`);
+  console.log(`PASS browser.mjs: ${checks} assertions; ${screenshots} delivery screenshots; CDP device metrics at 320/360/390/412`);
 } finally {
   if (server) await server.stop();
   await browser.close();

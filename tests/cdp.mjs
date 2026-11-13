@@ -33,6 +33,7 @@ export async function openBrowser() {
     const message = JSON.parse(data);
     events.get(message.method)?.(message.params);
     if (message.method === 'Runtime.exceptionThrown') errors.push(message.params.exceptionDetails);
+    if (message.method === 'Runtime.consoleAPICalled' && message.params.type === 'error') errors.push(message.params);
     if (message.method === 'Log.entryAdded' && message.params.entry.level === 'error') errors.push(message.params.entry);
     const entry = pending.get(message.id);
     if (!entry) return;
