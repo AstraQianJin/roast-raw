@@ -112,6 +112,13 @@ try {
       equal(await browser.evaluate('location.search'), '?week=1', 'full analysis preserves selected week');
       equal(await browser.evaluate('document.querySelectorAll(".leaf-list button").length'), 16, 'Analysis owns full sixteen-muscle list');
       equal(await browser.evaluate('document.querySelectorAll(".capacity-board").length'), 1, 'Analysis owns cycle capacity board');
+      equal(await browser.evaluate('(() => { const bottom=s=>document.querySelector(s).getBoundingClientRect().bottom; const top=s=>document.querySelector(s).getBoundingClientRect().top; return [bottom(".anatomy-grid") <= top("[data-testid=analysis-summary]"), bottom("[data-testid=analysis-summary]") <= top(".leaf-list"), bottom(".leaf-list") <= top(".analysis-workspace > aside"), bottom(".analysis-workspace") <= top("[data-testid=trend-view]")]; })()'), [true, true, true, true], 'mobile reading order: anatomy, summary, sixteen leaves, capacity, trends');
+      equal(await browser.evaluate('document.querySelector("[data-testid=performance-movement]").value'), 'S.Main|high-bar squat', 'performance defaults to exact main squat ID');
+      equal(await browser.evaluate('Boolean(document.querySelector("[data-testid=capacity-trend] svg")) && Boolean(document.querySelector("[data-testid=performance-empty]"))'), true, 'capacity trend visible and absent performance explicit');
+      equal(await browser.evaluate('document.querySelector(".anatomy-grid path[data-leaf=chest]").classList.contains(' + JSON.stringify(`heat-${analysis.perWeek[0].leaves.chest.heat.Both.band}`) + ')'), true, 'map uses API cycle-fixed heat band');
+      equal(await browser.evaluate('(() => { const expected=document.createElement("i"); expected.style.width=' + JSON.stringify(`${analysis.perWeek[0].leaves.chest.heat.Both.percent}%`) + '; return document.querySelector("[data-testid=leaf-chest] .leaf-track i").style.width === expected.style.width; })()'), true, 'leaf bar uses API cycle-fixed proportion after browser CSS serialization');
+      equal(await browser.evaluate('(() => { const previous=scrollY; scrollTo(innerWidth,previous); const right=scrollX; scrollTo(-innerWidth,previous); const left=scrollX; scrollTo(0,previous); return [right,left]; })()'), [0, 0], 'analysis cannot horizontally scroll');
+      equal(await browser.evaluate('[...document.querySelectorAll("main button, main select, main summary")].filter(e => { const r=e.getBoundingClientRect(); return r.width>0 && r.height>0 && (r.width<44 || r.height<44); }).map(e=>e.className)'), [], 'analysis controls meet 44px');
       await noOverflow(`Analysis ${width} ${theme}`);
       await screenshot(`analysis-${width}-${theme}`);
       await screenshot(`map-${width}-${theme}`, '.muscle-map');
@@ -123,6 +130,8 @@ try {
       equal(await browser.evaluate('location.pathname + location.search'), '/analysis?week=2', 'analysis map changes week deep link');
       await click('.map-filters button:nth-child(3)');
       equal(await browser.evaluate('document.querySelector(".map-filters button:nth-child(3)").getAttribute("aria-pressed")'), 'true', 'secondary filter selected');
+      equal(await browser.evaluate('document.querySelector(".anatomy-grid path[data-leaf=chest]").classList.contains(' + JSON.stringify(`heat-${analysis.perWeek[1].leaves.chest.heat.Secondary.band}`) + ')'), true, 'secondary contribution uses same cycle-fixed denominator');
+      equal(await browser.evaluate('document.querySelector("[data-testid=heat-scale]").textContent.includes(' + JSON.stringify(analysis.heatScale.maximum.toFixed(1)) + ')'), true, 'legend maximum stays fixed when week and filter change');
       await noOverflow(`Map selected ${width} ${theme}`);
       await click('[data-testid="leaf-adductors"]');
       assert.match(await browser.evaluate('document.querySelector(".muscle-detail").textContent'), /No separate reference/, 'unknown MEV stays unknown'); checks++;
@@ -710,6 +719,49 @@ try {
     }
   }
   console.log('PASS versioned prescriptions: preview/apply failures and retained inputs, eight variations, persisted manual references, original comparison/restore, unchanged actual records, dated system loads, weekly GPP, four-width/two-theme references and 44px controls');
+  const beforePerformancePlan = await trainingApi('/api/plan');
+  const pullRows = [1, 3].map(n => defaultPlan.workouts.find(row => row.week === n && row.movementId === pull.movementId));
+  assert.ok(pullRows.every(Boolean), 'same exact pull-up ID scheduled either side of an unlogged week'); checks++;
+  for (const [index, observed] of pullRows.entries()) {
+    const payload = { cycle_id: cycleId, week: observed.week, day: observed.day, seq: observed.seq, sets: 2, reps: index ? 1 : 3, load: index ? 101.25 : 100, rpe: null, note: 'Isolated performance chart fixture' };
+    equal((await fetch(`${trainingBase}/api/log`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })).status, 200, 'save actual performance fixture');
+  }
+  const recorded = await trainingApi('/api/performance');
+  const pullSeries = recorded.movements.find(item => item.id === pull.movementId);
+  equal(pullSeries.weekly.slice(0, 3).map(item => item.value), [110, null, 101.25], 'recorded system-total estimates and raw single leave null week');
+  equal(await trainingApi('/api/plan'), beforePerformancePlan, 'performance never changes references or prescriptions');
+  for (const width of [320, 360, 390, 412]) {
+    await browser.viewport(width);
+    for (const theme of ['light', 'dark']) {
+      await load(trainingBase, '/analysis?week=1');
+      await browser.evaluate(`localStorage.setItem('roastraw-theme', '${theme}')`);
+      await load(trainingBase, '/analysis?week=1');
+      await input('[data-testid=performance-movement]', pull.movementId);
+      equal(await browser.evaluate('document.querySelector(".performance-line").getAttribute("d").match(/M/g)?.length'), 2, 'performance path breaks at null week');
+      equal(await browser.evaluate('document.querySelectorAll(".performance-point").length'), 2, 'no fake zero observations');
+      equal(await browser.evaluate('document.querySelectorAll(".performance-point.estimated").length'), 1, 'estimated point labelled separately');
+      equal(await browser.evaluate('document.querySelectorAll(".performance-point.actual").length'), 1, 'actual single labelled separately');
+      assert.match(await browser.evaluate('document.querySelector("[data-testid=performance-records]").textContent'), /110.*Estimated.*Epley estimate.*100 kg.*101.25.*Actual single/s, 'records expose methods and raw system loads'); checks++;
+      await noOverflow(`performance ${width} ${theme}`);
+      await click('.weekly-reading summary');
+      await noOverflow(`performance expanded source values ${width} ${theme}`);
+      equal(await browser.evaluate('document.querySelectorAll(".capacity-week").length'), defaultPlan.weeks.length, 'all weekly source values remain accessible');
+      await click('.weekly-reading summary');
+      equal(await browser.evaluate('(() => { const previous=scrollY; scrollTo(innerWidth,previous); const right=scrollX; scrollTo(-innerWidth,previous); const left=scrollX; scrollTo(0,previous); return [right,left]; })()'), [0, 0], 'performance has no horizontal scrolling');
+      await screenshot(`trends-${width}-${theme}`, '[data-testid=trend-view]');
+      await input('[data-testid=performance-movement]', ohpId);
+      equal(await browser.evaluate('Boolean(document.querySelector("[data-testid=performance-empty]"))'), true, 'unlogged selected movement has explicit empty state');
+    }
+  }
+  await blockedTrainingRequests(['/api/performance'], async () => {
+    await browser.navigate(`${trainingBase}/analysis?week=1`);
+    await browser.waitFor('Boolean(document.querySelector(".error-panel"))');
+    equal(await browser.evaluate('document.querySelectorAll("[data-testid=trend-view], .muscle-map").length'), 0, 'failed performance request hides stale chart and anatomy');
+  }, 'performance GET failure');
+  await click('.error-panel button');
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=trend-view]"))');
+  equal(await trainingApi('/api/plan'), beforePerformancePlan, 'failure and retry do not rewrite the plan');
+  console.log('PASS performance: cycle-fixed heat, anatomy-first mobile order, Epley/actual labels, null-gap curves, all widths/themes, explicit empty and failure retry');
   await server.stop(); server = null;
   const deloadDate = plan.workouts.find(row => row.week === deloadWeek.n).date;
   server = await startServer(['--date', `${deloadDate}T10:00:00`]);

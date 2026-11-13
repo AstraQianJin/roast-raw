@@ -16,6 +16,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .calendar import calendar_state
 from .stats.engine import analyze
+from .stats.performance import performance
 from .store import ReadOnlyError, Store
 from .validation import Reject, validate_plan
 
@@ -144,6 +145,11 @@ def create_app(db_path=None, plan_path=None):
     @app.get('/api/plan')
     def plan(cycle_id: str | None = None):
         return active_plan(cycle_id)
+
+    @app.get('/api/performance')
+    def recorded_performance(cycle_id: str | None = None):
+        selected = active_plan(cycle_id)
+        return performance(selected, store.logs(selected['meta']['planId']))
 
     @app.get('/api/log')
     def logs(cycle_id: str | None = None):

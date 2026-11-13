@@ -1,23 +1,15 @@
 <script setup>
 import { computed, ref } from 'vue';
 
-const props = defineProps({ geometry: Object, leaves: Array, weekNumber: Number, weekCount: Number, compact: Boolean });
+const props = defineProps({ geometry: Object, leaves: Array, heatScale: Object, weekNumber: Number, weekCount: Number, compact: Boolean });
 const emit = defineEmits(['week']);
 const filter = ref('Both');
 const selected = ref(null);
 const hovered = ref(null);
 const active = computed(() => props.leaves.find(leaf => leaf.id === (hovered.value || selected.value)));
 const indexed = computed(() => Object.fromEntries(props.leaves.map(leaf => [leaf.id, leaf])));
-const maximum = computed(() => Math.max(...props.leaves.map(leaf => leaf.raw), 1));
-function value(id) {
-  const leaf = indexed.value[id];
-  if (!leaf) return 0;
-  return filter.value === 'Primary' ? leaf.primaryWeighted : filter.value === 'Secondary' ? leaf.secondaryWeighted : leaf.raw;
-}
-function shade(id) {
-  const amount = value(id);
-  return amount > 0 ? Math.min(4, Math.ceil(amount / maximum.value * 4)) : 0;
-}
+const heat = id => indexed.value[id].heat[filter.value];
+const shade = id => heat(id).band;
 function visiblePaths(view) {
   return props.geometry.paths[view].filter(path => !path.leaf || props.geometry.leaves[path.leaf].view.includes(view));
 }
@@ -39,7 +31,7 @@ const number = value => Number(value).toFixed(1);
     <div class="map-legend" aria-label="Five volume bands">
       <span v-for="(label, i) in ['0', '1–25%', '26–50%', '51–75%', '76–100%']" :key="label"><i :class="`heat-${i}`"></i>{{ label }}</span>
     </div>
-    <p class="micro-copy">Share of this week’s highest weighted volume; not a recovery score.</p>
+    <p class="micro-copy" data-testid="heat-scale">Fixed cycle scale: {{ number(heatScale.maximum) }} planned weighted sets. Shared across weeks and filters; not a recovery score. The darkest band also includes values above this scale.</p>
     <div class="map-filters" aria-label="Muscle contribution">
       <button v-for="kind in ['Both', 'Primary', 'Secondary']" :key="kind" :aria-pressed="filter === kind" @click="filter = kind">{{ kind }}</button>
     </div>
@@ -65,10 +57,11 @@ const number = value => Number(value).toFixed(1);
       <select v-model="selected" @change="hovered = null"><option :value="null">Choose a muscle</option><option v-for="leaf in leaves" :key="leaf.id" :value="leaf.id">{{ leaf.name }}</option></select>
     </label>
     <RouterLink v-if="compact" :to="`/analysis?week=${weekNumber}`" class="inline-link">Full muscle analysis →</RouterLink>
-    <div v-else class="leaf-list" aria-label="All sixteen muscles">
+    <slot name="summary" />
+    <div v-if="!compact" class="leaf-list" aria-label="All sixteen muscles">
       <button v-for="leaf in leaves" :key="leaf.id" :data-testid="`leaf-${leaf.id}`" :aria-pressed="selected === leaf.id" @click="selected = selected === leaf.id ? null : leaf.id">
         <span>{{ leaf.name }} <i class="tier-marker">{{ leaf.primaryWeighted > 0 ? 'P' : leaf.secondaryWeighted > 0 ? 'S' : '—' }}</i></span>
-        <span class="leaf-track" aria-hidden="true"><i :class="`heat-${shade(leaf.id)}`" :style="{ width: `${value(leaf.id) / maximum * 100}%` }"></i></span>
+        <span class="leaf-track" aria-hidden="true"><i :class="`heat-${shade(leaf.id)}`" :style="{ width: `${heat(leaf.id).percent}%` }"></i></span>
         <span aria-hidden="true">↗</span>
       </button>
     </div>

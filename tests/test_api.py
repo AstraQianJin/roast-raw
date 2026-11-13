@@ -477,6 +477,199 @@ class APITests(GeneratedPlanCase):
             self.assertEqual(dict(db.execute('SELECT cycle_id,count(*) FROM logs_journal GROUP BY cycle_id')),
                              {self.cycle_id: 1, archive_id: 1})
 
+    def performance_entries(self, plan=None, cycle_id=None):
+        source = self.seed if plan is None else plan
+        params = {} if cycle_id is None else {'cycle_id': cycle_id}
+        result = self.get_json('/api/performance', params=params)
+        self.assertEqual(set(result), {'movements'})
+        self.assertIsInstance(result['movements'], list)
+        entries = {entry['id']: entry for entry in result['movements']}
+        self.assertEqual(len(entries), len(result['movements']), 'Movement IDs must be unique')
+        self.assertEqual(set(entries), {row['movementId'] for row in source['workouts']})
+        for entry in entries.values():
+            self.assertEqual(set(entry), {'id', 'name', 'lift', 'system', 'weekly'})
+            names = {row['movement'] for row in source['workouts'] if row['movementId'] == entry['id']}
+            self.assertEqual(names, {entry['name']})
+            self.assertIsInstance(entry['system'], bool)
+            self.assertEqual([point['n'] for point in entry['weekly']], [week['n'] for week in source['weeks']])
+            for point in entry['weekly']:
+                self.assertEqual(set(point), {'n', 'value', 'estimated', 'method', 'date', 'key', 'load', 'reps', 'rpe'})
+        return entries
+
+    def assert_performance_week(self, entry, row, payload=None, value=None, estimated=None):
+        point = next(point for point in entry['weekly'] if point['n'] == row['week'])
+        if payload is None:
+            self.assertEqual(point, {
+                'n': row['week'], 'value': None, 'estimated': None, 'method': None,
+                'date': None, 'key': None, 'load': None, 'reps': None, 'rpe': None,
+            })
+            return
+        self.assertEqual({field: item for field, item in point.items() if field != 'method'}, {
+            'n': row['week'], 'value': value, 'estimated': estimated,
+            'date': row['date'], 'key': log_key(row), 'load': payload['load'],
+            'reps': payload['reps'], 'rpe': payload['rpe'],
+        })
+        self.assertIs(point['estimated'], estimated)
+        if estimated:
+            self.assertIsInstance(point['method'], str)
+            self.assertIn('Epley', point['method'])
+        else:
+            self.assertEqual(point['method'], 'Actual single')
+
+    def test_performance_without_logs_has_explicit_nulls_and_never_writes(self):
+        plan_before = self.get_json('/api/plan')
+        prescription_before = self.get_json('/api/prescription', params={'cycle_id': self.cycle_id})
+        before = database_rows(self.db_path)
+        entries = self.performance_entries()
+        self.assertEqual(self.performance_entries(cycle_id=self.cycle_id), entries)
+        for entry in entries.values():
+            for week in self.seed['weeks']:
+                self.assert_performance_week(entry, {'week': week['n']})
+        self.assertEqual(database_rows(self.db_path), before)
+        self.assertEqual(self.get_json('/api/plan'), plan_before)
+        self.assertEqual(self.get_json('/api/prescription', params={'cycle_id': self.cycle_id}), prescription_before)
+
+    def test_performance_uses_independent_actual_load_anchors_without_updating_references(self):
+        plan_before = self.get_json('/api/plan')
+        prescription_before = self.get_json('/api/prescription', params={'cycle_id': self.cycle_id})
+        # Hardcoded arithmetic anchors: never derive expectations from the stats engine.
+        for load, reps, rpe, value, estimated in (
+                (100, 3, None, 110, True),
+                (101.25, 1, 9, 101.25, False),
+                (100, 10, 8, 133.3, True)):
+            with self.subTest(load=load, reps=reps):
+                payload = actual_payload(self.seed, self.row, load=load, reps=reps, rpe=rpe)
+                self.put_log(payload)
+                before = database_rows(self.db_path)
+                logs_before = self.get_json('/api/log')
+                entries = self.performance_entries()
+                self.assertEqual(self.performance_entries(cycle_id=self.cycle_id), entries)
+                self.assert_performance_week(entries[self.row['movementId']], self.row, payload, value, estimated)
+                for entry in entries.values():
+                    for week in self.seed['weeks']:
+                        if entry['id'] != self.row['movementId'] or week['n'] != self.row['week']:
+                            self.assert_performance_week(entry, {'week': week['n']})
+                self.assertEqual(database_rows(self.db_path), before)
+                self.assertEqual(self.get_json('/api/log'), logs_before)
+                self.assertEqual(self.get_json('/api/plan'), plan_before)
+                self.assertEqual(self.get_json('/api/prescription', params={'cycle_id': self.cycle_id}), prescription_before)
+
+    def test_performance_power_clean_pull_up_and_ohp_use_their_recorded_loads(self):
+        rows = {}
+        for name in ('Power Clean', 'Pull-Up', 'OHP'):
+            matches = [row for row in self.seed['workouts'] if row['movement'] == name and row['sets'] > 0]
+            self.assertTrue(matches, f'The generated plan must retain {name}')
+            rows[name] = matches[0]
+        plan_before = self.get_json('/api/plan')
+        prescription_before = self.get_json('/api/prescription', params={'cycle_id': self.cycle_id})
+        clean = rows['Power Clean']
+        self.put_log(actual_payload(self.seed, clean, load=70, reps=3, rpe=None))
+        pull = actual_payload(self.seed, rows['Pull-Up'], load=100, reps=3, rpe=None)
+        ohp = actual_payload(self.seed, rows['OHP'], load=60, reps=5, rpe=8)
+        self.put_log(pull)
+        self.put_log(ohp)
+        before = database_rows(self.db_path)
+        entries = self.performance_entries()
+        self.assert_performance_week(entries[clean['movementId']], clean)
+        self.assert_performance_week(entries[rows['Pull-Up']['movementId']], rows['Pull-Up'], pull, 110, True)
+        self.assert_performance_week(entries[rows['OHP']['movementId']], rows['OHP'], ohp, 70, True)
+        self.assertEqual(entries[rows['Pull-Up']['movementId']]['lift'], 'D')
+        self.assertIs(entries[rows['Pull-Up']['movementId']]['system'], True)
+        self.assertEqual(entries[rows['OHP']['movementId']]['lift'], 'B')
+        self.assertIs(entries[rows['OHP']['movementId']]['system'], False)
+        self.assertEqual(database_rows(self.db_path), before)
+        single = actual_payload(self.seed, clean, load=70, reps=1, rpe=9)
+        self.put_log(single)
+        before = database_rows(self.db_path)
+        entries = self.performance_entries()
+        self.assert_performance_week(entries[clean['movementId']], clean, single, 70, False)
+        self.assertEqual(database_rows(self.db_path), before)
+        self.assertEqual(self.get_json('/api/plan'), plan_before)
+        self.assertEqual(self.get_json('/api/prescription', params={'cycle_id': self.cycle_id}), prescription_before)
+
+    def test_performance_null_load_and_zero_sets_remove_observations_without_fallback(self):
+        matches = [row for row in self.seed['workouts']
+                   if row['movement'] == 'OHP' and row['bucket'] == 'accessory' and row['sets'] > 0]
+        self.assertTrue(matches, 'The legacy fixture must retain an optional-load OHP row')
+        optional = matches[0]
+        self.put_log(actual_payload(self.seed, optional, load=60, reps=5))
+        self.put_log(actual_payload(self.seed, self.row, load=100, reps=3))
+        entries = self.performance_entries()
+        self.assertEqual(next(point['value'] for point in entries[optional['movementId']]['weekly']
+                              if point['n'] == optional['week']), 70)
+        self.assertEqual(next(point['value'] for point in entries[self.row['movementId']]['weekly']
+                              if point['n'] == self.row['week']), 110)
+        self.put_log(actual_payload(self.seed, optional, load=None, reps=5, rpe=None))
+        # Positive load/reps deliberately remain: explicit zero sets must still win.
+        self.put_log(actual_payload(self.seed, self.row, sets=0, load=200, reps=3, rpe=9))
+        plan_before = self.get_json('/api/plan')
+        prescription_before = self.get_json('/api/prescription', params={'cycle_id': self.cycle_id})
+        before = database_rows(self.db_path)
+        entries = self.performance_entries()
+        for entry in entries.values():
+            for week in self.seed['weeks']:
+                self.assert_performance_week(entry, {'week': week['n']})
+        self.assertEqual(self.get_json('/api/log')['logs'][log_key(optional)]['load'], None)
+        self.assertEqual(self.get_json('/api/log')['logs'][log_key(self.row)]['sets'], 0)
+        self.assertEqual(database_rows(self.db_path), before)
+        self.assertEqual(self.get_json('/api/plan'), plan_before)
+        self.assertEqual(self.get_json('/api/prescription', params={'cycle_id': self.cycle_id}), prescription_before)
+
+    def test_performance_archived_selectors_isolate_same_key_and_use_historical_plan(self):
+        for status in ('archived', 'completed'):
+            with self.subTest(status=status):
+                archived = self.archive_fixture(status)
+                archive_id = archived['meta']['planId']
+                # Distinct historical dates expose an endpoint that uses the active plan.
+                def shift(value):
+                    return (date.fromisoformat(value) - timedelta(days=364)).isoformat()
+
+                for field in ('startDate', 'endDate'):
+                    archived['meta'][field] = shift(archived['meta'][field])
+                for week in archived['weeks']:
+                    for field in ('dateStart', 'dateEnd'):
+                        week[field] = shift(week[field])
+                for row in archived['workouts']:
+                    row['date'] = shift(row['date'])
+                with open_db(self.db_path) as db:
+                    db.execute('UPDATE cycles SET start_date=?,end_date=? WHERE id=?',
+                               (archived['meta']['startDate'], archived['meta']['endDate'], archive_id))
+                    db.execute('UPDATE plans SET json=? WHERE cycle_id=?', (json.dumps(archived), archive_id))
+                archive_row = next(row for row in archived['workouts'] if log_key(row) == log_key(self.row))
+                historical = actual_payload(archived, archive_row, load=101.25, reps=1, rpe=9)
+                self.app.state.store.save_log(archive_id, archive_row, fields_only(historical))
+                if status == 'archived':
+                    self.assert_performance_week(self.performance_entries()[self.row['movementId']], self.row)
+                current = actual_payload(self.seed, self.row, load=100, reps=3, rpe=None)
+                self.put_log(current)
+                before = database_rows(self.db_path)
+                plan_before = self.get_json('/api/plan')
+                active_prescription = self.get_json('/api/prescription', params={'cycle_id': self.cycle_id})
+                archive_prescription = self.get_json('/api/prescription', params={'cycle_id': archive_id})
+                active = self.performance_entries()
+                selected = self.performance_entries(archived, archive_id)
+                self.assert_performance_week(active[self.row['movementId']], self.row, current, 110, True)
+                self.assert_performance_week(selected[archive_row['movementId']], archive_row, historical, 101.25, False)
+                self.assertEqual(self.performance_entries(cycle_id=self.cycle_id), active)
+                self.assertEqual(self.performance_entries(archived, archive_id), selected)
+                self.assertEqual(self.get_json('/api/plan'), plan_before)
+                self.assertEqual(self.get_json('/api/plan', params={'cycle_id': archive_id}), archived)
+                self.assertEqual(self.get_json('/api/prescription', params={'cycle_id': self.cycle_id}), active_prescription)
+                self.assertEqual(self.get_json('/api/prescription', params={'cycle_id': archive_id}), archive_prescription)
+                self.assertEqual(database_rows(self.db_path), before)
+
+    def test_performance_unknown_cycle_is_404_and_route_is_read_only(self):
+        self.put_log(actual_payload(self.seed, self.row, load=100, reps=3))
+        before = database_rows(self.db_path)
+        response = self.client.get('/api/performance', params={'cycle_id': self.cycle_id + '-does-not-exist'})
+        self.assertEqual(response.status_code, 404, response.text)
+        self.assertEqual(database_rows(self.db_path), before)
+        for method in ('POST', 'PUT', 'PATCH', 'DELETE'):
+            with self.subTest(method=method):
+                response = self.client.request(method, '/api/performance', json={'cycle_id': self.cycle_id})
+                self.assertEqual(response.status_code, 405, response.text)
+                self.assertEqual(database_rows(self.db_path), before)
+
     def test_today_uses_shanghai_date_and_is_read_only(self):
         instant = local_noon(self.row['date']).astimezone(timezone.utc)
         before = database_rows(self.db_path)
@@ -696,6 +889,11 @@ class UvicornRestartTests(GeneratedPlanCase):
             self.assertEqual(saved['key'], log_key(row))
             self.assertEqual({key: saved[key] for key in LOG_FIELDS}, fields_only(payload))
             self.assert_timestamp(saved['updated_at'])
+            performance_before = self.request_json(base_url, '/api/performance')
+            movement = next(entry for entry in performance_before['movements'] if entry['id'] == row['movementId'])
+            point = next(point for point in movement['weekly'] if point['n'] == row['week'])
+            self.assertEqual((point['value'], point['key'], point['date']), (133.2, log_key(row), row['date']))
+            self.assertIs(point['estimated'], True)
             daily_query = f"?cycle_id={self.seed['meta']['planId']}&date={row['date']}&session_id={row['week']}|{row['day']}"
             readiness_payload = {'cycle_id': self.seed['meta']['planId'], 'date': row['date'],
                                  'session_id': f"{row['week']}|{row['day']}", 'recovery': 4, 'arousal': 5, 'nutrition': 6}
@@ -717,6 +915,7 @@ class UvicornRestartTests(GeneratedPlanCase):
             self.assertIsNot(first_process, second_process)
             after = self.request_json(base_url, '/api/log')
             self.assertEqual(after, before)
+            self.assertEqual(self.request_json(base_url, '/api/performance'), performance_before)
             self.assertEqual(self.request_json(base_url, '/api/readiness' + daily_query), readiness_before)
             metrics_query = f"?cycle_id={self.seed['meta']['planId']}&date={row['date']}"
             self.assertEqual(self.request_json(base_url, '/api/body-metrics' + metrics_query), metrics_before)

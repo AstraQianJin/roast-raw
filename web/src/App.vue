@@ -12,11 +12,13 @@ import WeekCapacity from './components/WeekCapacity.vue';
 import CapacityBoard from './components/CapacityBoard.vue';
 import DailyRecord from './components/DailyRecord.vue';
 import PrescriptionSettings from './components/PrescriptionSettings.vue';
+import TrendView from './components/TrendView.vue';
 
 const route = useRoute();
 const router = useRouter();
 const plan = ref(null);
 const analysis = ref(null);
+const performance = ref(null);
 const geometry = ref(null);
 const calendar = ref(null);
 const cycles = ref(null);
@@ -30,7 +32,7 @@ async function savedLog(saved) {
   const { key, ...values } = saved;
   logs.value[key] = values;
   try {
-    [analysis.value, calendar.value] = await Promise.all([get(`/api/analysis?mode=${mode.value}`), get('/api/today')]);
+    [analysis.value, calendar.value, performance.value] = await Promise.all([get(`/api/analysis?mode=${mode.value}`), get('/api/today'), get('/api/performance')]);
     await refreshPrescription();
   } catch { error.value = 'Your log was saved, but the updated summary could not be loaded. Retry the connection.'; }
 }
@@ -81,7 +83,7 @@ const leaves = computed(() => analysis.value.leafOrder.map(id => {
   const values = week.value.leaves[id];
   const range = analysis.value.ranges.leaf[id];
   const verdict = range.mev === null || range.mrv === null ? 'No separate reference' : range.scope === 'group_back' ? 'Group-scope reference' : values.d < range.mev ? 'Below MEV' : values.d > range.mrv ? 'Above MRV' : 'Within reference range';
-  return { id, name: geometry.value.leaves[id].en, weighted: values.w, raw: values.raw, direct: values.d, primaryWeighted: values.primaryWeighted, secondaryWeighted: values.secondaryWeighted, mev: range.mev, mrv: range.mrv, scope: range.scope, verdict };
+  return { id, name: geometry.value.leaves[id].en, weighted: values.w, raw: values.raw, heat: values.heat, direct: values.d, primaryWeighted: values.primaryWeighted, secondaryWeighted: values.secondaryWeighted, mev: range.mev, mrv: range.mrv, scope: range.scope, verdict };
 }));
 const display = value => value === null || value === undefined ? '—' : Number(value).toLocaleString('en-US', { maximumFractionDigits: 1 });
 const DELOAD_NOTE = 'Deload week: lighter loads, same movements. Nothing is skipped and no date moves.';
@@ -103,9 +105,10 @@ async function refresh() {
   loading.value = true;
   error.value = '';
   try {
-    const result = await Promise.all(['/api/plan', `/api/analysis?mode=${mode.value}`, '/api/geometry', '/api/today', '/api/cycle', '/api/log'].map(get));
+    const result = await Promise.all(['/api/plan', `/api/analysis?mode=${mode.value}`, '/api/geometry', '/api/today', '/api/cycle', '/api/log', '/api/performance'].map(get));
     [plan.value, analysis.value, geometry.value, calendar.value, cycles.value] = result;
     logs.value = result[5].logs;
+    performance.value = result[6];
     prescriptionInfo.value = await get(`/api/prescription?${new URLSearchParams({ cycle_id: plan.value.meta.planId })}`);
   } catch (failure) { error.value = failure.message || 'The server is unavailable. Reconnect and try again.'; }
   finally { loading.value = false; }
@@ -164,7 +167,7 @@ watch([() => route.fullPath, loading], async () => {
               <DailyRecord :cycle-id="plan.meta.planId" :date="todaySession.date" :session-id="`${todaySession.week}|${todaySession.day}`" @saved="refreshPrescription" />
             </template>
           </div>
-          <aside><MuscleMap compact :geometry="geometry" :leaves="leaves" :week-number="currentWeek" :week-count="plan.weeks.length" @week="selectWeek" /><WeekCapacity :week="week" :ranges="analysis.ranges" /></aside>
+          <aside><MuscleMap compact :geometry="geometry" :leaves="leaves" :heat-scale="analysis.heatScale" :week-number="currentWeek" :week-count="plan.weeks.length" @week="selectWeek" /><WeekCapacity :week="week" :ranges="analysis.ranges" /></aside>
         </div>
         <template v-else-if="page === 'plan'">
           <div class="eyebrow">{{ plan.meta.weeks }} WEEKS · {{ plan.meta.sessions }} SESSIONS · FIXED CALENDAR</div><h1>The plan.</h1><p class="hero-subtitle">{{ dateLabel(plan.meta.startDate) }} — {{ dateLabel(plan.meta.endDate) }}</p>
@@ -192,13 +195,19 @@ watch([() => route.fullPath, loading], async () => {
               <WeekCapacity :week="week" :ranges="analysis.ranges" />
               <details class="gear gpp" data-testid="gpp"><summary>GPP <span class="chip">CARDIO / RECOVERY / WEAK POINT</span></summary><p class="micro-copy">Planned supporting work. These targets are not recorded completion and do not add SBD equivalent sets.</p><p v-if="!weekGpp.length && !weekCardio.length">No supporting work prescribed for this week.</p><article v-for="item in weekGpp" :key="item.item_idx"><h3>{{ item.item || item.domain || 'Supporting work' }}</h3><p>{{ item.rx_text || `${display(item.target_value)} ${item.target_unit || ''}` }}</p><small v-if="item.note">{{ item.note }}</small></article><article v-for="item in weekCardio" :key="item.day"><h3>Cardio · {{ dateLabel(item.date) }} <small v-if="item.optional">OPTIONAL</small></h3><p>{{ item.note }}</p><p v-if="item.duration_min">{{ display(item.duration_min) }} min · {{ item.zone || 'Prescribed effort' }}<template v-if="item.hr_low && item.hr_high"> · HR {{ item.hr_low }}–{{ item.hr_high }}</template></p></article></details>
             </div>
-            <aside><MuscleMap compact :geometry="geometry" :leaves="leaves" :week-number="currentWeek" :week-count="plan.weeks.length" @week="selectWeek" /></aside>
+            <aside><MuscleMap compact :geometry="geometry" :leaves="leaves" :heat-scale="analysis.heatScale" :week-number="currentWeek" :week-count="plan.weeks.length" @week="selectWeek" /></aside>
           </div>
         </template>
         <template v-else-if="page === 'analysis'">
           <div class="eyebrow">CAPACITY / ANALYSIS · {{ plan.meta.weeks }} WEEKS</div><h1>Every set counts.</h1><p class="hero-subtitle">One plan. Every contribution.</p>
           <div class="map-filters"><button :aria-pressed="mode === 'plan'" @click="changeMode('plan')">Planned</button><button :aria-pressed="mode === 'log'" @click="changeMode('log')">Logged + planned</button></div><p class="annotation">{{ mode === 'plan' ? 'Prescribed sets for the full cycle.' : 'Recorded sets replace their planned rows. Unrecorded rows still use the plan.' }}</p>
-          <div class="workspace"><div><WeekCapacity :week="week" :ranges="analysis.ranges" /><CapacityBoard :analysis="analysis" :week="week" /></div><aside><MuscleMap :geometry="geometry" :leaves="leaves" :week-number="currentWeek" :week-count="plan.weeks.length" @week="selectWeek" /></aside></div>
+          <div class="workspace analysis-workspace">
+            <MuscleMap :geometry="geometry" :leaves="leaves" :heat-scale="analysis.heatScale" :week-number="currentWeek" :week-count="plan.weeks.length" @week="selectWeek">
+              <template #summary><section class="analysis-summary" data-testid="analysis-summary" aria-label="Selected week summary"><span class="section-label">W{{ String(currentWeek).padStart(2, '0') }} · {{ mode === 'plan' ? 'PLANNED' : 'LOGGED + PLANNED' }}</span><p><strong>{{ week.total }}</strong> raw working sets · <strong>{{ display(week.tonnageKg) }}</strong> kg</p><small>{{ week.dateStart }} — {{ week.dateEnd }} · {{ week.sessions }} sessions</small></section></template>
+            </MuscleMap>
+            <aside><WeekCapacity :week="week" :ranges="analysis.ranges" /><CapacityBoard :analysis="analysis" :week="week" /></aside>
+          </div>
+          <TrendView :analysis="analysis" :performance="performance" />
         </template>
         <template v-else-if="page === 'archive'"><div class="eyebrow">CYCLE HISTORY</div><h1>The archive.</h1><div class="empty-state"><h2>{{ cycles.cycles.some(c => c.status === 'archived') ? 'Archived cycles' : 'No archived cycles.' }}</h2><p>Completed cycles and their reviews will live here. Your current plan remains active.</p><RouterLink to="/plan" class="inline-link">View the active plan →</RouterLink></div></template>
         <template v-else-if="page === 'settings'"><div class="eyebrow">PREFERENCES / SYSTEM</div><h1>The essentials.</h1><div class="empty-state"><h2>Appearance</h2><p>Light by default. Choose the contrast that suits your session.</p><button class="inline-link" @click="theme = theme === 'light' ? 'dark' : 'light'">Use {{ theme === 'light' ? 'dark' : 'light' }} theme</button></div><div class="empty-state"><h2>Server storage</h2><p>Connected · SQLite · Asia/Shanghai</p><p>{{ plan.schemaVersion }} · {{ plan.meta.weeks }} weeks · {{ plan.meta.sessions }} sessions</p><p>Single-user release {{ releaseVersion }}. Records are saved on the server; prescribed and actual sets stay separate.</p></div><PrescriptionSettings :cycle-id="plan.meta.planId" @changed="refresh" /></template>
@@ -210,6 +219,9 @@ watch([() => route.fullPath, loading], async () => {
 
 <style scoped>
 .gear summary { flex-wrap: wrap; }
+.analysis-summary { margin: 20px 0; padding: 16px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.analysis-summary p { margin-top: 8px; font-size: 14px; line-height: 1.7; }
+.analysis-summary small { color: var(--muted); font-size: 11px; }
 .gpp article { padding: 16px 0; border-top: 1px solid var(--line-soft); overflow-wrap: anywhere; }
 .gpp h3 { font-size: 16px; }
 .gpp small { color: var(--muted); line-height: 1.6; }

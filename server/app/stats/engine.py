@@ -1,4 +1,5 @@
 import json
+import math
 from decimal import Decimal, ROUND_HALF_UP
 from functools import lru_cache
 from pathlib import Path
@@ -135,19 +136,23 @@ def analyze(plan, logs=None, mode='plan'):
     unresolved = set()
     actual = dict(cycle['roles'])
     planned = dict(cycle['roles'])
+    planned_peak = 0.0
     for meta in plan['weeks']:
         volume = _blank()
+        planned_volume = _blank()
         for row in (row for row in plan['workouts'] if row['week'] == meta['n']):
             key = f"{row['week']}|{row['day']}|{row['seq']}"
             log = logs.get(key)
             contribution, errors = row_volume(row, log if mode == 'log' else None, policy)
             unresolved.update(errors)
             _add(volume, contribution)
+            _add(planned_volume, contribution if mode == 'plan' else row_volume(row, policy=policy)[0])
             _, bucket, _, _ = classification(row, policy)
             planned[bucket] += row['sets']
             if log is not None:
                 actual[bucket] += log['sets']
         _add(cycle, volume)
+        planned_peak = max(planned_peak, *planned_volume['leavesWeighted'].values())
         per_week.append({
             **{key: meta[key] for key in ('n', 'kind', 'blockId', 'dateStart', 'dateEnd', 'days', 'sessions')},
             'total': volume['sets'], 'roles': volume['roles'], 'lifts': volume['lifts'], 'equivalent': _equivalent(volume),
@@ -156,6 +161,15 @@ def analyze(plan, logs=None, mode='plan'):
             'leaves': _leaves(volume), 'tonnageKg': r1(volume['kg']),
             'topPct': meta.get('topPct'), 'topPctByLift': meta.get('topPctByLift'),
         })
+    for week in per_week:
+        for leaf in week['leaves'].values():
+            leaf['heat'] = {}
+            for label, field in (('Both', 'raw'), ('Primary', 'primaryWeighted'), ('Secondary', 'secondaryWeighted')):
+                share = leaf[field] / planned_peak if planned_peak else 0
+                leaf['heat'][label] = {
+                    'band': min(4, math.ceil(share * 4)) if share > 0 else 0,
+                    'percent': min(100, max(0, share * 100)),
+                }
     completion = {
         'planned': planned, 'actual': actual,
         'main': _pct(actual['main'], planned['main']),
@@ -167,6 +181,7 @@ def analyze(plan, logs=None, mode='plan'):
         'deload': [week['n'] for week in plan['weeks'] if week['kind'] == 'deload'],
         'test': [week['n'] for week in plan['weeks'] if week['kind'] == 'test'],
         'perWeek': per_week,
+        'heatScale': {'maximum': planned_peak, 'basis': 'Highest planned weekly muscle-weighted volume across this cycle'},
         'cycle': {
             'total': cycle['sets'], 'roles': cycle['roles'], 'lifts': cycle['lifts'], 'equivalent': _equivalent(cycle),
             'groups': {key: {'d': cycle['groups'][key], 'w': r1(cycle['groupsWeighted'][key])}
