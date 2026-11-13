@@ -13,6 +13,7 @@ import CapacityBoard from './components/CapacityBoard.vue';
 import DailyRecord from './components/DailyRecord.vue';
 import PrescriptionSettings from './components/PrescriptionSettings.vue';
 import TrendView from './components/TrendView.vue';
+import ArchiveView from './components/ArchiveView.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -45,7 +46,7 @@ watch(theme, value => {
   document.querySelector('meta[name="theme-color"]').content = value === 'dark' ? '#07090D' : '#F4F7FA';
   localStorage.setItem('roastraw-theme', value);
 }, { immediate: true });
-const page = computed(() => route.path.startsWith('/plan') ? 'plan' : ['/', '/today'].includes(route.path) ? 'today' : route.path.slice(1));
+const page = computed(() => route.path.startsWith('/plan') ? 'plan' : route.path === '/archive' || route.path.startsWith('/archive/') ? 'archive' : ['/', '/today'].includes(route.path) ? 'today' : route.path.slice(1));
 const currentWeek = computed(() => {
   if (!plan.value) return 1;
   if (route.params.blockId) return plan.value.weeks.find(week => week.blockId === route.params.blockId)?.n || 0;
@@ -209,7 +210,7 @@ watch([() => route.fullPath, loading], async () => {
           </div>
           <TrendView :analysis="analysis" :performance="performance" />
         </template>
-        <template v-else-if="page === 'archive'"><div class="eyebrow">CYCLE HISTORY</div><h1>The archive.</h1><div class="empty-state"><h2>{{ cycles.cycles.some(c => c.status === 'archived') ? 'Archived cycles' : 'No archived cycles.' }}</h2><p>Completed cycles and their reviews will live here. Your current plan remains active.</p><RouterLink to="/plan" class="inline-link">View the active plan →</RouterLink></div></template>
+        <ArchiveView v-else-if="page === 'archive'" :active-cycle-id="plan.meta.planId" />
         <template v-else-if="page === 'settings'"><div class="eyebrow">PREFERENCES / SYSTEM</div><h1>The essentials.</h1><div class="empty-state"><h2>Appearance</h2><p>Light by default. Choose the contrast that suits your session.</p><button class="inline-link" @click="theme = theme === 'light' ? 'dark' : 'light'">Use {{ theme === 'light' ? 'dark' : 'light' }} theme</button></div><div class="empty-state"><h2>Server storage</h2><p>Connected · SQLite · Asia/Shanghai</p><p>{{ plan.schemaVersion }} · {{ plan.meta.weeks }} weeks · {{ plan.meta.sessions }} sessions</p><p>Single-user release {{ releaseVersion }}. Records are saved on the server; prescribed and actual sets stay separate.</p></div><PrescriptionSettings :cycle-id="plan.meta.planId" @changed="refresh" /></template>
       </template>
     </main>

@@ -10,6 +10,13 @@
     "schema": {"const": "RPL-Review-v1"},
     "exported_at": {"type": "string", "format": "date-time"},
     "plan_id": {"type": "string", "minLength": 1},
+    "app_version": {"type": "string", "minLength": 1},
+    "as_of": {"type": "string", "format": "date"},
+    "cycle": {"type": "object"},
+    "body_metrics": {"type": "array", "items": {"type": "object"}},
+    "prescription_versions": {"type": "array", "items": {"type": "object"}},
+    "journals": {"type": "object", "required": ["logs", "records"], "properties": {"logs": {"type": "array"}, "records": {"type": "array"}}, "additionalProperties": false},
+    "integrity": {"type": "object", "required": ["algorithm", "review_sha256"], "properties": {"algorithm": {"const": "SHA-256"}, "review_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}, "additionalProperties": false},
     "profile_start": {"type": ["object", "null"]},
     "profile_end": {"type": ["object", "null"], "default": null},
     "plan": {

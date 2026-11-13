@@ -17,7 +17,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from .calendar import calendar_state
 from .stats.engine import analyze
 from .stats.performance import performance
-from .store import ReadOnlyError, Store
+from .store import ReadOnlyError, Store, timestamp
 from .validation import Reject, validate_plan
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -141,6 +141,39 @@ def create_app(db_path=None, plan_path=None):
     @app.get('/api/cycle')
     def cycles():
         return store.cycles()
+
+    def cycle_review(cycle_id=None):
+        from .stats.review import build_review
+        selected_id = cycle_id or store.cycles()['active_cycle_id']
+        source = store.review_source(selected_id)
+        if source is None:
+            raise HTTPException(404, 'Cycle not found')
+        if source['saved_review'] is not None and source['cycle']['status'] != 'active':
+            return source['saved_review']
+        as_of = calendar_state(source['plan'], source['logs'])['date']
+        return build_review(source, timestamp(), package_version, as_of)
+
+    @app.get('/api/review')
+    def review(cycle_id: str | None = None):
+        return cycle_review(cycle_id)
+
+    @app.get('/api/review/export')
+    def export_review(cycle_id: str | None = None):
+        return JSONResponse(cycle_review(cycle_id), headers={
+            'Content-Disposition': 'attachment; filename="RoastRaw-review.json"', 'Cache-Control': 'no-store'})
+
+    @app.get('/api/archive')
+    def archive():
+        records = store.cycles()
+        historical = []
+        for cycle in records['cycles']:
+            if cycle['status'] == 'active':
+                continue
+            selected = cycle_review(cycle['id'])
+            historical.append({**cycle, 'weeks': len(selected['plan']['weeks']),
+                               'completion': selected['completion'], 'attainment': selected['attainment'],
+                               'e1rm': selected['e1rm']})
+        return {'cycles': historical, 'active_cycle_id': records['active_cycle_id']}
 
     @app.get('/api/plan')
     def plan(cycle_id: str | None = None):

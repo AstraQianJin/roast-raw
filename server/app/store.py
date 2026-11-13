@@ -221,6 +221,33 @@ class Store:
                              'rpe': row['rpe'], 'note': row['note'], 'updated_at': row['updated_at']}
                 for row in rows}
 
+    def review_source(self, cycle_id):
+        with self.connect() as db:
+            db.execute('BEGIN')
+            cycle = db.execute('SELECT * FROM cycles WHERE id=?', (cycle_id,)).fetchone()
+            if cycle is None:
+                return None
+            plan = json.loads(db.execute('SELECT json FROM plans WHERE cycle_id=?', (cycle_id,)).fetchone()['json'])
+            logs = {row['key']: {'load': row['load'], 'sets': row['set_count'], 'reps': row['reps'],
+                                'rpe': row['rpe'], 'note': row['note'], 'updated_at': row['updated_at']}
+                    for row in db.execute('SELECT * FROM logs WHERE cycle_id=? ORDER BY key', (cycle_id,))}
+            metrics = [{'date': row['date'], 'bodyweight': row['bodyweight'], 'bodyfat': row['bodyfat'],
+                        'measurements': json.loads(row['measurements_json'] or '{}')}
+                       for row in db.execute('SELECT * FROM body_metrics WHERE cycle_id=? ORDER BY date', (cycle_id,))]
+            readiness = [{**json.loads(row['payload']), 'updated_at': row['updated_at']}
+                         for row in db.execute('SELECT * FROM readiness_v2 WHERE cycle_id=? ORDER BY date,updated_at', (cycle_id,))]
+            legacy = [dict(row) for row in db.execute('SELECT * FROM readiness WHERE cycle_id=? ORDER BY date,session_id', (cycle_id,))]
+            versions = [{'id': row['id'], 'plan': json.loads(row['json']), 'created_at': row['created_at']}
+                        for row in db.execute('SELECT * FROM prescription_versions WHERE cycle_id=? ORDER BY created_at,id', (cycle_id,))]
+            journals = {}
+            for name, table in (('logs', 'logs_journal'), ('records', 'records_journal')):
+                journals[name] = [{**dict(row), 'payload': json.loads(row['payload'])}
+                                  for row in db.execute(f'SELECT * FROM {table} WHERE cycle_id=? ORDER BY id', (cycle_id,))]
+            archived = db.execute('SELECT review_json FROM archives WHERE cycle_id=?', (cycle_id,)).fetchone()
+            return {'cycle': dict(cycle), 'plan': plan, 'logs': logs, 'body_metrics': metrics,
+                    'readiness': readiness, 'legacy_readiness': legacy, 'prescription_versions': versions,
+                    'journals': journals, 'saved_review': json.loads(archived['review_json']) if archived else None}
+
     def save_log(self, cycle_id, row, payload):
         key = f"{row['week']}|{row['day']}|{row['seq']}"
         stamp = timestamp()

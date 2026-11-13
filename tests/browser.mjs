@@ -288,25 +288,27 @@ try {
   async function dailyLoaded() {
     await browser.waitFor('document.querySelectorAll(".daily-record .record-form").length === 2 && [...document.querySelectorAll(".daily-record .record-form")].every(form => form.getAttribute("aria-busy") === "false" && !form.querySelector(".load-failure") && !form.querySelector("button[type=submit]").disabled)');
   }
-  async function blockedTrainingRequests(paths, action, label) {
+  async function blockedTrainingRequests(paths, action, label, requestBase = trainingBase, abortedPaths = []) {
     equal(browser.errors, [], `${label}: clean console before deliberate network failure`);
     const failureStart = browser.networkFailures.length;
-    await browser.send('Network.setBlockedURLs', { urls: paths.map(path => `${trainingBase}${path}*`) });
+    await browser.send('Network.setBlockedURLs', { urls: paths.map(path => `${requestBase}${path}*`) });
     try {
       await action();
       // Network.loadingFailed is authoritative even when Chrome emits no console entry.
       equal(browser.errors.filter(entry => entry.source !== 'network'), [], `${label}: no runtime or console exceptions`);
       const expected = entry => entry.source === 'network' && typeof entry.url === 'string' &&
-        paths.some(path => entry.url === `${trainingBase}${path}` || entry.url.startsWith(`${trainingBase}${path}?`)) &&
+        paths.some(path => entry.url === `${requestBase}${path}` || entry.url.startsWith(`${requestBase}${path}?`)) &&
         /net::ERR_BLOCKED_BY_CLIENT/.test(entry.text);
       equal(browser.errors.filter(entry => entry.source === 'network' && !expected(entry)), [], `${label}: no unexpected network errors`);
       const failures = browser.networkFailures.slice(failureStart);
       const expectedFailure = entry => typeof entry.url === 'string' &&
-        paths.some(path => entry.url === `${trainingBase}${path}` || entry.url.startsWith(`${trainingBase}${path}?`)) &&
+        paths.some(path => entry.url === `${requestBase}${path}` || entry.url.startsWith(`${requestBase}${path}?`)) &&
         entry.blockedReason === 'inspector' && entry.canceled === false && entry.type === 'Fetch';
-      equal(failures.filter(entry => !expectedFailure(entry)), [], `${label}: no unexpected request failures`);
+      const expectedAbort = entry => entry.canceled === true && entry.errorText === 'net::ERR_ABORTED' &&
+        entry.type === 'Fetch' && abortedPaths.some(path => entry.url === `${requestBase}${path}`);
+      equal(failures.filter(entry => !expectedFailure(entry) && !expectedAbort(entry)), [], `${label}: no unexpected request failures`);
       for (const path of paths) {
-        equal(failures.some(entry => expectedFailure(entry) && (entry.url === `${trainingBase}${path}` || entry.url.startsWith(`${trainingBase}${path}?`))), true, `${label}: recorded blocked ${path}`);
+        equal(failures.some(entry => expectedFailure(entry) && (entry.url === `${requestBase}${path}` || entry.url.startsWith(`${requestBase}${path}?`))), true, `${label}: recorded blocked ${path}`);
       }
       for (let index = browser.errors.length - 1; index >= 0; index--) {
         if (expected(browser.errors[index])) browser.errors.splice(index, 1);
@@ -778,6 +780,85 @@ try {
       await screenshot(`plan-deload-${width}-${theme}`);
     }
   }
+  await server.stop(); server = null;
+  server = await startServer(['--archive', '--date', `${plan.meta.endDate}T10:00:00`]);
+  const archiveBase = server.base;
+  const archiveApi = async path => (await fetch(`${archiveBase}${path}`)).json();
+  const historicalReview = await archiveApi('/api/review?cycle_id=archive-fixture');
+  const activeBeforeReview = await archiveApi('/api/plan');
+  const activeLogsBeforeReview = await archiveApi('/api/log');
+  equal(historicalReview.attainment.bodyweight, 50, 'independent historical bodyweight progress is 50 percent');
+  equal(historicalReview.attainment.goal, null, 'ordinary historical singles are not actual test attainment');
+  equal(historicalReview.attainment.composite, null, 'missing goal weight is not redistributed');
+  for (const width of [320, 360, 390, 412]) {
+    await browser.viewport(width);
+    for (const theme of ['light', 'dark']) {
+      await load(archiveBase, '/archive');
+      await browser.evaluate(`localStorage.setItem('roastraw-theme', '${theme}')`);
+      await load(archiveBase, '/archive');
+      await browser.waitFor('document.querySelector("[data-testid=archive-view]")?.getAttribute("aria-busy") === "false"');
+      equal(await browser.evaluate('document.querySelectorAll(".archive-entry").length'), 1, 'archive excludes active cycle');
+      equal(await browser.evaluate('Boolean(document.querySelector("[data-testid=archive-active-link]"))'), true, 'active review is separate from historical list');
+      await noOverflow(`archive ${width} ${theme}`);
+      await screenshot(`archive-${width}-${theme}`);
+      await click('[data-testid=archive-cycle-archive-fixture]');
+      await browser.waitFor('Boolean(document.querySelector("[data-testid=review-view]"))');
+      equal(await browser.evaluate('location.pathname'), '/archive/archive-fixture', 'history has cycle-scoped deep link');
+      equal(await browser.evaluate('document.querySelector("[data-testid=review-status]").textContent'), 'READ-ONLY', 'historical status explicit');
+      equal(await browser.evaluate('document.querySelector("[data-testid=review-score-bodyweight] .score-value").textContent'), '50%', 'review displays server bodyweight progress');
+      equal(await browser.evaluate('document.querySelector("[data-testid=review-score-goal] .score-value").textContent'), '—', 'unknown actual tests remain dash');
+      equal(await browser.evaluate('document.querySelector("[data-testid=review-score-composite] .score-value").textContent'), '—', 'unknown composite remains dash');
+      equal(await browser.evaluate('document.querySelectorAll(".record-form, .exercise-editor, .prescription-settings").length'), 0, 'historical review has no write forms');
+      equal(await browser.evaluate('document.querySelector("[data-testid=performance-records]").textContent.includes("70 kg")'), true, 'historical performance isolated from active 100 kg log');
+      await noOverflow(`review ${width} ${theme}`);
+      await screenshot(`review-${width}-${theme}`);
+      await click('[data-testid=archive-plan] > summary');
+      equal(await browser.evaluate('document.querySelectorAll("[data-testid=archive-rows] > li").length'), plan.workouts.filter(row => row.week === 1).length, 'every historical first-week row is readable');
+      assert.match(await browser.evaluate('document.querySelector("[data-testid=archive-rows]").textContent'), /70 kg.*Historical <script> data, not HTML/s, 'notes are native escaped text and actual load is historical'); checks++;
+      equal(await browser.evaluate('document.querySelectorAll("[data-testid=archive-rows] script").length'), 0, 'untrusted notes never become executable markup');
+      await input('[data-testid=archive-week]', plan.weeks.at(-1).n);
+      equal(await browser.evaluate('document.querySelectorAll("[data-testid=archive-rows] > li").length'), plan.workouts.filter(row => row.week === plan.weeks.at(-1).n).length, 'arbitrary final week history is readable');
+      await click('[data-testid=review-readiness] > summary');
+      await browser.waitFor('document.querySelector("[data-testid=review-readiness] .source-reading") !== null');
+      assert.match(await browser.evaluate('document.querySelector("[data-testid=review-readiness]").textContent'), /Legacy fatigue \(not recovery\).*6/s, 'legacy fatigue preserved separately'); checks++;
+      equal(await browser.evaluate('[...document.querySelectorAll("main button, main select, main summary, main a")].filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0&&(r.width<44||r.height<44)}).map(e=>e.className)'), [], 'review controls meet 44px in expanded states');
+      await noOverflow(`review expanded ${width} ${theme}`);
+      equal(await browser.evaluate('(() => { const previous=scrollY; scrollTo(innerWidth,previous); const right=scrollX; scrollTo(-innerWidth,previous); const left=scrollX; scrollTo(0,previous); return [right,left]; })()'), [0, 0], 'review has no actual horizontal scrolling');
+      await load(archiveBase, '/archive/archive-fixture');
+      await browser.waitFor('Boolean(document.querySelector("[data-testid=review-view]"))');
+      equal(await browser.evaluate('document.querySelector("[data-testid=review-status]").textContent'), 'READ-ONLY', 'deep-link reload retains historical identity');
+    }
+  }
+  await browser.evaluate('(() => { window.reviewDownload=null; window.originalCreateURL=URL.createObjectURL; window.originalAnchorClick=HTMLAnchorElement.prototype.click; URL.createObjectURL=blob=>{window.reviewDownload=blob.text();return window.originalCreateURL(blob)}; HTMLAnchorElement.prototype.click=function(){if(!this.download)return window.originalAnchorClick.call(this)}; })()');
+  await click('[data-testid=review-export]');
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=review-export-status]"))');
+  const downloadedReview = await browser.evaluate('window.reviewDownload.then(text=>JSON.parse(text))');
+  equal(downloadedReview.plan_id, 'archive-fixture', 'download uses selected historical cycle');
+  equal(downloadedReview.logs[0].load, 70, 'complete blob retains raw historical actual');
+  equal(downloadedReview.prescription_versions[0].plan.meta.planId, 'archive-fixture', 'download preserves historical prescription plan');
+  equal(downloadedReview.readiness.legacy[0].fatigue, 6, 'download preserves original fatigue');
+  await browser.evaluate('URL.createObjectURL=window.originalCreateURL; HTMLAnchorElement.prototype.click=window.originalAnchorClick');
+  await blockedTrainingRequests(['/api/review/export'], async () => {
+    await click('[data-testid=review-export]');
+    await browser.waitFor('Boolean(document.querySelector("[data-testid=review-error]"))');
+    equal(await browser.evaluate('document.querySelectorAll("[data-testid=review-view]").length'), 0, 'failed export clears stale review');
+  }, 'review export failure', archiveBase);
+  await click('[data-testid=review-retry]');
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=review-view]"))');
+  await blockedTrainingRequests(['/api/review'], async () => {
+    await browser.navigate(`${archiveBase}/archive/archive-fixture`);
+    await browser.waitFor('Boolean(document.querySelector("[data-testid=review-error]"))');
+    equal(await browser.evaluate('document.querySelectorAll("[data-testid=review-view]").length'), 0, 'failed GET clears stale review');
+  }, 'review GET failure', archiveBase, ['/api/analysis?cycle_id=archive-fixture&mode=log', '/api/performance?cycle_id=archive-fixture']);
+  await click('[data-testid=review-retry]');
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=review-view]"))');
+  await load(archiveBase, `/archive/${encodeURIComponent(plan.meta.planId)}`);
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=review-view]"))');
+  equal(await browser.evaluate('document.querySelector("[data-testid=review-status]").textContent'), 'IN PROGRESS', 'active review never implies archival');
+  equal(await archiveApi('/api/plan'), activeBeforeReview, 'archive navigation and exports do not modify active plan');
+  equal(await archiveApi('/api/log'), activeLogsBeforeReview, 'archive navigation and exports do not modify active logs');
+  equal((await archiveApi('/api/cycle')).active_cycle_id, plan.meta.planId, 'export retains active cycle');
+  console.log('PASS review/archive: cycle-isolated read-only deep links, 50-percent bodyweight progress, null test scores, complete Blob export, legacy fatigue, all widths/themes and failure retry');
   equal(browser.errors, [], 'no browser runtime or console errors');
   console.log(`PASS browser.mjs: ${checks} assertions; ${screenshots} delivery screenshots; CDP device metrics at 320/360/390/412`);
 } finally {

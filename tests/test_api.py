@@ -901,6 +901,7 @@ class UvicornRestartTests(GeneratedPlanCase):
             metrics_payload = {'cycle_id': self.seed['meta']['planId'], 'date': row['date'], 'bodyweight': 82.5,
                                'bodyfat': None, 'measurements': {'waist': 80.0}}
             metrics_before = self.request_json(base_url, '/api/body-metrics', method='PUT', payload=metrics_payload)
+            review_before = self.request_json(base_url, '/api/review/export')
             before = self.request_json(base_url, '/api/log')
             self.assertEqual(before, {
                 'cycle_id': self.seed['meta']['planId'],
@@ -916,6 +917,11 @@ class UvicornRestartTests(GeneratedPlanCase):
             after = self.request_json(base_url, '/api/log')
             self.assertEqual(after, before)
             self.assertEqual(self.request_json(base_url, '/api/performance'), performance_before)
+            review_after = self.request_json(base_url, '/api/review/export')
+            for exported in (review_before, review_after):
+                exported.pop('exported_at')
+                exported.pop('integrity')
+            self.assertEqual(review_after, review_before)
             self.assertEqual(self.request_json(base_url, '/api/readiness' + daily_query), readiness_before)
             metrics_query = f"?cycle_id={self.seed['meta']['planId']}&date={row['date']}"
             self.assertEqual(self.request_json(base_url, '/api/body-metrics' + metrics_query), metrics_before)
