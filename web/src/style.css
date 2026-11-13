@@ -65,6 +65,10 @@ main { padding: 30px 0 48px; }
 .gear summary::-webkit-details-marker { display: none; }
 .gear .chip { padding: 2px 5px; border: 1px solid var(--line); color: var(--muted); }
 .gear p { font-size: 12px; padding-bottom: 16px; color: var(--muted); }
+.warmups .warmup-lift { padding-bottom: 12px; }
+.warmups .warmup-steps { font: 11px/1.7 var(--mono); color: var(--ink); padding-bottom: 0; }
+.warmups .warmup-steps span:not(:last-child)::after { content: " ·"; color: var(--muted); }
+.warmups p.micro-copy { font-size: 10px; }
 .section-kicker { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 18px; }
 .section-heading { display: flex; justify-content: space-between; align-items: baseline; margin: 26px 0 12px; }
 .exercise { border-left: 2px solid var(--role); padding: 14px 12px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }

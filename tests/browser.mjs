@@ -98,6 +98,18 @@ try {
       await load(base, dayPath);
       assert.ok(await browser.evaluate('document.querySelectorAll(".exercise").length > 0'), 'day expands after direct reload'); checks++;
       await noOverflow(`Day ${width} ${theme}`);
+      const dayRow = plan.workouts.find(row => row.week === 2);
+      const warmups = plan.warmups?.[dayRow.date] || [];
+      equal(await browser.evaluate('document.querySelectorAll("[data-testid=warmups]").length'), warmups.length ? 1 : 0, 'warm-up block matches plan data');
+      if (warmups.length) {
+        equal(await browser.evaluate('document.querySelector("[data-testid=warmups]").open'), false, 'warm-up starts collapsed');
+        await click('[data-testid=warmups] summary');
+        equal(await browser.evaluate('document.querySelector("[data-testid=warmups]").open'), true, 'warm-up expands');
+        const warmText = await browser.evaluate('document.querySelector("[data-testid=warmups]").textContent');
+        assert.ok(warmText.includes('SUGGESTION ONLY') && warmText.includes(`${warmups[0].steps[0].kg} kg`), 'warm-up steps render plan values'); checks++;
+        await noOverflow(`Day warm-up expanded ${width} ${theme}`);
+        await click('[data-testid=warmups] summary');
+      }
       console.log(`PASS CDP ${width}px ${theme}: Today, Plan, map, day reload, 44px targets, no page overflow`);
     }
   }
@@ -113,6 +125,13 @@ try {
   await load(base, '/plan/test');
   equal(await browser.evaluate('Number(document.querySelector(".week-number").textContent)'), 13, 'test week derived');
   await noOverflow('test week');
+  const deloadWeek = plan.weeks.find(w => w.kind === 'deload');
+  await load(base, `/plan/week/${deloadWeek.n}`);
+  equal(await browser.evaluate('document.querySelector(".week-header small").textContent'), 'DELOAD WEEK', 'deload week labelled');
+  assert.match(await browser.evaluate('document.querySelector(".week-header + .notice")?.textContent || ""'), /lighter loads, same movements/, 'deload notice explains reduced load'); checks++;
+  await noOverflow('deload week');
+  await load(base, `/plan/week/${plan.weeks.find(w => w.kind === 'training').n}`);
+  equal(await browser.evaluate('document.querySelector(".week-header + .notice")'), null, 'training week carries no deload notice');
   await load(base, '/plan/week/1');
   await click('[aria-label="Next plan week"]');
   await browser.evaluate('history.back()');
@@ -156,6 +175,10 @@ try {
   await load(server.base, '/');
   assert.match(await browser.evaluate('document.querySelector(".badges").textContent'), /TODAY’S SESSION/); checks++;
   assert.doesNotMatch(await browser.evaluate('document.querySelector(".badges").textContent'), /PREVIEW/); checks++;
+  equal(await browser.evaluate('document.querySelector("[data-testid=warmups]").open'), false, 'training-day warm-up collapsed by default');
+  await click('[data-testid=warmups] summary');
+  assert.match(await browser.evaluate('document.querySelector("[data-testid=warmups]").textContent'), /empty bar/, 'training-day warm-up lists steps'); checks++;
+  await noOverflow('training-day warm-up expanded');
   await noOverflow('training-day fixture');
   console.log('PASS training-day clock fixture: today is actual scheduled session, not next-session preview');
   equal(browser.errors, [], 'no browser runtime or console errors');

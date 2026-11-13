@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { animate } from '@motionone/dom';
 import MuscleMap from './components/MuscleMap.vue';
 import ExerciseRows from './components/ExerciseRows.vue';
+import WarmupSuggestions from './components/WarmupSuggestions.vue';
 import WeekCapacity from './components/WeekCapacity.vue';
 import CapacityBoard from './components/CapacityBoard.vue';
 
@@ -64,6 +65,7 @@ const leaves = computed(() => analysis.value.leafOrder.map(id => {
   return { id, name: geometry.value.leaves[id].en, weighted: values.w, raw: values.raw, direct: values.d, primaryWeighted: values.primaryWeighted, secondaryWeighted: values.secondaryWeighted, mev: range.mev, mrv: range.mrv, scope: range.scope, verdict };
 }));
 const display = value => value === null || value === undefined ? '—' : Number(value).toLocaleString('en-US', { maximumFractionDigits: 1 });
+const DELOAD_NOTE = 'Deload week: lighter loads, same movements. Nothing is skipped and no date moves.';
 function dateLabel(value) { return new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit', timeZone: 'Asia/Shanghai' }).format(new Date(`${value}T00:00:00+08:00`)).toUpperCase(); }
 function selectWeek(number) {
   if (number < 1 || number > plan.value.weeks.length) return;
@@ -115,6 +117,7 @@ watch(page, value => { if (value !== 'analysis' && mode.value !== 'plan') change
             <h1>{{ calendar.status === 'training' ? todayLifts.map(lift => lift.label.charAt(0) + lift.label.slice(1).toLowerCase()).join(' · ') || 'Training day.' : calendar.status === 'ended' ? 'Cycle complete.' : 'Rest & recover.' }}</h1>
             <p class="hero-subtitle">{{ calendar.status === 'training' ? plan.weeks.find(week => week.n === calendar.week).blockName : calendar.status === 'upcoming' ? 'A stronger cycle starts here.' : 'The calendar stays. Recovery matters.' }}</p>
             <p v-if="calendar.status !== 'training'" class="notice">{{ calendar.status === 'upcoming' ? `Your plan starts ${dateLabel(plan.meta.startDate)}. There is no session today.` : calendar.status === 'ended' ? 'The scheduled cycle has ended. No training dates have been moved.' : 'No session scheduled today. Missed sessions do not move the calendar.' }}</p>
+            <p v-if="calendar.status === 'training' && plan.weeks.find(item => item.n === calendar.week)?.kind === 'deload'" class="notice">{{ DELOAD_NOTE }}</p>
             <template v-if="todaySession">
               <div class="badges"><span class="badge">{{ calendar.day ? 'TODAY’S SESSION' : 'NEXT SESSION · PREVIEW' }}</span><span class="badge">W{{ String(todaySession.week).padStart(2, '0') }} · DAY {{ todaySession.day }} · {{ dateLabel(todaySession.date) }}</span></div>
               <section v-if="todayLifts.length" class="main-loads" :style="{ '--columns': todayLifts.length }" aria-label="Main lift loads">
@@ -124,6 +127,7 @@ watch(page, value => { if (value !== 'analysis' && mode.value !== 'plan') change
               <section class="day-capacity" aria-label="Session capacity"><header><span class="section-label">SESSION CAPACITY · PLANNED</span><strong>{{ todaySetCount }} SETS</strong></header><div class="capacity-track"><i v-for="(sets, index) in [todayTotals.main, todayTotals.sbdVar + todayTotals.nonSbdVar, todayTotals.accessory]" :key="index" :style="{ width: `${sets / Math.max(todaySetCount, 1) * 100}%` }"></i></div><div class="capacity-key"><span>MAIN {{ todayTotals.main }}</span><span>VAR {{ todayTotals.sbdVar + todayTotals.nonSbdVar }}</span><span>ACCESSORY {{ todayTotals.accessory }}</span></div></section>
               <details class="gear"><summary>GEAR <span class="chip">{{ todayLifts.some(lift => lift.load % 2.5 !== 0) ? 'MICRO PLATES' : 'SESSION SETUP' }}</span></summary><p>{{ todayLifts.some(lift => lift.load % 2.5 !== 0) ? 'Some prescribed loads need micro plates. Prepare equipment before the session; the plan’s loads remain unchanged.' : 'Prepare your usual training equipment. Detailed gear guidance follows in the reading-view milestone.' }}</p></details>
               <RouterLink :to="`/plan/week/${todaySession.week}/day/${todaySession.day}`" class="inline-link">Open the scheduled day →</RouterLink>
+              <WarmupSuggestions :entries="plan.warmups?.[todaySession.date] || []" />
               <ExerciseRows :rows="todayRows" />
             </template>
           </div>
@@ -139,11 +143,13 @@ watch(page, value => { if (value !== 'analysis' && mode.value !== 'plan') change
               <div class="week-progress" aria-hidden="true"><i v-for="item in plan.weeks" :key="item.n" :class="{ active: item.n === currentWeek, deload: item.kind === 'deload' }"></i></div>
               <nav class="week-rail" aria-label="Weeks in selected block"><RouterLink v-for="item in plan.weeks.filter(w => w.blockId === week.blockId)" :key="item.n" :to="`/plan/week/${item.n}`" :class="[item.kind, { active: item.n === currentWeek }]">{{ String(item.n).padStart(2, '0') }}</RouterLink></nav>
               <div class="week-header"><span class="week-number">{{ currentWeek }}</span><div><h2>{{ weekMeta.blockName }}</h2><small>{{ week.kind.toUpperCase() }} WEEK</small></div><div class="week-summary"><strong>{{ display(week.tonnageKg / 1000) }} t</strong><small>{{ week.sessions }} SESSIONS</small></div></div>
+              <p v-if="weekMeta.kind === 'deload'" class="notice">{{ DELOAD_NOTE }}</p>
               <div class="top-intensity"><span>TOP %1RM <b>{{ display(week.topPct) }}%</b></span><span>S {{ display(week.topPctByLift.S) }} · B {{ display(week.topPctByLift.B) }} · D {{ display(week.topPctByLift.D) }}</span></div>
               <p class="breadcrumb">Plan / {{ week.blockId }} / Week {{ currentWeek }}<template v-if="route.params.day"> / Day {{ route.params.day }}</template></p>
               <div v-for="day in days" :key="day.date">
                 <template v-if="day.rows.length">
                   <RouterLink class="day-row" :to="route.params.day === day.id ? `/plan/week/${currentWeek}` : `/plan/week/${currentWeek}/day/${day.id}`" :aria-expanded="route.params.day === day.id"><span class="day-date"><strong>{{ day.label }}</strong>{{ day.weekday }}</span><span class="day-letter">{{ day.id }}</span><span class="day-info"><span class="top-load"><small>TOP</small>{{ topLifts(day.rows).map(lift => `${lift.code} ${display(lift.load)}`).join(' · ') || 'ACCESSORY WORK' }}</span><span class="day-title" style="display:block">{{ plan.days.find(item => item.id === day.id).titleEn }}</span><span class="day-status">{{ (calendar.sessionStates[`${currentWeek}|${day.id}`] || 'scheduled').toUpperCase() }}</span></span><span>{{ route.params.day === day.id ? '−' : '›' }}</span></RouterLink>
+                  <WarmupSuggestions v-if="route.params.day === day.id" :entries="plan.warmups?.[day.date] || []" />
                   <ExerciseRows v-if="route.params.day === day.id" :rows="day.rows" />
                 </template>
                 <div v-else class="rest-row"><span>{{ day.label }} · {{ day.weekday }}</span><span>REST</span></div>

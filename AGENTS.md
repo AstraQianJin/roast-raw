@@ -118,6 +118,7 @@ npm --prefix web run dev                 # 开发态 5173，代理 /api
 ```
 
 完整 setup（venv / pip 镜像 / npm ci）见 `README.md`，不在此抄。
+提交身份：`git -c user.name=Astra -c user.email=astra@roastraw.local commit …`（身份不写 config；密钥目录任何新文件自动被 `Ref/07_Permissions/*` 忽略，勿改该规则）。
 
 ## 6 · 症状 → 对策（拿报错原文搜这张表，别通读）
 
