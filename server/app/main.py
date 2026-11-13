@@ -76,6 +76,24 @@ class MetricsInput(DatedInput):
     measurements: Measurements = Field(default_factory=Measurements)
 
 
+class PrescriptionInput(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True, allow_inf_nan=False)
+    cycle_id: str = Field(min_length=1)
+    current_id: str = Field(pattern=r'^[a-f0-9]{64}$')
+    references: dict[str, float | None]
+
+
+class ApplyPrescription(PrescriptionInput):
+    preview_id: str = Field(pattern=r'^[a-f0-9]{64}$')
+
+
+class RestorePrescription(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+    cycle_id: str = Field(min_length=1)
+    current_id: str = Field(pattern=r'^[a-f0-9]{64}$')
+    revision_id: str = Field(pattern=r'^[a-f0-9]{64}$')
+
+
 def create_app(db_path=None, plan_path=None):
     store = Store(db_path or os.environ.get('RR_DB_PATH', ROOT / 'data' / 'roastraw.sqlite3'))
 
@@ -85,6 +103,7 @@ def create_app(db_path=None, plan_path=None):
         validate_plan(seed)
         store.initialize(seed)
         store.upgrade()
+        store.upgrade_prescriptions()
         yield
 
     package_version = json.loads((ROOT / 'web/package.json').read_text(encoding='utf-8'))['version']
@@ -196,6 +215,79 @@ def create_app(db_path=None, plan_path=None):
         writable(payload.cycle_id)
         store.save_metrics(payload.cycle_id, payload.model_dump(exclude={'cycle_id'}))
         return metrics(payload.cycle_id, payload.date)
+
+    @app.get('/api/prescription')
+    def prescription(cycle_id: str):
+        from .stats.variations import POLICY, catalogue, defaults, digest, family, system_load
+        selected = active_plan(cycle_id)
+        policy = selected.get('prescription', {})
+        readings = store.metrics(cycle_id)
+        actuals = store.logs(cycle_id)
+        system_loads = {}
+        if policy.get('version') == POLICY:
+            for row in selected['workouts']:
+                info = family(row)
+                if info and info['system']:
+                    key = f"{row['week']}|{row['day']}|{row['seq']}"
+                    log = actuals.get(key)
+                    system_loads[key] = {
+                        'planned': [system_load(segment['load'], row['date'], readings) for segment in row['segments']],
+                        'logged': system_load(log['load'], row['date'], readings) if log and log['sets'] > 0 else None}
+        return {'cycle_id': cycle_id, 'currentId': digest(selected), 'policy': policy.get('version', 'legacy'),
+                'references': policy.get('references', defaults()),
+                'catalogue': [entry for group in catalogue().values() for entry in group],
+                'versions': store.prescription_versions(cycle_id), 'systemLoads': system_loads}
+
+    def preview_payload(payload):
+        from .stats.variations import changes, digest, recalculate
+        writable(payload.cycle_id)
+        selected = active_plan(payload.cycle_id)
+        if digest(selected) != payload.current_id:
+            raise HTTPException(409, 'Prescription changed. Refresh and review the new version before saving.')
+        try:
+            candidate = recalculate(selected, payload.references)
+        except ValueError as exc:
+            from .stats.variations import defaults
+            message = str(exc)
+            bad_id = next((key for key in defaults().keys() | payload.references.keys() if key == message or key in message), None)
+            row = next((row for row in selected['workouts'] if f"{row['week']}|{row['day']}|{row['seq']} (" in message), {})
+            raise Reject([{'file': 'request', 'week': row.get('week'), 'day': row.get('day'),
+                           'movement': row.get('movement'), 'field': 'references' + ('.' + bad_id if bad_id else ''),
+                           'expected': 'Known movement ID with a positive finite reference for prescribed variations. ' + message}])
+        validate_plan(candidate, file='recalculated.json')
+        return selected, candidate, {'previewId': digest(candidate), 'currentId': payload.current_id,
+                                     'changes': changes(selected, candidate)}
+
+    @app.post('/api/prescription/preview')
+    def preview_prescription(payload: PrescriptionInput):
+        return preview_payload(payload)[2]
+
+    @app.post('/api/prescription/apply')
+    def apply_prescription(payload: ApplyPrescription):
+        _, candidate, preview = preview_payload(payload)
+        if preview['previewId'] != payload.preview_id:
+            raise HTTPException(409, 'Preview does not match these references. Review again before applying.')
+        revision_id = store.replace_prescription(payload.cycle_id, payload.current_id, candidate, 'apply')
+        return {'id': revision_id, 'saved': True}
+
+    @app.get('/api/prescription/version')
+    def prescription_version(cycle_id: str, revision_id: str):
+        from .stats.variations import changes
+        selected = active_plan(cycle_id)
+        historical = store.prescription_version(cycle_id, revision_id)
+        if historical is None:
+            raise HTTPException(404, 'Prescription version not found')
+        return {'id': revision_id, 'plan': historical, 'changes': changes(selected, historical)}
+
+    @app.post('/api/prescription/restore')
+    def restore_prescription(payload: RestorePrescription):
+        writable(payload.cycle_id)
+        historical = store.prescription_version(payload.cycle_id, payload.revision_id)
+        if historical is None:
+            raise HTTPException(404, 'Prescription version not found')
+        validate_plan(historical, file='historical.json')
+        revision_id = store.replace_prescription(payload.cycle_id, payload.current_id, historical, 'restore')
+        return {'id': revision_id, 'saved': True}
 
     @app.get('/api/analysis')
     def analysis(mode: Literal['plan', 'log'] = 'plan', cycle_id: str | None = None):

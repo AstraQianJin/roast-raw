@@ -72,8 +72,8 @@ def parse_segments(e):
 
     low = raw.lower()
     note = str(e.get("notes") or "").lower()
-    bodyweight = (("自重" in raw) or ("bodyweight" in low) or ("bodyweight" in note)
-                  or bool(e.get("bwAnchor")))
+    bodyweight = not e.get("systemLoad") and (("自重" in raw) or ("bodyweight" in low) or ("bodyweight" in note)
+                                             or bool(e.get("bwAnchor")))
     technique = ("技术组" in raw) or ("technique" in low)
     side = _SIDE_RX.search(raw)
     if side:

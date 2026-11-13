@@ -607,6 +607,109 @@ try {
     }
   }
   console.log('PASS isolated training forms: single editor and drafts, real SQLite actual/skip saves, readiness 66.7 / REC 1.08, independent pain and raw baselines, dated zero-fat body metrics, failed saves and GET retries, expanded four-width/two-theme scrolling and 44px controls');
+
+  const prescriptionUrl = `/api/prescription?${new URLSearchParams({ cycle_id: cycleId })}`;
+  const originalInfo = await trainingApi(prescriptionUrl);
+  const variationLifts = { 'Low-bar Squat': 'S', 'Wide-grip Bench': 'B', 'Sumo Deadlift': 'D', 'Power Clean': 'D', OHP: 'B', 'Pull-Up': 'D', Dip: 'B', 'Bent-Over Barbell Row': 'D' };
+  const ohpId = originalInfo.catalogue.find(item => item.name === 'OHP').id;
+  const referenceSelector = `.reference-input[name=${JSON.stringify(ohpId)}]`;
+  const settingsLoaded = async () => {
+    await browser.waitFor('Boolean(document.querySelector(".preview-prescription")) && !document.querySelector(".preview-prescription").disabled');
+    if (!await browser.evaluate('document.querySelector("[data-testid=prescription-settings]").open')) await click('[data-testid=prescription-settings] > summary');
+  };
+  await load(trainingBase, '/settings');
+  await settingsLoaded();
+  equal(await browser.evaluate(`document.querySelector(${JSON.stringify(referenceSelector)}).value`), '60', 'approved OHP reference starts at 60 kg');
+  equal(originalInfo.policy, 'legacy', 'startup never silently applies a prescription');
+  await blockedTrainingRequests(['/api/prescription/preview'], async () => {
+    await click('.preview-prescription');
+    await browser.waitFor('Boolean(document.querySelector(".prescription-error")) && !document.querySelector(".preview-prescription").disabled');
+    equal(await browser.evaluate(`document.querySelector(${JSON.stringify(referenceSelector)}).value`), '60', 'failed preview retains reference inputs');
+    equal(await trainingApi('/api/plan'), trainingPlan, 'blocked preview cannot replace original plan');
+  }, 'prescription preview failure');
+  await click('.preview-prescription');
+  await browser.waitFor('Boolean(document.querySelector(".prescription-preview")) && Boolean(document.querySelector(".apply-prescription"))');
+  equal(await trainingApi('/api/plan'), trainingPlan, 'successful preview is still read-only');
+  await input(referenceSelector, '70');
+  equal(await browser.evaluate('Boolean(document.querySelector(".prescription-preview"))'), false, 'editing a reference invalidates the reviewed preview');
+  await click('.preview-prescription');
+  await browser.waitFor('Boolean(document.querySelector(".apply-prescription")) && !document.querySelector(".apply-prescription").disabled');
+  await blockedTrainingRequests(['/api/prescription/apply'], async () => {
+    await click('.apply-prescription');
+    await browser.waitFor('Boolean(document.querySelector(".prescription-error")) && !document.querySelector(".apply-prescription").disabled');
+    equal(await browser.evaluate(`document.querySelector(${JSON.stringify(referenceSelector)}).value`), '70', 'failed apply retains edited reference');
+    equal(await trainingApi('/api/plan'), trainingPlan, 'failed apply leaves every original field intact');
+  }, 'prescription apply failure');
+  await click('.apply-prescription');
+  await browser.waitFor('document.querySelector("main").getAttribute("aria-busy") === "false" && Boolean(document.querySelector(".preview-prescription")) && !document.querySelector(".preview-prescription").disabled');
+  const revisedPlan = await trainingApi('/api/plan');
+  equal(revisedPlan.prescription.version, 'eight-variations-v1', 'explicit UI apply saves a versioned policy');
+  equal(revisedPlan.prescription.basePlan, trainingPlan, 'original prescription remains fully recoverable');
+  equal(revisedPlan.prescription.references[ohpId], 70, 'manual reference persists independently of estimated performance');
+  equal(revisedPlan.workouts.map(row => [row.date, row.sets, row.reps, row.targetRpe, row.movementId]), trainingPlan.workouts.map(row => [row.date, row.sets, row.reps, row.targetRpe, row.movementId]), 'dates, sets, reps, target RPE and identities survive UI recalculation');
+  equal([...new Set(revisedPlan.workouts.filter(row => variationLifts[row.movement]).map(row => row.movement))].sort(), Object.keys(variationLifts).sort(), 'all eight approved variations remain in the plan');
+  for (const row of revisedPlan.workouts.filter(row => variationLifts[row.movement])) {
+    equal([row.role, row.bucket, row.lift], ['variation', 'sbdVar', variationLifts[row.movement]], `${row.movement}: approved classification`);
+  }
+  equal((await trainingApi(logUrl)).logs, skippedLogs.logs, 'prescription apply does not rewrite actual logs');
+  equal((await trainingApi(metricsUrl)).records, [bodyRecord], 'prescription apply preserves dated body metrics');
+  await load(trainingBase, '/settings');
+  await settingsLoaded();
+  equal(await browser.evaluate(`document.querySelector(${JSON.stringify(referenceSelector)}).value`), '70', 'reference hydrates after full browser reload');
+  const history = await trainingApi(prescriptionUrl);
+  equal(history.versions.length, 2, 'original and recalculated immutable versions exist');
+  const originalIndex = history.versions.findIndex(item => item.id === originalInfo.currentId);
+  await click('.prescription-history > summary');
+  await click(`.revision-list > li:nth-child(${originalIndex + 1}) .revision-compare`);
+  await browser.waitFor('Boolean(document.querySelector(".revision-restore")) && !document.querySelector(".revision-restore").disabled');
+  await click('.revision-restore');
+  await settingsLoaded();
+  await browser.waitFor(`document.querySelector(${JSON.stringify(referenceSelector)})?.value === '60'`);
+  equal(await trainingApi('/api/plan'), trainingPlan, 'reviewed restore returns every original prescription field');
+  equal((await trainingApi(logUrl)).logs, skippedLogs.logs, 'restore never discards actual logs');
+  await click('.preview-prescription');
+  await browser.waitFor('Boolean(document.querySelector(".apply-prescription")) && !document.querySelector(".apply-prescription").disabled');
+  await click('.apply-prescription');
+  await browser.waitFor(`document.querySelector('main').getAttribute('aria-busy') === 'false' && document.querySelector(${JSON.stringify(referenceSelector)})?.value === '60' && !document.querySelector('.preview-prescription').disabled`);
+  const defaultPlan = await trainingApi('/api/plan');
+  equal(defaultPlan.prescription.references[ohpId], 60, 'reviewed default reference reapplies after original restore');
+  const pull = defaultPlan.workouts.find(row => row.movement === 'Pull-Up' && row.date >= trainingDate);
+  assert.ok(pull, 'fixture includes a scheduled system-weight pull-up on or after the bodyweight reading'); checks++;
+  await load(trainingBase, `/plan/week/${pull.week}/day/${pull.day}`);
+  assert.match(await browser.evaluate('document.querySelector("[data-testid=system-load]").textContent'), /Total system weight.*bodyweight 82.5 kg/s, 'dated bodyweight is shown with system load'); checks++;
+  equal(await browser.evaluate('document.querySelector("[data-testid=gpp]").open'), false, 'weekly GPP starts collapsed');
+  await click('[data-testid=gpp] summary');
+  assert.match(await browser.evaluate('document.querySelector("[data-testid=gpp]").textContent'), /Zone 2 cardio.*Breathing and mobility/s, 'GPP retains prescribed cardio and recovery'); checks++;
+  await noOverflow('expanded weekly GPP');
+  for (const width of [320, 360, 390, 412]) {
+    await browser.viewport(width);
+    for (const theme of ['light', 'dark']) {
+      await load(trainingBase, '/settings');
+      await browser.evaluate(`localStorage.setItem('roastraw-theme', '${theme}')`);
+      await load(trainingBase, '/settings');
+      await settingsLoaded();
+      await click('.preview-prescription');
+      await browser.waitFor('Boolean(document.querySelector(".prescription-preview"))');
+      await browser.evaluate('[...document.querySelectorAll(".reference-family, .prescription-history")].forEach(item => item.open = true)');
+      await noOverflow(`prescription reference and preview ${width} ${theme}`);
+      equal(await browser.evaluate('[...document.querySelectorAll("[data-testid=prescription-settings] input, [data-testid=prescription-settings] button, [data-testid=prescription-settings] summary")].filter(element => { const r=element.getBoundingClientRect(); return r.width>0 && r.height>0 && (r.width<44 || r.height<44); }).map(element=>element.className)'), [], `prescription ${width} ${theme}: 44px controls`);
+      equal(await browser.evaluate('(() => { const previous=scrollY; scrollTo(innerWidth,previous); const right=scrollX; scrollTo(-innerWidth,previous); const left=scrollX; scrollTo(0,previous); return [right,left]; })()'), [0, 0], `prescription ${width} ${theme}: no horizontal scrolling`);
+      await screenshot(`references-${width}-${theme}`, '[data-testid=prescription-settings]');
+      await load(trainingBase, `/plan/week/${pull.week}/day/${pull.day}`);
+      await browser.evaluate('document.querySelector("[data-testid=gpp]").open = true; document.querySelector(".plan-day .gear").open = true');
+      await noOverflow(`system load and expanded GPP/GEAR ${width} ${theme}`);
+      equal(await browser.evaluate('[...document.querySelectorAll(".gear summary")].filter(element => { const r=element.getBoundingClientRect(); return r.width>0 && r.height>0 && (r.width<44 || r.height<44); }).length'), 0, `GPP/GEAR ${width} ${theme}: 44px summaries`);
+      await screenshot(`supporting-work-${width}-${theme}`, '[data-testid=gpp]');
+      await load(trainingBase, `/analysis?week=${pull.week}`);
+      const capacity = (await trainingApi('/api/analysis')).perWeek.find(week => week.n === pull.week);
+      for (const code of ['S', 'B', 'D']) equal(await browser.evaluate(`document.querySelector('[data-testid=equivalent-${code}]').textContent`), capacity.equivalent[code].total.toFixed(1), `${width} ${theme}: ${code} displays backend-rounded equivalent capacity`);
+      equal(await browser.evaluate('document.querySelector("[data-testid=weekly-total]").textContent'), String(capacity.total), `${width} ${theme}: raw weekly sets remain separate`);
+      await noOverflow(`recalculated capacity ${width} ${theme}`);
+      await screenshot(`prescription-analysis-${width}-${theme}`);
+      equal(browser.errors, [], `prescription ${width} ${theme}: no unexpected browser errors`);
+    }
+  }
+  console.log('PASS versioned prescriptions: preview/apply failures and retained inputs, eight variations, persisted manual references, original comparison/restore, unchanged actual records, dated system loads, weekly GPP, four-width/two-theme references and 44px controls');
   await server.stop(); server = null;
   const deloadDate = plan.workouts.find(row => row.week === deloadWeek.n).date;
   server = await startServer(['--date', `${deloadDate}T10:00:00`]);

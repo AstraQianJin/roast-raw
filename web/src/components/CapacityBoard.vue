@@ -16,6 +16,8 @@ const display = value => Number(value).toFixed(1);
         <span>{{ label }}</span><strong>{{ analysis.cycle.lifts[code].main + analysis.cycle.lifts[code].var }}</strong>
         <div class="cycle-bar" aria-hidden="true"><i :style="{ height: `${analysis.cycle.lifts[code].main / peak * 100}%` }"></i><i :style="{ height: `${analysis.cycle.lifts[code].var / peak * 100}%` }"></i></div>
         <small>{{ analysis.cycle.lifts[code].main }} MAIN / {{ analysis.cycle.lifts[code].var }} VAR</small>
+        <small>{{ display(analysis.cycle.equivalent[code].total) }} SBD EQUIVALENT</small>
+        <small v-if="analysis.cycle.equivalent[code].unknown">{{ analysis.cycle.equivalent[code].unknown }} SETS · TRANSFER UNKNOWN</small>
       </div>
     </div>
     <p class="annotation">Six groups · W{{ String(week.n).padStart(2, '0') }}</p>

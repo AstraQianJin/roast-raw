@@ -11,6 +11,7 @@ import WarmupSuggestions from './components/WarmupSuggestions.vue';
 import WeekCapacity from './components/WeekCapacity.vue';
 import CapacityBoard from './components/CapacityBoard.vue';
 import DailyRecord from './components/DailyRecord.vue';
+import PrescriptionSettings from './components/PrescriptionSettings.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -20,11 +21,17 @@ const geometry = ref(null);
 const calendar = ref(null);
 const cycles = ref(null);
 const logs = ref({});
+const prescriptionInfo = ref(null);
+async function refreshPrescription() {
+  try { prescriptionInfo.value = await get(`/api/prescription?${new URLSearchParams({ cycle_id: plan.value.meta.planId })}`); }
+  catch { error.value = 'Updated prescription details could not be loaded. Your saved data has not been changed.'; }
+}
 async function savedLog(saved) {
   const { key, ...values } = saved;
   logs.value[key] = values;
   try {
     [analysis.value, calendar.value] = await Promise.all([get(`/api/analysis?mode=${mode.value}`), get('/api/today')]);
+    await refreshPrescription();
   } catch { error.value = 'Your log was saved, but the updated summary could not be loaded. Retry the connection.'; }
 }
 const error = ref('');
@@ -78,6 +85,9 @@ const leaves = computed(() => analysis.value.leafOrder.map(id => {
 }));
 const display = value => value === null || value === undefined ? '—' : Number(value).toLocaleString('en-US', { maximumFractionDigits: 1 });
 const DELOAD_NOTE = 'Deload week: lighter loads, same movements. Nothing is skipped and no date moves.';
+const needsMicroPlates = rows => rows.some(row => row.segments.some(segment => segment.load !== null && segment.load % 2.5 !== 0));
+const weekGpp = computed(() => (plan.value?.gpp || []).filter(item => item.week === currentWeek.value));
+const weekCardio = computed(() => (plan.value?.runPlan || []).filter(item => item.week === currentWeek.value));
 function dateLabel(value) { return new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit', timeZone: 'Asia/Shanghai' }).format(new Date(`${value}T00:00:00+08:00`)).toUpperCase(); }
 function selectWeek(number) {
   if (number < 1 || number > plan.value.weeks.length) return;
@@ -96,6 +106,7 @@ async function refresh() {
     const result = await Promise.all(['/api/plan', `/api/analysis?mode=${mode.value}`, '/api/geometry', '/api/today', '/api/cycle', '/api/log'].map(get));
     [plan.value, analysis.value, geometry.value, calendar.value, cycles.value] = result;
     logs.value = result[5].logs;
+    prescriptionInfo.value = await get(`/api/prescription?${new URLSearchParams({ cycle_id: plan.value.meta.planId })}`);
   } catch (failure) { error.value = failure.message || 'The server is unavailable. Reconnect and try again.'; }
   finally { loading.value = false; }
 }
@@ -146,11 +157,11 @@ watch([() => route.fullPath, loading], async () => {
                 <div class="load-total"><small>TOTAL LOAD<br>main work + variations</small><strong>{{ display(todayRows.reduce((sum, row) => sum + row.tonnageKg, 0)) }}<small> kg</small></strong></div>
               </section>
               <section class="day-capacity" aria-label="Session capacity"><header><span class="section-label">SESSION CAPACITY · PLANNED</span><strong>{{ todaySetCount }} SETS</strong></header><div class="capacity-track"><i v-for="(sets, index) in [todayTotals.main, todayTotals.sbdVar + todayTotals.nonSbdVar, todayTotals.accessory]" :key="index" :style="{ width: `${sets / Math.max(todaySetCount, 1) * 100}%` }"></i></div><div class="capacity-key"><span>MAIN {{ todayTotals.main }}</span><span>VAR {{ todayTotals.sbdVar + todayTotals.nonSbdVar }}</span><span>ACCESSORY {{ todayTotals.accessory }}</span></div></section>
-              <details class="gear"><summary>GEAR <span class="chip">{{ todayLifts.some(lift => lift.load % 2.5 !== 0) ? 'MICRO PLATES' : 'SESSION SETUP' }}</span></summary><p>{{ todayLifts.some(lift => lift.load % 2.5 !== 0) ? 'Some prescribed loads need micro plates. Prepare equipment before the session; the plan’s loads remain unchanged.' : 'Prepare your usual training equipment. Detailed gear guidance follows in the reading-view milestone.' }}</p></details>
+              <details class="gear"><summary>GEAR <span class="chip">{{ needsMicroPlates(todayRows) ? 'MICRO PLATES' : 'SESSION SETUP' }}</span><span v-if="plan.meta.profile.bar_kg" class="chip">{{ display(plan.meta.profile.bar_kg) }} KG BAR</span></summary><p>{{ needsMicroPlates(todayRows) ? 'Some prescribed loads need micro plates. Prepare equipment before the session; loads remain unchanged.' : 'Standard plates cover these prescribed loads. Prepare equipment before the session.' }}</p><p v-if="plan.meta.profile.bar_kg">Plan bar reference: {{ display(plan.meta.profile.bar_kg) }} kg. {{ plan.meta.profile.collars ? 'Collars included in the plan setup.' : 'Collars are not included in the plan load reference.' }}</p><p v-if="todayRows.some(row => prescriptionInfo?.systemLoads[row.week + '|' + row.day + '|' + row.seq])">Pull-up and dip loads include bodyweight. Check the dated bodyweight reading before choosing assistance or added weight.</p></details>
               <RouterLink :to="`/plan/week/${todaySession.week}/day/${todaySession.day}`" class="inline-link">Open the scheduled day →</RouterLink>
               <WarmupSuggestions :entries="plan.warmups?.[todaySession.date] || []" />
-              <ExerciseRows :rows="todayRows" :cycle-id="plan.meta.planId" :logs="logs" @saved="savedLog" />
-              <DailyRecord :cycle-id="plan.meta.planId" :date="todaySession.date" :session-id="`${todaySession.week}|${todaySession.day}`" />
+              <ExerciseRows :rows="todayRows" :cycle-id="plan.meta.planId" :logs="logs" :system-loads="prescriptionInfo?.systemLoads || {}" @saved="savedLog" />
+              <DailyRecord :cycle-id="plan.meta.planId" :date="todaySession.date" :session-id="`${todaySession.week}|${todaySession.day}`" @saved="refreshPrescription" />
             </template>
           </div>
           <aside><MuscleMap compact :geometry="geometry" :leaves="leaves" :week-number="currentWeek" :week-count="plan.weeks.length" @week="selectWeek" /><WeekCapacity :week="week" :ranges="analysis.ranges" /></aside>
@@ -171,13 +182,15 @@ watch([() => route.fullPath, loading], async () => {
               <div v-for="day in days" :id="day.id ? `day-${currentWeek}-${day.id}` : undefined" :key="day.date" :tabindex="route.params.day === day.id ? -1 : undefined" class="plan-day">
                 <template v-if="day.rows.length">
                   <RouterLink class="day-row" :to="route.params.day === day.id ? `/plan/week/${currentWeek}` : `/plan/week/${currentWeek}/day/${day.id}`" :aria-expanded="route.params.day === day.id"><span class="day-date"><strong>{{ day.label }}</strong>{{ day.weekday }}</span><span class="day-letter">{{ day.id }}</span><span class="day-info"><span class="top-load"><small>TOP</small>{{ topLifts(day.rows).map(lift => `${lift.code} ${display(lift.load)}`).join(' · ') || 'ACCESSORY WORK' }}</span><span class="day-title" style="display:block">{{ plan.days.find(item => item.id === day.id).titleEn }}</span><span class="day-status">{{ (calendar.sessionStates[`${currentWeek}|${day.id}`] || 'scheduled').toUpperCase() }}</span></span><span>{{ route.params.day === day.id ? '−' : '›' }}</span></RouterLink>
+                  <details v-if="route.params.day === day.id" class="gear"><summary>GEAR <span class="chip">{{ needsMicroPlates(day.rows) ? 'MICRO PLATES' : 'SESSION SETUP' }}</span><span v-if="plan.meta.profile.bar_kg" class="chip">{{ display(plan.meta.profile.bar_kg) }} KG BAR</span></summary><p>{{ needsMicroPlates(day.rows) ? 'Prepare micro plates for the prescribed loads.' : 'Standard plates cover these prescribed loads.' }} All loads stay as prescribed; bodyweight movements use dated total system weight when shown.</p></details>
                   <WarmupSuggestions v-if="route.params.day === day.id" :entries="plan.warmups?.[day.date] || []" />
-                  <ExerciseRows v-if="route.params.day === day.id" :rows="day.rows" :cycle-id="plan.meta.planId" :logs="logs" @saved="savedLog" />
-                  <DailyRecord v-if="route.params.day === day.id" :cycle-id="plan.meta.planId" :date="day.date" :session-id="`${currentWeek}|${day.id}`" />
+                  <ExerciseRows v-if="route.params.day === day.id" :rows="day.rows" :cycle-id="plan.meta.planId" :logs="logs" :system-loads="prescriptionInfo?.systemLoads || {}" @saved="savedLog" />
+                  <DailyRecord v-if="route.params.day === day.id" :cycle-id="plan.meta.planId" :date="day.date" :session-id="`${currentWeek}|${day.id}`" @saved="refreshPrescription" />
                 </template>
                 <div v-else class="rest-row"><span>{{ day.label }} · {{ day.weekday }}</span><span>REST</span></div>
               </div>
               <WeekCapacity :week="week" :ranges="analysis.ranges" />
+              <details class="gear gpp" data-testid="gpp"><summary>GPP <span class="chip">CARDIO / RECOVERY / WEAK POINT</span></summary><p class="micro-copy">Planned supporting work. These targets are not recorded completion and do not add SBD equivalent sets.</p><p v-if="!weekGpp.length && !weekCardio.length">No supporting work prescribed for this week.</p><article v-for="item in weekGpp" :key="item.item_idx"><h3>{{ item.item || item.domain || 'Supporting work' }}</h3><p>{{ item.rx_text || `${display(item.target_value)} ${item.target_unit || ''}` }}</p><small v-if="item.note">{{ item.note }}</small></article><article v-for="item in weekCardio" :key="item.day"><h3>Cardio · {{ dateLabel(item.date) }} <small v-if="item.optional">OPTIONAL</small></h3><p>{{ item.note }}</p><p v-if="item.duration_min">{{ display(item.duration_min) }} min · {{ item.zone || 'Prescribed effort' }}<template v-if="item.hr_low && item.hr_high"> · HR {{ item.hr_low }}–{{ item.hr_high }}</template></p></article></details>
             </div>
             <aside><MuscleMap compact :geometry="geometry" :leaves="leaves" :week-number="currentWeek" :week-count="plan.weeks.length" @week="selectWeek" /></aside>
           </div>
@@ -188,9 +201,16 @@ watch([() => route.fullPath, loading], async () => {
           <div class="workspace"><div><WeekCapacity :week="week" :ranges="analysis.ranges" /><CapacityBoard :analysis="analysis" :week="week" /></div><aside><MuscleMap :geometry="geometry" :leaves="leaves" :week-number="currentWeek" :week-count="plan.weeks.length" @week="selectWeek" /></aside></div>
         </template>
         <template v-else-if="page === 'archive'"><div class="eyebrow">CYCLE HISTORY</div><h1>The archive.</h1><div class="empty-state"><h2>{{ cycles.cycles.some(c => c.status === 'archived') ? 'Archived cycles' : 'No archived cycles.' }}</h2><p>Completed cycles and their reviews will live here. Your current plan remains active.</p><RouterLink to="/plan" class="inline-link">View the active plan →</RouterLink></div></template>
-        <template v-else-if="page === 'settings'"><div class="eyebrow">PREFERENCES / SYSTEM</div><h1>The essentials.</h1><div class="empty-state"><h2>Appearance</h2><p>Light by default. Choose the contrast that suits your session.</p><button class="inline-link" @click="theme = theme === 'light' ? 'dark' : 'light'">Use {{ theme === 'light' ? 'dark' : 'light' }} theme</button></div><div class="empty-state"><h2>Server storage</h2><p>Connected · SQLite · Asia/Shanghai</p><p>{{ plan.schemaVersion }} · {{ plan.meta.weeks }} weeks · {{ plan.meta.sessions }} sessions</p><p>Single-user release {{ releaseVersion }}. Plan import, review export and full logging screens arrive in later milestones.</p></div></template>
+        <template v-else-if="page === 'settings'"><div class="eyebrow">PREFERENCES / SYSTEM</div><h1>The essentials.</h1><div class="empty-state"><h2>Appearance</h2><p>Light by default. Choose the contrast that suits your session.</p><button class="inline-link" @click="theme = theme === 'light' ? 'dark' : 'light'">Use {{ theme === 'light' ? 'dark' : 'light' }} theme</button></div><div class="empty-state"><h2>Server storage</h2><p>Connected · SQLite · Asia/Shanghai</p><p>{{ plan.schemaVersion }} · {{ plan.meta.weeks }} weeks · {{ plan.meta.sessions }} sessions</p><p>Single-user release {{ releaseVersion }}. Records are saved on the server; prescribed and actual sets stay separate.</p></div><PrescriptionSettings :cycle-id="plan.meta.planId" @changed="refresh" /></template>
       </template>
     </main>
     <footer class="site-footer"><span>ROAST RAW / TRAIN WITH INTENT</span><span>{{ releaseVersion }} · LOCAL PREVIEW</span></footer>
   </div>
 </template>
+
+<style scoped>
+.gear summary { flex-wrap: wrap; }
+.gpp article { padding: 16px 0; border-top: 1px solid var(--line-soft); overflow-wrap: anywhere; }
+.gpp h3 { font-size: 16px; }
+.gpp small { color: var(--muted); line-height: 1.6; }
+</style>

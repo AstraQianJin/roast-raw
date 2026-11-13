@@ -32,7 +32,7 @@ class Store:
     def initialize(self, plan):
         with self.connect() as db:
             version = db.execute('PRAGMA user_version').fetchone()[0]
-            if version not in (0, 1, 2):
+            if version not in (0, 1, 2, 3):
                 raise RuntimeError('Unsupported database version; no data was changed')
             db.execute('PRAGMA journal_mode=WAL')
             db.executescript('''
@@ -88,7 +88,7 @@ class Store:
     def upgrade(self):
         with self.connect() as db:
             version = db.execute('PRAGMA user_version').fetchone()[0]
-        if version == 2:
+        if version in (2, 3):
             return
         if version != 1:
             raise RuntimeError('Unsupported database version; no data was changed')
@@ -103,6 +103,59 @@ class Store:
                 id INTEGER PRIMARY KEY, cycle_id TEXT NOT NULL REFERENCES cycles(id),
                 kind TEXT NOT NULL, key TEXT NOT NULL, payload TEXT NOT NULL, created_at TEXT NOT NULL)''')
             db.execute('PRAGMA user_version=2')
+
+    def upgrade_prescriptions(self):
+        from .stats.variations import digest
+        with self.connect() as db:
+            version = db.execute('PRAGMA user_version').fetchone()[0]
+        if version == 3:
+            return
+        if version != 2:
+            raise RuntimeError('Unsupported database version; no data was changed')
+        self.snapshot()
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            db.execute('''CREATE TABLE prescription_versions (
+                cycle_id TEXT NOT NULL REFERENCES cycles(id), id TEXT NOT NULL,
+                json TEXT NOT NULL, created_at TEXT NOT NULL,
+                PRIMARY KEY(cycle_id,id))''')
+            for row in db.execute('SELECT cycle_id,json FROM plans').fetchall():
+                db.execute('INSERT INTO prescription_versions VALUES(?,?,?,?)',
+                           (row['cycle_id'], digest(json.loads(row['json'])), row['json'], timestamp()))
+            db.execute('PRAGMA user_version=3')
+
+    def prescription_versions(self, cycle_id):
+        from .stats.variations import digest
+        current = digest(self.plan(cycle_id))
+        with self.connect() as db:
+            rows = db.execute('SELECT * FROM prescription_versions WHERE cycle_id=? ORDER BY created_at DESC', (cycle_id,)).fetchall()
+        return [{'id': row['id'], 'created_at': row['created_at'], 'current': row['id'] == current,
+                 'policy': json.loads(row['json']).get('prescription', {}).get('version', 'legacy')}
+                for row in rows]
+
+    def prescription_version(self, cycle_id, revision_id):
+        with self.connect() as db:
+            row = db.execute('SELECT json FROM prescription_versions WHERE cycle_id=? AND id=?', (cycle_id, revision_id)).fetchone()
+        return json.loads(row['json']) if row else None
+
+    def replace_prescription(self, cycle_id, expected_id, plan, action):
+        from .stats.variations import digest
+        revision_id = digest(plan)
+        self.snapshot()
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            self.require_active(db, cycle_id)
+            current = json.loads(db.execute('SELECT json FROM plans WHERE cycle_id=?', (cycle_id,)).fetchone()['json'])
+            if digest(current) != expected_id:
+                raise ReadOnlyError('Prescription changed. Refresh and review the new version before saving.')
+            if revision_id != expected_id:
+                encoded = json.dumps(plan, ensure_ascii=False, allow_nan=False)
+                stamp = timestamp()
+                db.execute('INSERT OR IGNORE INTO prescription_versions VALUES(?,?,?,?)', (cycle_id, revision_id, encoded, stamp))
+                db.execute('INSERT INTO records_journal(cycle_id,kind,key,payload,created_at) VALUES(?,?,?,?,?)',
+                           (cycle_id, 'prescription', revision_id, json.dumps({'action': action, 'from': expected_id, 'to': revision_id}), stamp))
+                db.execute('UPDATE plans SET json=? WHERE cycle_id=?', (encoded, cycle_id))
+        return revision_id
 
     def readiness_records(self, cycle_id):
         with self.connect() as db:

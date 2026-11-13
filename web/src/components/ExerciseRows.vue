@@ -6,6 +6,7 @@ const props = defineProps({
   rows: { type: Array, default: () => [] },
   cycleId: { type: String, default: '' },
   logs: { type: Object, default: () => ({}) },
+  systemLoads: { type: Object, default: () => ({}) },
   readonly: { type: Boolean, default: false },
 });
 const emit = defineEmits(['saved']);
@@ -36,6 +37,15 @@ const display = value => value === null || value === undefined ? '—' : Number(
             <span class="weight">{{ role === 'accessory' ? '—' : display(segment.load) }}<small v-if="role !== 'accessory' && segment.load !== null"> kg</small></span>
             <small>{{ segment.pct === null || role === 'accessory' ? '' : `${display(segment.pct)}%` }}</small>
           </div>
+          <p v-if="systemLoads[logKey(row)]" class="system-load" data-testid="system-load">
+            Total system weight ·
+            <template v-for="(weight, index) in systemLoads[logKey(row)].planned" :key="index">
+              {{ display(weight.total) }} kg ·
+              <template v-if="weight.adjustment === null">External load unknown: record bodyweight on or before {{ row.date }}.</template>
+              <template v-else>{{ weight.adjustment < 0 ? `${display(-weight.adjustment)} kg assistance` : weight.adjustment > 0 ? `+${display(weight.adjustment)} kg added` : 'Bodyweight only' }} · bodyweight {{ display(weight.bodyweight) }} kg ({{ weight.bodyweightDate }}).</template>
+            </template>
+            <span v-if="systemLoads[logKey(row)].logged" class="logged-system">Logged total {{ display(systemLoads[logKey(row)].logged.total) }} kg · {{ systemLoads[logKey(row)].logged.adjustment === null ? 'external load unknown' : `${display(systemLoads[logKey(row)].logged.adjustment)} kg external adjustment` }}.</span>
+          </p>
           <button
             v-if="!readonly"
             type="button"
@@ -59,6 +69,8 @@ const display = value => value === null || value === undefined ? '—' : Number(
 </template>
 
 <style scoped>
+.system-load { font-size: 12px; color: var(--muted); line-height: 1.6; overflow-wrap: anywhere; }
+.logged-system { display: block; }
 .log-toggle {
   box-sizing: border-box;
   min-height: 44px;

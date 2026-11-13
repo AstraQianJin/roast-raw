@@ -432,6 +432,36 @@ def validate_plan(doc, file="plan.json", lib=None):
         errors.append(issue(file, field, error.message, error.instance, row))
     if errors:
         raise Reject(errors)
+    if "prescription" in doc:
+        from server.app.stats.variations import recalculate
+        version = doc["prescription"]
+        base = version["basePlan"]
+        if "prescription" in base:
+            raise Reject([issue(file, "prescription.basePlan", "original non-nested prescription", "nested version")])
+        validate_plan(base, file=file + ":original", lib=lib)
+        try:
+            expected = recalculate(base, version["references"])
+        except ValueError as exc:
+            raise Reject([issue(file, "prescription.references", str(exc), version["references"])])
+        def compare(expected_value, actual_value, path, context=None):
+            if isinstance(expected_value, dict) and isinstance(actual_value, dict):
+                context = actual_value if "movement" in actual_value or "n" in actual_value else context
+                for key in sorted(expected_value.keys() | actual_value.keys()):
+                    if key not in expected_value or key not in actual_value:
+                        errors.append(issue(file, path + "." + key, "exact source field presence", "missing or added", context))
+                    else:
+                        compare(expected_value[key], actual_value[key], path + "." + key, context)
+            elif isinstance(expected_value, list) and isinstance(actual_value, list):
+                if len(expected_value) != len(actual_value):
+                    errors.append(issue(file, path + ".length", len(expected_value), len(actual_value), context))
+                for index, (before, after) in enumerate(zip(expected_value, actual_value)):
+                    compare(before, after, path + "." + str(index), context)
+            elif expected_value != actual_value:
+                errors.append(issue(file, path, expected_value, actual_value, context))
+        compare(expected, doc, "$")
+        if errors:
+            raise Reject(errors)
+        return doc
     index, _ = _library(lib, file, errors)
     from server.app.stats import classify as C
     from server.app.stats.prescription import parse_segments, row_load
@@ -477,6 +507,8 @@ def validate_plan(doc, file="plan.json", lib=None):
     seen, by_week = set(), {}
     for i, row in enumerate(doc["workouts"]):
         path = "workouts.%d" % i
+        if "systemLoad" in row:
+            errors.append(issue(file, path + ".systemLoad", "field only in a versioned prescription", row["systemLoad"], row))
         identity = (row["week"], row["day"], row["seq"])
         if identity in seen:
             errors.append(issue(file, path + ".seq", "unique (week, day, seq)", list(identity), row))

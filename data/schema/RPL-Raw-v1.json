@@ -8,6 +8,15 @@
   "properties": {
     "schemaVersion": {"const": "RPL-Raw-v1"},
     "meta": {"$ref": "#/$defs/meta"},
+    "prescription": {
+      "type": "object", "additionalProperties": false,
+      "required": ["version", "references", "basePlan"],
+      "properties": {
+        "version": {"const": "eight-variations-v1"},
+        "references": {"type": "object", "additionalProperties": {"type": ["number", "null"], "exclusiveMinimum": 0}},
+        "basePlan": {"type": "object", "description": "Original validated legacy prescription; cannot contain another prescription version."}
+      }
+    },
     "blocks": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/block"}},
     "weeks": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/week"}},
     "days": {"type": "array", "minItems": 1, "maxItems": 7, "items": {"$ref": "#/$defs/day"}},
@@ -154,7 +163,8 @@
         "sets": {"$ref": "#/$defs/count"}, "reps": {"$ref": "#/$defs/count"}, "targetRpe": {"$ref": "#/$defs/rpe"},
         "notes": {"type": "string"}, "rxRaw": {"$ref": "#/$defs/text"}, "rxEn": {"type": "string"},
         "segments": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/segment"}},
-        "tonnageKg": {"$ref": "#/$defs/tonnage"}, "coefStatus": {"const": "exact"}
+        "tonnageKg": {"$ref": "#/$defs/tonnage"}, "coefStatus": {"const": "exact"},
+        "systemLoad": {"type": "boolean"}
       }
     }
   }

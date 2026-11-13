@@ -46,6 +46,7 @@ def _blank():
         'kg': 0.0, 'sets': 0,
         'roles': {key: 0 for key in ('main', 'sbdVar', 'nonSbdVar', 'accessory')},
         'lifts': {key: {'main': 0, 'var': 0} for key in ('S', 'B', 'D')},
+        'equivalent': {key: {'main': 0.0, 'var': 0.0, 'unknown': 0} for key in ('S', 'B', 'D')},
         'groups': {key: 0 for key in C.MUSCLE_GROUPS},
         'groupsWeighted': {key: 0.0 for key in C.MUSCLE_GROUPS},
         **{field: {key: 0.0 for key in library()['leaf_order']}
@@ -62,12 +63,15 @@ def _add(target, source):
     for code in target['lifts']:
         for kind in ('main', 'var'):
             target['lifts'][code][kind] += source['lifts'][code][kind]
+        for kind in ('main', 'var', 'unknown'):
+            target['equivalent'][code][kind] += source['equivalent'][code][kind]
 
 
-def row_volume(row, log=None):
+def row_volume(row, log=None, policy=None):
     result = _blank()
     movement, category = row['movement'], row['category']
-    bucket = C.movement_bucket(movement, row)
+    from .variations import POLICY, classification, family
+    _, bucket, lift, _ = classification(row, policy)
     entry, status = resolve(movement, category)
     if entry is None:
         return result, [f'{movement} ({status})']
@@ -75,9 +79,18 @@ def row_volume(row, log=None):
     result['sets'] = sets
     result['roles'][bucket] = sets
     if bucket in ('main', 'sbdVar'):
-        code = C.movement_lift(movement, row)
+        code = lift
         if code in result['lifts']:
             result['lifts'][code]['main' if bucket == 'main' else 'var'] = sets
+            approved = family(row)
+            if bucket == 'main':
+                result['equivalent'][code]['main'] = sets
+            elif policy != POLICY:
+                result['equivalent'][code]['var'] = sets
+            elif approved is not None:
+                result['equivalent'][code]['var'] = sets * approved['transfer']
+            else:
+                result['equivalent'][code]['unknown'] = sets
     group = row['group']
     if group is not None:
         result['groups'][group] = sets
@@ -98,6 +111,11 @@ def row_volume(row, log=None):
     return result, []
 
 
+def _equivalent(volume):
+    return {code: {**lift, 'total': r1(lift['main'] + lift['var'])}
+            for code, lift in volume['equivalent'].items()}
+
+
 def _leaves(volume):
     return {key: {'w': r1(volume['leavesWeighted'][key]), 'd': int(volume['leaves'][key]),
                   'raw': volume['leavesWeighted'][key],
@@ -110,6 +128,8 @@ def analyze(plan, logs=None, mode='plan'):
     if mode not in ('plan', 'log'):
         raise ValueError('mode must be plan or log')
     logs = logs or {}
+    policy = plan.get('prescription', {}).get('version')
+    from .variations import classification
     cycle = _blank()
     per_week = []
     unresolved = set()
@@ -120,17 +140,17 @@ def analyze(plan, logs=None, mode='plan'):
         for row in (row for row in plan['workouts'] if row['week'] == meta['n']):
             key = f"{row['week']}|{row['day']}|{row['seq']}"
             log = logs.get(key)
-            contribution, errors = row_volume(row, log if mode == 'log' else None)
+            contribution, errors = row_volume(row, log if mode == 'log' else None, policy)
             unresolved.update(errors)
             _add(volume, contribution)
-            bucket = C.movement_bucket(row['movement'], row)
+            _, bucket, _, _ = classification(row, policy)
             planned[bucket] += row['sets']
             if log is not None:
                 actual[bucket] += log['sets']
         _add(cycle, volume)
         per_week.append({
             **{key: meta[key] for key in ('n', 'kind', 'blockId', 'dateStart', 'dateEnd', 'days', 'sessions')},
-            'total': volume['sets'], 'roles': volume['roles'], 'lifts': volume['lifts'],
+            'total': volume['sets'], 'roles': volume['roles'], 'lifts': volume['lifts'], 'equivalent': _equivalent(volume),
             'groups': {key: {'d': volume['groups'][key], 'w': volume['groupsWeighted'][key]}
                        for key in C.MUSCLE_GROUPS},
             'leaves': _leaves(volume), 'tonnageKg': r1(volume['kg']),
@@ -148,7 +168,7 @@ def analyze(plan, logs=None, mode='plan'):
         'test': [week['n'] for week in plan['weeks'] if week['kind'] == 'test'],
         'perWeek': per_week,
         'cycle': {
-            'total': cycle['sets'], 'roles': cycle['roles'], 'lifts': cycle['lifts'],
+            'total': cycle['sets'], 'roles': cycle['roles'], 'lifts': cycle['lifts'], 'equivalent': _equivalent(cycle),
             'groups': {key: {'d': cycle['groups'][key], 'w': r1(cycle['groupsWeighted'][key])}
                        for key in C.MUSCLE_GROUPS},
             'leaves': _leaves(cycle), 'tonnageKg': r1(cycle['kg']),
