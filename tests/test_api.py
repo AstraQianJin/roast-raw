@@ -151,7 +151,7 @@ class APITests(GeneratedPlanCase):
     def test_health_plan_and_cycles_are_read_only(self):
         before = database_rows(self.db_path)
         self.assertEqual(self.get_json('/api/health'), {
-            'status': 'ok', 'version': '0.01', 'timezone': 'Asia/Shanghai', 'storage': 'SQLite',
+            'status': 'ok', 'version': f"0.{int(json.loads((ROOT / 'web/package.json').read_text(encoding='utf-8'))['version'].split('.')[2]):02d}", 'timezone': 'Asia/Shanghai', 'storage': 'SQLite',
         })
         self.assertEqual(self.get_json('/api/plan'), self.seed)
         self.assertEqual(self.get_json('/api/plan', params={'cycle_id': self.cycle_id}), self.seed)
@@ -393,7 +393,7 @@ class APITests(GeneratedPlanCase):
             tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
             self.assertTrue(REQUIRED_TABLES <= tables, f'Missing required tables: {REQUIRED_TABLES - tables}')
             self.assertIn('logs_journal', tables)
-            self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], 1)
+            self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], 2)
             self.assertEqual(db.execute('PRAGMA journal_mode').fetchone()[0].lower(), 'wal')
             self.assertEqual(db.execute('PRAGMA foreign_key_check').fetchall(), [])
             for table in ('plans', 'logs', 'logs_journal', 'readiness', 'archives', 'body_metrics'):
@@ -696,6 +696,13 @@ class UvicornRestartTests(GeneratedPlanCase):
             self.assertEqual(saved['key'], log_key(row))
             self.assertEqual({key: saved[key] for key in LOG_FIELDS}, fields_only(payload))
             self.assert_timestamp(saved['updated_at'])
+            daily_query = f"?cycle_id={self.seed['meta']['planId']}&date={row['date']}&session_id={row['week']}|{row['day']}"
+            readiness_payload = {'cycle_id': self.seed['meta']['planId'], 'date': row['date'],
+                                 'session_id': f"{row['week']}|{row['day']}", 'recovery': 4, 'arousal': 5, 'nutrition': 6}
+            readiness_before = self.request_json(base_url, '/api/readiness', method='PUT', payload=readiness_payload)
+            metrics_payload = {'cycle_id': self.seed['meta']['planId'], 'date': row['date'], 'bodyweight': 82.5,
+                               'bodyfat': None, 'measurements': {'waist': 80.0}}
+            metrics_before = self.request_json(base_url, '/api/body-metrics', method='PUT', payload=metrics_payload)
             before = self.request_json(base_url, '/api/log')
             self.assertEqual(before, {
                 'cycle_id': self.seed['meta']['planId'],
@@ -710,6 +717,9 @@ class UvicornRestartTests(GeneratedPlanCase):
             self.assertIsNot(first_process, second_process)
             after = self.request_json(base_url, '/api/log')
             self.assertEqual(after, before)
+            self.assertEqual(self.request_json(base_url, '/api/readiness' + daily_query), readiness_before)
+            metrics_query = f"?cycle_id={self.seed['meta']['planId']}&date={row['date']}"
+            self.assertEqual(self.request_json(base_url, '/api/body-metrics' + metrics_query), metrics_before)
             self.assertEqual(after['logs'][log_key(row)]['updated_at'], saved['updated_at'])
             self.assertEqual(self.request_json(base_url, '/api/plan'), self.seed)
             cycles = self.request_json(base_url, '/api/cycle')

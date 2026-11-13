@@ -11,14 +11,14 @@
 | 规格 | 腾讯云 4C / 4G / 40G 系统盘 / 3M 带宽 / 200G 流量 |
 | 系统 | Ubuntu（预装 Hermes Agent 0.22.5） |
 | 密钥 | `Ref/07_Permissions/RR.pem`（权限只读当前用户） |
-| SSH 用户 | `root`（已确认） |
+| SSH 用户 | `ubuntu`（已确认） |
 | 域名 / TLS | 待确认（当前只有 IP；0.01 可先用 HTTP） |
 | 0.01 部署 | 直接部署到本机 `82.157.146.30` |
 
 ## 连接
 
 ```powershell
-ssh -i "C:\Users\Astra\Desktop\Roast Raw\Ref\07_Permissions\RR.pem" root@82.157.146.30
+ssh -i "C:\Users\Astra\Desktop\Roast Raw\Ref\07_Permissions\RR.pem" ubuntu@82.157.146.30
 ```
 
 首次连接会提示确认 host key；只确认一次，记下 fingerprint。

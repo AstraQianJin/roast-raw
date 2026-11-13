@@ -1,5 +1,24 @@
 <script setup>
-defineProps({ rows: Array });
+import { ref, watch } from 'vue';
+import LogEditor from './LogEditor.vue';
+
+const props = defineProps({
+  rows: { type: Array, default: () => [] },
+  cycleId: { type: String, default: '' },
+  logs: { type: Object, default: () => ({}) },
+  readonly: { type: Boolean, default: false },
+});
+const emit = defineEmits(['saved']);
+const openEditor = ref(null);
+const visitedEditors = ref(new Set());
+const logKey = row => `${row.week}|${row.day}|${row.seq}`;
+const editorKey = row => JSON.stringify([props.cycleId, row.week, row.day, row.seq]);
+const toggleEditor = row => {
+  const key = editorKey(row);
+  visitedEditors.value.add(key);
+  openEditor.value = openEditor.value === key ? null : key;
+};
+watch(() => props.readonly, value => { if (value) openEditor.value = null; });
 const roleNames = { main: 'MAIN LIFTS', sbdVar: 'SBD VARIATIONS', nonSbdVar: 'OTHER VARIATIONS', accessory: 'ACCESSORIES' };
 const display = value => value === null || value === undefined ? '—' : Number(value).toLocaleString('en-US', { maximumFractionDigits: 1 });
 </script>
@@ -17,8 +36,42 @@ const display = value => value === null || value === undefined ? '—' : Number(
             <span class="weight">{{ role === 'accessory' ? '—' : display(segment.load) }}<small v-if="role !== 'accessory' && segment.load !== null"> kg</small></span>
             <small>{{ segment.pct === null || role === 'accessory' ? '' : `${display(segment.pct)}%` }}</small>
           </div>
+          <button
+            v-if="!readonly"
+            type="button"
+            class="log-toggle"
+            :aria-expanded="openEditor === editorKey(row)"
+            @click="toggleEditor(row)"
+          >{{ openEditor === editorKey(row) ? 'Close log' : `Log ${row.nameEn}` }}</button>
+          <LogEditor
+            v-if="visitedEditors.has(editorKey(row))"
+            v-show="!readonly && openEditor === editorKey(row)"
+            :key="editorKey(row)"
+            :row="row"
+            :cycle-id="cycleId"
+            :log="logs[logKey(row)]"
+            @saved="emit('saved', $event)"
+          />
         </article>
       </template>
     </template>
   </div>
 </template>
+
+<style scoped>
+.log-toggle {
+  box-sizing: border-box;
+  min-height: 44px;
+  min-width: 44px;
+  max-width: 100%;
+  margin-top: 12px;
+  padding: 8px 12px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+.log-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+</style>

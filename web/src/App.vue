@@ -10,6 +10,7 @@ import ExerciseRows from './components/ExerciseRows.vue';
 import WarmupSuggestions from './components/WarmupSuggestions.vue';
 import WeekCapacity from './components/WeekCapacity.vue';
 import CapacityBoard from './components/CapacityBoard.vue';
+import DailyRecord from './components/DailyRecord.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -18,6 +19,14 @@ const analysis = ref(null);
 const geometry = ref(null);
 const calendar = ref(null);
 const cycles = ref(null);
+const logs = ref({});
+async function savedLog(saved) {
+  const { key, ...values } = saved;
+  logs.value[key] = values;
+  try {
+    [analysis.value, calendar.value] = await Promise.all([get(`/api/analysis?mode=${mode.value}`), get('/api/today')]);
+  } catch { error.value = 'Your log was saved, but the updated summary could not be loaded. Retry the connection.'; }
+}
 const error = ref('');
 const loading = ref(true);
 const mode = ref('plan');
@@ -84,8 +93,9 @@ async function refresh() {
   loading.value = true;
   error.value = '';
   try {
-    const result = await Promise.all(['/api/plan', `/api/analysis?mode=${mode.value}`, '/api/geometry', '/api/today', '/api/cycle'].map(get));
+    const result = await Promise.all(['/api/plan', `/api/analysis?mode=${mode.value}`, '/api/geometry', '/api/today', '/api/cycle', '/api/log'].map(get));
     [plan.value, analysis.value, geometry.value, calendar.value, cycles.value] = result;
+    logs.value = result[5].logs;
   } catch (failure) { error.value = failure.message || 'The server is unavailable. Reconnect and try again.'; }
   finally { loading.value = false; }
 }
@@ -139,7 +149,8 @@ watch([() => route.fullPath, loading], async () => {
               <details class="gear"><summary>GEAR <span class="chip">{{ todayLifts.some(lift => lift.load % 2.5 !== 0) ? 'MICRO PLATES' : 'SESSION SETUP' }}</span></summary><p>{{ todayLifts.some(lift => lift.load % 2.5 !== 0) ? 'Some prescribed loads need micro plates. Prepare equipment before the session; the plan’s loads remain unchanged.' : 'Prepare your usual training equipment. Detailed gear guidance follows in the reading-view milestone.' }}</p></details>
               <RouterLink :to="`/plan/week/${todaySession.week}/day/${todaySession.day}`" class="inline-link">Open the scheduled day →</RouterLink>
               <WarmupSuggestions :entries="plan.warmups?.[todaySession.date] || []" />
-              <ExerciseRows :rows="todayRows" />
+              <ExerciseRows :rows="todayRows" :cycle-id="plan.meta.planId" :logs="logs" @saved="savedLog" />
+              <DailyRecord :cycle-id="plan.meta.planId" :date="todaySession.date" :session-id="`${todaySession.week}|${todaySession.day}`" />
             </template>
           </div>
           <aside><MuscleMap compact :geometry="geometry" :leaves="leaves" :week-number="currentWeek" :week-count="plan.weeks.length" @week="selectWeek" /><WeekCapacity :week="week" :ranges="analysis.ranges" /></aside>
@@ -161,7 +172,8 @@ watch([() => route.fullPath, loading], async () => {
                 <template v-if="day.rows.length">
                   <RouterLink class="day-row" :to="route.params.day === day.id ? `/plan/week/${currentWeek}` : `/plan/week/${currentWeek}/day/${day.id}`" :aria-expanded="route.params.day === day.id"><span class="day-date"><strong>{{ day.label }}</strong>{{ day.weekday }}</span><span class="day-letter">{{ day.id }}</span><span class="day-info"><span class="top-load"><small>TOP</small>{{ topLifts(day.rows).map(lift => `${lift.code} ${display(lift.load)}`).join(' · ') || 'ACCESSORY WORK' }}</span><span class="day-title" style="display:block">{{ plan.days.find(item => item.id === day.id).titleEn }}</span><span class="day-status">{{ (calendar.sessionStates[`${currentWeek}|${day.id}`] || 'scheduled').toUpperCase() }}</span></span><span>{{ route.params.day === day.id ? '−' : '›' }}</span></RouterLink>
                   <WarmupSuggestions v-if="route.params.day === day.id" :entries="plan.warmups?.[day.date] || []" />
-                  <ExerciseRows v-if="route.params.day === day.id" :rows="day.rows" />
+                  <ExerciseRows v-if="route.params.day === day.id" :rows="day.rows" :cycle-id="plan.meta.planId" :logs="logs" @saved="savedLog" />
+                  <DailyRecord v-if="route.params.day === day.id" :cycle-id="plan.meta.planId" :date="day.date" :session-id="`${currentWeek}|${day.id}`" />
                 </template>
                 <div v-else class="rest-row"><span>{{ day.label }} · {{ day.weekday }}</span><span>REST</span></div>
               </div>

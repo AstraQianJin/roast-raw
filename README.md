@@ -57,15 +57,19 @@ node tests/browser.mjs
 - `GET /api/analysis?mode=plan` or `mode=log`
 - `GET /api/log?cycle_id=...`
 - `PUT /api/log` with `cycle_id`, `week`, `day`, `seq`, `load`, `sets`, `reps`, `rpe`, `note`
+- `GET /api/readiness?cycle_id=...&date=YYYY-MM-DD&session_id=week|day`, `PUT /api/readiness`
+- `GET /api/body-metrics?cycle_id=...&date=YYYY-MM-DD`, `PUT /api/body-metrics`
 - `POST /api/plan/validate`: strict validation only, **does not import or persist**
 
 One log describes one prescribed exercise row. Unlogged rows retain planned volume in log mode, while completion counts only real logged sets. Zero sets explicitly replaces a planned row. Last-write-wins updates and the append-only log journal commit together. Actual tonnage uses recorded last-set load/reps × actual sets and is an estimate; planned tonnage follows segment loads with the legacy main/variation rounding rules.
 
-Six core tables exist: `cycles`, `plans`, `logs`, `readiness`, `archives`, `body_metrics`, plus `logs_journal`. A schema-version guard rejects unsupported databases without resetting them. No migration from an older Roast product is attempted.
+Recovery and body metrics have separate explicit saves. Recovery/arousal/nutrition use positive 1–7 ratings; joint pain is a separate warning. HRV and resting HR need 28 distinct valid prior dates per field; fewer than three scored inputs leaves the score and REC unknown. Missing values remain null. Bodyweight uses the same date or nearest past date, never a future record. Readiness only advises; it never rewrites prescriptions. A personal time-performance curve is not implemented because matched benchmark observations are not yet collected.
+
+The store keeps `cycles`, `plans`, `logs`, legacy `readiness`, `archives`, `body_metrics`, and append-only journals. Positive recovery lives in `readiness_v2`; old fatigue is preserved without reinterpretation. Schema upgrades take a consistent SQLite snapshot in the database's sibling `backups/` directory before a transactional, version-gated migration. Unsupported versions are rejected, not reset. To restore, stop the owned API process, preserve the current database and its WAL/SHM companions together, copy the selected snapshot to a new path, check SQLite integrity, then launch with `RR_DB_PATH` pointing to that copy. No migration from an older Roast product is attempted.
 
 ## Scope and provenance
 
-Today/Plan include default-visible compact anatomy and weekly capacity. Analysis owns the full sixteen-muscle list, detailed reference context and cycle capacity board. Day deep links expand, scroll to and focus the selected day. Light/dark themes, genuine statistics and minimal persistence are implemented. Full logging/readiness/body-metric forms, plan replacement, archive/review export, questionnaire, AI and deployment remain later milestones. Readiness values never auto-adjust loads. Unknown reference values stay null; back-group ranges are not presented as individual-muscle targets.
+Today/Plan include default-visible compact anatomy and weekly capacity. Analysis owns the full sixteen-muscle list, detailed reference context and cycle capacity board. Day deep links expand, scroll to and focus the selected day. Light/dark themes, genuine statistics and minimal persistence are implemented. Inline exercise logging and date-associated recovery/body-metric forms are implemented. Plan replacement, archive/review export, questionnaire, AI and deployment remain later milestones. Readiness values never auto-adjust loads. Unknown reference values stay null; back-group ranges are not presented as individual-muscle targets.
 
 Anatomy paths are the supplied `Ref/02_Stats/muscle_geo.json`, derived from body-muscles 1.0.0 (Apache-2.0). Only coordinates are reused, not its React component; no React dependency is added. See `docs/body-muscles-LICENSE.txt` for upstream notice/license. Five fixed OKLCH bands encode weekly relative volume, not recovery.
 

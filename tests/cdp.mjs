@@ -23,6 +23,8 @@ export async function openBrowser() {
   const pending = new Map();
   const events = new Map();
   const errors = [];
+  const requests = new Map();
+  const networkFailures = [];
   function nextEvent(method) {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => { events.delete(method); reject(new Error(`CDP event timeout: ${method}`)); }, 15000);
@@ -32,6 +34,12 @@ export async function openBrowser() {
   ws.onmessage = ({ data }) => {
     const message = JSON.parse(data);
     events.get(message.method)?.(message.params);
+    if (message.method === 'Network.requestWillBeSent') requests.set(message.params.requestId, message.params.request.url);
+    if (message.method === 'Network.loadingFailed') {
+      networkFailures.push({ ...message.params, url: requests.get(message.params.requestId) });
+      requests.delete(message.params.requestId);
+    }
+    if (message.method === 'Network.loadingFinished') requests.delete(message.params.requestId);
     if (message.method === 'Runtime.exceptionThrown') errors.push(message.params.exceptionDetails);
     if (message.method === 'Runtime.consoleAPICalled' && message.params.type === 'error') errors.push(message.params);
     if (message.method === 'Log.entryAdded' && message.params.entry.level === 'error') errors.push(message.params.entry);
@@ -62,7 +70,7 @@ export async function openBrowser() {
   await send('Runtime.enable');
   await send('Log.enable');
   return {
-    send, evaluate, waitFor, errors,
+    send, evaluate, waitFor, errors, networkFailures,
     async viewport(width, height = 844) {
       await send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: true });
     },
