@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:rpl:raw:v1",
+  "title": "Roast Raw plan, version 1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "meta", "blocks", "weeks", "days", "workouts", "source"],
+  "properties": {
+    "schemaVersion": {"const": "RPL-Raw-v1"},
+    "meta": {"$ref": "#/$defs/meta"},
+    "blocks": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/block"}},
+    "weeks": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/week"}},
+    "days": {"type": "array", "minItems": 1, "maxItems": 7, "items": {"$ref": "#/$defs/day"}},
+    "workouts": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/workout"}},
+    "gpp": {"type": "array", "items": {"$ref": "#/$defs/gpp"}},
+    "runPlan": {"type": "array", "items": {"$ref": "#/$defs/run"}},
+    "warmups": {"type": "object", "propertyNames": {"type": "string", "format": "date"}, "additionalProperties": {"type": "array", "items": {"$ref": "#/$defs/warmup"}}},
+    "testPlan": {
+      "type": "object", "additionalProperties": false, "required": ["tests", "dates"],
+      "properties": {
+        "tests": {"type": "array", "uniqueItems": true, "items": {"const": "sbd"}},
+        "dates": {"type": "object", "additionalProperties": false, "properties": {"sbd": {"type": "string", "format": "date"}}}
+      }
+    },
+    "source": {
+      "type": "object", "required": ["format", "schemaVersion", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "format": {"type": "string"}, "schemaVersion": {"type": "string"},
+        "exportedAt": {"type": ["string", "null"]}, "app": {"type": ["object", "null"]},
+        "sha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
+        "hashBasis": {"enum": ["input-bytes", "unavailable"]},
+        "legacyEnvelope": {"type": "object", "description": "Opaque, non-executable source payload. Never render as HTML."},
+        "adapterMappings": {"type": "array", "items": {"type": "object", "required": ["week", "day", "seq", "movement", "fromCategory", "toCategory", "reason"]}},
+        "synthetic": {"type": "boolean"},
+        "templateSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    }
+  },
+  "$defs": {
+    "gpp": {
+      "type": "object", "required": ["week", "item_idx"],
+      "properties": {
+        "week": {"$ref": "#/$defs/positive"}, "item_idx": {"$ref": "#/$defs/count"},
+        "load_kg": {"$ref": "#/$defs/load"}, "target_value": {"$ref": "#/$defs/load"},
+        "target_rpe": {"$ref": "#/$defs/rpe"}
+      }
+    },
+    "run": {
+      "type": "object", "required": ["week", "day", "date"],
+      "properties": {
+        "week": {"$ref": "#/$defs/positive"}, "day": {"$ref": "#/$defs/text"},
+        "date": {"$ref": "#/$defs/date"}, "weekday_offset": {"type": "integer", "minimum": 0, "maximum": 6},
+        "duration_min": {"$ref": "#/$defs/load"}, "target_sec": {"$ref": "#/$defs/load"},
+        "reps": {"$ref": "#/$defs/count"}, "hr_low": {"$ref": "#/$defs/load"}, "hr_high": {"$ref": "#/$defs/load"}
+      }
+    },
+    "warmup": {
+      "type": "object", "additionalProperties": false, "required": ["lift", "movement", "steps"],
+      "properties": {
+        "lift": {"$ref": "#/$defs/text"}, "movement": {"$ref": "#/$defs/text"},
+        "steps": {"type": "array", "minItems": 1, "items": {
+          "type": "object", "additionalProperties": false, "required": ["pct", "label", "kg", "reps"],
+          "properties": {
+            "pct": {"$ref": "#/$defs/percent"}, "label": {"$ref": "#/$defs/text"},
+            "kg": {"$ref": "#/$defs/load"}, "reps": {"$ref": "#/$defs/count"}
+          }
+        }}
+      }
+    },
+    "text": {"type": "string", "minLength": 1},
+    "date": {"type": "string", "format": "date"},
+    "count": {"type": "integer", "minimum": 0},
+    "positive": {"type": "integer", "minimum": 1},
+    "load": {"type": ["number", "null"], "minimum": 0},
+    "pct": {"type": ["number", "null"], "minimum": 0, "maximum": 1.5},
+    "percent": {"type": ["number", "null"], "minimum": 0, "maximum": 150},
+    "rpe": {"type": ["number", "null"], "minimum": 0, "maximum": 10},
+    "tonnage": {"type": "number", "minimum": 0},
+    "meta": {
+      "type": "object", "additionalProperties": false,
+      "required": ["planId", "name", "startDate", "endDate", "weeks", "sessions", "auxSets", "cycleTonnageKg", "profile", "anchors"],
+      "properties": {
+        "planId": {"$ref": "#/$defs/text"}, "name": {"$ref": "#/$defs/text"},
+        "startDate": {"$ref": "#/$defs/date"}, "endDate": {"$ref": "#/$defs/date"},
+        "weeks": {"$ref": "#/$defs/positive"}, "sessions": {"$ref": "#/$defs/count"},
+        "auxSets": {"$ref": "#/$defs/count"}, "cycleTonnageKg": {"$ref": "#/$defs/tonnage"},
+        "tonnageBasis": {"type": "string"}, "profile": {"type": "object"},
+        "anchors": {"type": "object"}, "goals": {"type": "array", "items": {"type": "object"}},
+        "guardrails": {"type": "object"}
+      }
+    },
+    "block": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "nameEn", "cycleType", "workWeeks", "deloadWeeks", "workMode", "deloadMode"],
+      "properties": {
+        "id": {"$ref": "#/$defs/text"}, "nameEn": {"$ref": "#/$defs/text"}, "nameZh": {"type": "string"},
+        "cycleType": {"$ref": "#/$defs/text"}, "workWeeks": {"$ref": "#/$defs/count"}, "deloadWeeks": {"$ref": "#/$defs/count"},
+        "workMode": {"$ref": "#/$defs/text"}, "deloadMode": {"$ref": "#/$defs/text"},
+        "baseRpe": {"$ref": "#/$defs/rpe"}, "rpeStep": {"$ref": "#/$defs/rpe"}, "deloadRpe": {"$ref": "#/$defs/rpe"}
+      }
+    },
+    "day": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "label", "titleEn", "weekdayOffset", "focusTags"],
+      "properties": {
+        "id": {"$ref": "#/$defs/text"}, "label": {"$ref": "#/$defs/text"}, "titleEn": {"$ref": "#/$defs/text"},
+        "weekdayOffset": {"type": "integer", "minimum": 0, "maximum": 6},
+        "focusTags": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "week": {
+      "type": "object", "additionalProperties": false,
+      "required": ["n", "blockId", "blockName", "kind", "dateStart", "dateEnd", "days", "sessions", "sets", "tonnageKg", "mainTonnageKg", "topPct", "topPctByLift"],
+      "properties": {
+        "n": {"$ref": "#/$defs/positive"}, "blockId": {"$ref": "#/$defs/text"}, "blockName": {"$ref": "#/$defs/text"},
+        "kind": {"enum": ["training", "deload", "test"]},
+        "dateStart": {"$ref": "#/$defs/date"}, "dateEnd": {"$ref": "#/$defs/date"},
+        "days": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/text"}},
+        "sessions": {"$ref": "#/$defs/count"}, "sets": {"$ref": "#/$defs/count"},
+        "tonnageKg": {"$ref": "#/$defs/tonnage"}, "mainTonnageKg": {"$ref": "#/$defs/tonnage"},
+        "topPct": {"$ref": "#/$defs/percent"},
+        "topPctByLift": {
+          "type": "object", "additionalProperties": false, "required": ["S", "B", "D"],
+          "properties": {"S": {"$ref": "#/$defs/percent"}, "B": {"$ref": "#/$defs/percent"}, "D": {"$ref": "#/$defs/percent"}}
+        }
+      }
+    },
+    "segment": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "label", "sets", "reps", "unit", "load", "pct", "delta", "amrap"],
+      "properties": {
+        "kind": {"enum": ["top", "backoff", "work", "bw"]}, "label": {"$ref": "#/$defs/text"},
+        "sets": {"$ref": "#/$defs/count"}, "reps": {"$ref": "#/$defs/count"},
+        "unit": {"enum": ["", "s", "s/side", "reps/side", "reps/arm", "reps/leg"]},
+        "load": {"$ref": "#/$defs/load"}, "pct": {"$ref": "#/$defs/percent"},
+        "delta": {"type": ["number", "null"], "minimum": 0, "maximum": 100},
+        "amrap": {"type": "boolean"}, "text": {"type": "string"}
+      }
+    },
+    "workout": {
+      "type": "object", "additionalProperties": false,
+      "required": ["week", "day", "date", "seq", "rowIndex", "mode", "category", "movement", "nameEn", "movementId", "lift", "group", "role", "bucket", "level", "pct", "loadKg", "loadRaw", "sets", "reps", "targetRpe", "notes", "rxRaw", "rxEn", "segments", "tonnageKg", "coefStatus"],
+      "properties": {
+        "week": {"$ref": "#/$defs/positive"}, "day": {"$ref": "#/$defs/text"}, "date": {"$ref": "#/$defs/date"},
+        "seq": {"$ref": "#/$defs/positive"}, "rowIndex": {"$ref": "#/$defs/count"},
+        "mode": {"$ref": "#/$defs/text"}, "category": {"$ref": "#/$defs/text"}, "movement": {"$ref": "#/$defs/text"},
+        "nameEn": {"$ref": "#/$defs/text"}, "movementId": {"$ref": "#/$defs/text"},
+        "lift": {"enum": ["S", "B", "D", null]}, "group": {"type": ["string", "null"]},
+        "role": {"enum": ["main", "variation", "accessory"]},
+        "bucket": {"enum": ["main", "sbdVar", "nonSbdVar", "accessory"]},
+        "level": {"enum": ["main", "primary_var", "secondary_var", "accessory"]},
+        "pct": {"$ref": "#/$defs/pct"}, "loadKg": {"$ref": "#/$defs/load"}, "loadRaw": {"$ref": "#/$defs/load"},
+        "sets": {"$ref": "#/$defs/count"}, "reps": {"$ref": "#/$defs/count"}, "targetRpe": {"$ref": "#/$defs/rpe"},
+        "notes": {"type": "string"}, "rxRaw": {"$ref": "#/$defs/text"}, "rxEn": {"type": "string"},
+        "segments": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/segment"}},
+        "tonnageKg": {"$ref": "#/$defs/tonnage"}, "coefStatus": {"const": "exact"}
+      }
+    }
+  }
+}

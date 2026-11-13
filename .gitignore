@@ -1,0 +1,16 @@
+Ref/07_Permissions/*
+!Ref/07_Permissions/ACCESS.md
+*.pem
+*.key
+.env
+.env.*
+!.env.example
+server/.venv/
+__pycache__/
+*.py[cod]
+node_modules/
+web/dist/
+data/*.sqlite*
+data/*.db*
+data/backups/
+.qoder-credits/

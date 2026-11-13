@@ -1,0 +1,49 @@
+:root {
+  color-scheme: light;
+  --bg: #F4F7FA;
+  --panel: #FFFFFF;
+  --panel2: #EAF0F5;
+  --ink: #0F1720;
+  --muted: #526071;
+  --line: #C9D0D8;
+  --line-soft: #DFE5EB;
+  --accent: #A01B14;
+  --accent-soft: #F6E8E7;
+  --on-accent: #FFFFFF;
+  --main: #B3261E;
+  --variation: #1D5BC4;
+  --accessory: #1E7A45;
+  --anatomy-base: #E0E6EC;
+  --anatomy-outline: #75818D;
+  --heat-0: oklch(94% 0.025 25);
+  --heat-1: oklch(84% 0.06 25);
+  --heat-2: oklch(74% 0.095 25);
+  --heat-3: oklch(64% 0.13 25);
+  --heat-4: oklch(54% 0.165 25);
+  --serif: Georgia, 'Times New Roman', serif;
+  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+}
+[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #07090D;
+  --panel: #0E121A;
+  --panel2: #171D29;
+  --ink: #F2F5F9;
+  --muted: #A0ACBC;
+  --line: #343E4D;
+  --line-soft: #222B38;
+  --accent: #FF7A73;
+  --accent-soft: #281716;
+  --on-accent: #0F1720;
+  --main: #FF6B64;
+  --variation: #7FB0FF;
+  --accessory: #4ADE80;
+  --anatomy-base: #19222F;
+  --anatomy-outline: #8593A6;
+  --heat-0: oklch(25% 0.025 25);
+  --heat-1: oklch(38% 0.05875 25);
+  --heat-2: oklch(51% 0.0925 25);
+  --heat-3: oklch(64% 0.12625 25);
+  --heat-4: oklch(77% 0.16 25);
+}

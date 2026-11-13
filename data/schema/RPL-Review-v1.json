@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:rpl:review:v1",
+  "title": "Roast Raw independent review export",
+  "description": "Unknown actual metrics remain null; defaults never imply zero performance or completion.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "exported_at", "plan_id", "profile_start", "profile_end", "plan", "logs", "readiness", "planned_vs_actual", "completion", "attainment", "e1rm", "end_state", "next_outlook"],
+  "properties": {
+    "schema": {"const": "RPL-Review-v1"},
+    "exported_at": {"type": "string", "format": "date-time"},
+    "plan_id": {"type": "string", "minLength": 1},
+    "profile_start": {"type": ["object", "null"]},
+    "profile_end": {"type": ["object", "null"], "default": null},
+    "plan": {
+      "type": "object", "required": ["schemaVersion", "meta", "blocks", "days", "weeks", "workouts"],
+      "properties": {
+        "schemaVersion": {"const": "RPL-Raw-v1"}, "meta": {"type": "object"},
+        "blocks": {"type": "array", "items": {"type": "object"}},
+        "days": {"type": "array", "items": {"type": "object"}},
+        "weeks": {"type": "array", "items": {"type": "object"}},
+        "workouts": {"type": "array", "items": {"type": "object"}}
+      }
+    },
+    "logs": {"type": "array", "items": {"type": "object"}},
+    "readiness": {"type": ["object", "array", "null"], "default": null},
+    "planned_vs_actual": {"type": ["object", "null"], "default": null},
+    "completion": {"type": ["object", "number", "null"], "minimum": 0, "default": null},
+    "attainment": {"type": ["object", "null"], "default": null},
+    "e1rm": {"type": ["object", "null"], "default": null},
+    "end_state": {"type": ["object", "null"], "default": null},
+    "next_outlook": {"type": ["object", "null"], "default": null}
+  }
+}

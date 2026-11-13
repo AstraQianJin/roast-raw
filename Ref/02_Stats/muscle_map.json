@@ -1,0 +1,8355 @@
+{
+ "schema": "RPL-MuscleMap-v1",
+ "generated_by": "tools/gen_muscle_map.py",
+ "source": {
+  "csv": "docs/research/fractional_sets/coefficient_matrix.csv",
+  "root": "mobile",
+  "sha256": "2211a6cbb099b47acc260d48485d0852b3be23a161f6f9a89bbc38b9f7eb9a72",
+  "rows": 261,
+  "unique_names": 242
+ },
+ "groups": [
+  "chest",
+  "shoulders",
+  "back",
+  "legs",
+  "arms",
+  "abs"
+ ],
+ "group_leaves": {
+  "chest": [
+   "chest"
+  ],
+  "shoulders": [
+   "delts_ant",
+   "delts_lat",
+   "delts_post"
+  ],
+  "back": [
+   "upper_back",
+   "erectors",
+   "lats"
+  ],
+  "legs": [
+   "quads",
+   "hamstrings",
+   "glutes",
+   "adductors"
+  ],
+  "arms": [
+   "triceps",
+   "biceps"
+  ],
+  "abs": [
+   "core"
+  ]
+ },
+ "leaf_order": [
+  "chest",
+  "delts_ant",
+  "delts_lat",
+  "delts_post",
+  "triceps",
+  "upper_back",
+  "lats",
+  "erectors",
+  "quads",
+  "hamstrings",
+  "glutes",
+  "adductors",
+  "biceps",
+  "forearms",
+  "core",
+  "calves"
+ ],
+ "extra_leaves": [
+  "forearms",
+  "calves"
+ ],
+ "ranges": {
+  "schema": "RPL-WeeklyVolumeRanges-v1",
+  "source": "docs/INTEGRATION_SPEC_v1.md §4.10",
+  "groups": {
+   "chest": {
+    "weekly_range": [
+     10,
+     20
+    ],
+    "mev": null,
+    "mrv": null
+   },
+   "shoulders": {
+    "weekly_range": [
+     10,
+     18
+    ],
+    "mev": null,
+    "mrv": null
+   },
+   "back": {
+    "weekly_range": [
+     16,
+     32
+    ],
+    "mev": null,
+    "mrv": null
+   },
+   "legs": {
+    "weekly_range": [
+     14,
+     30
+    ],
+    "mev": null,
+    "mrv": null
+   },
+   "arms": {
+    "weekly_range": [
+     10,
+     20
+    ],
+    "mev": null,
+    "mrv": null
+   },
+   "abs": {
+    "weekly_range": [
+     10,
+     20
+    ],
+    "mev": null,
+    "mrv": null
+   }
+  },
+  "sbd": {
+   "S": {
+    "weekly_range": [
+     10,
+     16
+    ],
+    "mev": 8,
+    "mrv": 18
+   },
+   "B": {
+    "weekly_range": [
+     10,
+     18
+    ],
+    "mev": 8,
+    "mrv": 20
+   },
+   "D": {
+    "weekly_range": [
+     10,
+     15
+    ],
+    "mev": 6,
+    "mrv": 17
+   }
+  }
+ },
+ "moves": {
+  "S.Main|high-bar squat": {
+   "cat": "S.Main",
+   "en": "High-bar Squat",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.2,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.15
+   },
+   "leaf": {
+    "erectors": 0.2,
+    "quads": 1.0,
+    "hamstrings": 0.1,
+    "glutes": 0.6,
+    "adductors": 0.4,
+    "core": 0.15,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "A"
+  },
+  "S.Main|low-bar squat": {
+   "cat": "S.Main",
+   "en": "Low-bar Squat",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.2,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.15
+   },
+   "leaf": {
+    "erectors": 0.2,
+    "quads": 1.0,
+    "hamstrings": 0.1,
+    "glutes": 0.6,
+    "adductors": 0.4,
+    "core": 0.15,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Vari.Start|anderson squat": {
+   "cat": "S.Vari.Start",
+   "en": "Anderson Squat",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.2,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.15
+   },
+   "leaf": {
+    "erectors": 0.2,
+    "quads": 1.0,
+    "hamstrings": 0.1,
+    "glutes": 0.6,
+    "adductors": 0.4,
+    "core": 0.15,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Vari.Start|box squat": {
+   "cat": "S.Vari.Start",
+   "en": "Box Squat",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.2,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.15
+   },
+   "leaf": {
+    "erectors": 0.2,
+    "quads": 1.0,
+    "hamstrings": 0.1,
+    "glutes": 0.6,
+    "adductors": 0.4,
+    "core": 0.15,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Vari.Start|cyclist squat": {
+   "cat": "S.Vari.Start",
+   "en": "Cyclist Squat",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.05
+   },
+   "leaf": {
+    "quads": 1.0,
+    "hamstrings": 0.1,
+    "glutes": 0.35,
+    "adductors": 0.3,
+    "core": 0.05,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Vari.Start|paused squat": {
+   "cat": "S.Vari.Start",
+   "en": "Paused Squat",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.2,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.15
+   },
+   "leaf": {
+    "erectors": 0.2,
+    "quads": 1.0,
+    "hamstrings": 0.1,
+    "glutes": 0.6,
+    "adductors": 0.4,
+    "core": 0.15,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Vari.Start|tempo squat": {
+   "cat": "S.Vari.Start",
+   "en": "Tempo Squat",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.2,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.15
+   },
+   "leaf": {
+    "erectors": 0.2,
+    "quads": 1.0,
+    "hamstrings": 0.1,
+    "glutes": 0.6,
+    "adductors": 0.4,
+    "core": 0.15,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Vari.Start|zercher squat": {
+   "cat": "S.Vari.Start",
+   "en": "Zercher Squat",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.4,
+    "legs": 0.9,
+    "arms": 0.1,
+    "abs": 0.4
+   },
+   "leaf": {
+    "upper_back": 0.4,
+    "quads": 0.9,
+    "hamstrings": 0.1,
+    "glutes": 0.4,
+    "adductors": 0.2,
+    "biceps": 0.1,
+    "core": 0.4
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Vari.Mid|front squat": {
+   "cat": "S.Vari.Mid",
+   "en": "Front Squat",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.3,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.25
+   },
+   "leaf": {
+    "upper_back": 0.3,
+    "quads": 1.0,
+    "hamstrings": 0.1,
+    "glutes": 0.4,
+    "adductors": 0.2,
+    "core": 0.25,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "A"
+  },
+  "S.Vari.Mid|kang squat": {
+   "cat": "S.Vari.Mid",
+   "en": "Kang Squat",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.2,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.15
+   },
+   "leaf": {
+    "erectors": 0.2,
+    "quads": 1.0,
+    "hamstrings": 0.1,
+    "glutes": 0.6,
+    "adductors": 0.4,
+    "core": 0.15,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Vari.Mid|narrow-stance squat": {
+   "cat": "S.Vari.Mid",
+   "en": "Narrow-stance Squat",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.2,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.15
+   },
+   "leaf": {
+    "erectors": 0.2,
+    "quads": 1.0,
+    "hamstrings": 0.1,
+    "glutes": 0.6,
+    "adductors": 0.4,
+    "core": 0.15,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Vari.Mid|pause above parallel squat": {
+   "cat": "S.Vari.Mid",
+   "en": "Pause Above Parallel Squat",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.2,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.15
+   },
+   "leaf": {
+    "erectors": 0.2,
+    "quads": 1.0,
+    "hamstrings": 0.1,
+    "glutes": 0.6,
+    "adductors": 0.4,
+    "core": 0.15,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Vari.Mid|pin squat": {
+   "cat": "S.Vari.Mid",
+   "en": "Pin Squat",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.2,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.15
+   },
+   "leaf": {
+    "erectors": 0.2,
+    "quads": 1.0,
+    "hamstrings": 0.1,
+    "glutes": 0.6,
+    "adductors": 0.4,
+    "core": 0.15,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Vari.End|banded squat": {
+   "cat": "S.Vari.End",
+   "en": "Banded Squat",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.2,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.15
+   },
+   "leaf": {
+    "erectors": 0.2,
+    "quads": 1.0,
+    "hamstrings": 0.1,
+    "glutes": 0.6,
+    "adductors": 0.4,
+    "core": 0.15,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Vari.End|cossack squat": {
+   "cat": "S.Vari.End",
+   "en": "Cossack Squat",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.75,
+    "arms": 0.0,
+    "abs": 0.15
+   },
+   "leaf": {
+    "quads": 0.75,
+    "hamstrings": 0.15,
+    "glutes": 0.75,
+    "adductors": 0.55,
+    "core": 0.15,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "C"
+  },
+  "S.Vari.End|hatfield squat": {
+   "cat": "S.Vari.End",
+   "en": "Hatfield Squat",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.2,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.15
+   },
+   "leaf": {
+    "erectors": 0.2,
+    "quads": 1.0,
+    "hamstrings": 0.1,
+    "glutes": 0.6,
+    "adductors": 0.4,
+    "core": 0.15,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Vari.End|leverage squat (v-squat)": {
+   "cat": "S.Vari.End",
+   "en": "Leverage Squat (V-Squat)",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.2,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.15
+   },
+   "leaf": {
+    "erectors": 0.2,
+    "quads": 1.0,
+    "hamstrings": 0.1,
+    "glutes": 0.6,
+    "adductors": 0.4,
+    "core": 0.15,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Vari.End|low-bar squat": {
+   "cat": "S.Vari.End",
+   "en": "Low-bar Squat",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.2,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.15
+   },
+   "leaf": {
+    "erectors": 0.2,
+    "quads": 1.0,
+    "hamstrings": 0.1,
+    "glutes": 0.6,
+    "adductors": 0.4,
+    "core": 0.15,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Vari.End|pendulum squat": {
+   "cat": "S.Vari.End",
+   "en": "Pendulum Squat",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.2,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.15
+   },
+   "leaf": {
+    "erectors": 0.2,
+    "quads": 1.0,
+    "hamstrings": 0.1,
+    "glutes": 0.6,
+    "adductors": 0.4,
+    "core": 0.15,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Vari.End|skater squat": {
+   "cat": "S.Vari.End",
+   "en": "Skater Squat",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.75,
+    "arms": 0.0,
+    "abs": 0.15
+   },
+   "leaf": {
+    "quads": 0.75,
+    "hamstrings": 0.15,
+    "glutes": 0.75,
+    "adductors": 0.55,
+    "core": 0.15,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "C"
+  },
+  "S.Vari.End|squat & calf raise machine": {
+   "cat": "S.Vari.End",
+   "en": "Squat & Calf Raise Machine",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.2,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.15
+   },
+   "leaf": {
+    "erectors": 0.2,
+    "quads": 1.0,
+    "hamstrings": 0.1,
+    "glutes": 0.6,
+    "adductors": 0.4,
+    "core": 0.15,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Vari.End|wide-stance squat": {
+   "cat": "S.Vari.End",
+   "en": "Wide-stance Squat",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.2,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.15
+   },
+   "leaf": {
+    "erectors": 0.2,
+    "quads": 1.0,
+    "hamstrings": 0.1,
+    "glutes": 0.6,
+    "adductors": 0.4,
+    "core": 0.15,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Vari.Balance|belt squat": {
+   "cat": "S.Vari.Balance",
+   "en": "Belt Squat",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.05,
+    "legs": 0.95,
+    "arms": 0.0,
+    "abs": 0.05
+   },
+   "leaf": {
+    "erectors": 0.05,
+    "quads": 0.95,
+    "hamstrings": 0.1,
+    "glutes": 0.45,
+    "adductors": 0.3,
+    "core": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Vari.Balance|cambered-bar squat": {
+   "cat": "S.Vari.Balance",
+   "en": "Cambered-Bar Squat",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.2,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.15
+   },
+   "leaf": {
+    "erectors": 0.2,
+    "quads": 1.0,
+    "hamstrings": 0.1,
+    "glutes": 0.6,
+    "adductors": 0.4,
+    "core": 0.15,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Vari.Balance|overhead squat": {
+   "cat": "S.Vari.Balance",
+   "en": "Overhead Squat",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.3,
+    "back": 0.3,
+    "legs": 0.8,
+    "arms": 0.0,
+    "abs": 0.5
+   },
+   "leaf": {
+    "delts_ant": 0.3,
+    "delts_lat": 0.2,
+    "upper_back": 0.3,
+    "quads": 0.8,
+    "hamstrings": 0.1,
+    "glutes": 0.35,
+    "adductors": 0.2,
+    "core": 0.5
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Vari.Balance|safety-bar squat": {
+   "cat": "S.Vari.Balance",
+   "en": "Safety-Bar Squat",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.2,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.15
+   },
+   "leaf": {
+    "erectors": 0.2,
+    "quads": 1.0,
+    "hamstrings": 0.1,
+    "glutes": 0.6,
+    "adductors": 0.4,
+    "core": 0.15,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Vari.Balance|zombie squat": {
+   "cat": "S.Vari.Balance",
+   "en": "Zombie Squat",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.2,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.15
+   },
+   "leaf": {
+    "erectors": 0.2,
+    "quads": 1.0,
+    "hamstrings": 0.1,
+    "glutes": 0.6,
+    "adductors": 0.4,
+    "core": 0.15,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "B.Main|mid-grip bench": {
+   "cat": "B.Main",
+   "en": "Mid-grip Bench",
+   "coef": {
+    "chest": 1.0,
+    "shoulders": 0.3,
+    "back": 0.1,
+    "legs": 0.0,
+    "arms": 0.3,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 1.0,
+    "delts_ant": 0.3,
+    "delts_lat": 0.05,
+    "triceps": 0.3,
+    "upper_back": 0.1,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "A"
+  },
+  "B.Main|ultra-wide-grip bench": {
+   "cat": "B.Main",
+   "en": "Ultra-Wide-grip Bench",
+   "coef": {
+    "chest": 1.0,
+    "shoulders": 0.3,
+    "back": 0.1,
+    "legs": 0.0,
+    "arms": 0.3,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 1.0,
+    "delts_ant": 0.3,
+    "delts_lat": 0.05,
+    "triceps": 0.3,
+    "upper_back": 0.1,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Vari.Start|dead bench": {
+   "cat": "B.Vari.Start",
+   "en": "Dead Bench",
+   "coef": {
+    "chest": 1.0,
+    "shoulders": 0.3,
+    "back": 0.1,
+    "legs": 0.0,
+    "arms": 0.3,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 1.0,
+    "delts_ant": 0.3,
+    "delts_lat": 0.05,
+    "triceps": 0.3,
+    "upper_back": 0.1,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Vari.Start|fat bar bench press": {
+   "cat": "B.Vari.Start",
+   "en": "Fat Bar Bench Press",
+   "coef": {
+    "chest": 1.0,
+    "shoulders": 0.3,
+    "back": 0.1,
+    "legs": 0.0,
+    "arms": 0.3,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 1.0,
+    "delts_ant": 0.3,
+    "delts_lat": 0.05,
+    "triceps": 0.3,
+    "upper_back": 0.1,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Vari.Start|long paused bench": {
+   "cat": "B.Vari.Start",
+   "en": "Long Paused Bench",
+   "coef": {
+    "chest": 1.0,
+    "shoulders": 0.3,
+    "back": 0.1,
+    "legs": 0.0,
+    "arms": 0.3,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 1.0,
+    "delts_ant": 0.3,
+    "delts_lat": 0.05,
+    "triceps": 0.3,
+    "upper_back": 0.1,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Vari.Start|panatta multi-grip flat press": {
+   "cat": "B.Vari.Start",
+   "en": "Panatta Multi-Grip Flat Press",
+   "coef": {
+    "chest": 1.0,
+    "shoulders": 0.3,
+    "back": 0.1,
+    "legs": 0.0,
+    "arms": 0.3,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 1.0,
+    "delts_ant": 0.3,
+    "delts_lat": 0.05,
+    "triceps": 0.3,
+    "upper_back": 0.1,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Vari.Start|tempo bench": {
+   "cat": "B.Vari.Start",
+   "en": "Tempo Bench",
+   "coef": {
+    "chest": 1.0,
+    "shoulders": 0.3,
+    "back": 0.1,
+    "legs": 0.0,
+    "arms": 0.3,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 1.0,
+    "delts_ant": 0.3,
+    "delts_lat": 0.05,
+    "triceps": 0.3,
+    "upper_back": 0.1,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Vari.Start|wide-grip bench": {
+   "cat": "B.Vari.Start",
+   "en": "Wide-grip Bench",
+   "coef": {
+    "chest": 1.0,
+    "shoulders": 0.3,
+    "back": 0.1,
+    "legs": 0.0,
+    "arms": 0.3,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 1.0,
+    "delts_ant": 0.3,
+    "delts_lat": 0.05,
+    "triceps": 0.3,
+    "upper_back": 0.1,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Vari.Mid|cambered bar bench press": {
+   "cat": "B.Vari.Mid",
+   "en": "Cambered Bar Bench Press",
+   "coef": {
+    "chest": 1.0,
+    "shoulders": 0.3,
+    "back": 0.1,
+    "legs": 0.0,
+    "arms": 0.3,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 1.0,
+    "delts_ant": 0.3,
+    "delts_lat": 0.05,
+    "triceps": 0.3,
+    "upper_back": 0.1,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Vari.Mid|floor press": {
+   "cat": "B.Vari.Mid",
+   "en": "Floor Press",
+   "coef": {
+    "chest": 0.85,
+    "shoulders": 0.25,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.45,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 0.85,
+    "delts_ant": 0.25,
+    "triceps": 0.45,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Vari.Mid|incline bench press": {
+   "cat": "B.Vari.Mid",
+   "en": "Incline Bench Press",
+   "coef": {
+    "chest": 0.9,
+    "shoulders": 0.5,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.3,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 0.9,
+    "delts_ant": 0.5,
+    "delts_lat": 0.05,
+    "triceps": 0.3,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Vari.Mid|pin bench": {
+   "cat": "B.Vari.Mid",
+   "en": "Pin Bench",
+   "coef": {
+    "chest": 1.0,
+    "shoulders": 0.3,
+    "back": 0.1,
+    "legs": 0.0,
+    "arms": 0.3,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 1.0,
+    "delts_ant": 0.3,
+    "delts_lat": 0.05,
+    "triceps": 0.3,
+    "upper_back": 0.1,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Vari.Mid|spoto bench": {
+   "cat": "B.Vari.Mid",
+   "en": "Spoto Bench",
+   "coef": {
+    "chest": 1.0,
+    "shoulders": 0.3,
+    "back": 0.1,
+    "legs": 0.0,
+    "arms": 0.3,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 1.0,
+    "delts_ant": 0.3,
+    "delts_lat": 0.05,
+    "triceps": 0.3,
+    "upper_back": 0.1,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Vari.End|board press": {
+   "cat": "B.Vari.End",
+   "en": "Board Press",
+   "coef": {
+    "chest": 0.85,
+    "shoulders": 0.25,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.45,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 0.85,
+    "delts_ant": 0.25,
+    "triceps": 0.45,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Vari.End|close-grip floor press": {
+   "cat": "B.Vari.End",
+   "en": "Close-Grip Floor Press",
+   "coef": {
+    "chest": 0.7,
+    "shoulders": 0.25,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.65,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 0.7,
+    "delts_ant": 0.25,
+    "triceps": 0.65,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Vari.End|narrow-grip bench": {
+   "cat": "B.Vari.End",
+   "en": "Narrow-Grip Bench",
+   "coef": {
+    "chest": 0.7,
+    "shoulders": 0.25,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.65,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 0.7,
+    "delts_ant": 0.25,
+    "triceps": 0.65,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Vari.End|plate-loaded decline press": {
+   "cat": "B.Vari.End",
+   "en": "Plate-Loaded Decline Press",
+   "coef": {
+    "chest": 1.0,
+    "shoulders": 0.15,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.3,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 1.0,
+    "delts_ant": 0.15,
+    "triceps": 0.3,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Vari.End|slingshot bench": {
+   "cat": "B.Vari.End",
+   "en": "Slingshot Bench",
+   "coef": {
+    "chest": 1.0,
+    "shoulders": 0.3,
+    "back": 0.1,
+    "legs": 0.0,
+    "arms": 0.3,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 1.0,
+    "delts_ant": 0.3,
+    "delts_lat": 0.05,
+    "triceps": 0.3,
+    "upper_back": 0.1,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Vari.End|ultra-wide-grip bench": {
+   "cat": "B.Vari.End",
+   "en": "Ultra-Wide-grip Bench",
+   "coef": {
+    "chest": 1.0,
+    "shoulders": 0.3,
+    "back": 0.1,
+    "legs": 0.0,
+    "arms": 0.3,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 1.0,
+    "delts_ant": 0.3,
+    "delts_lat": 0.05,
+    "triceps": 0.3,
+    "upper_back": 0.1,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Vari.Control|band-resisted bench press": {
+   "cat": "B.Vari.Control",
+   "en": "Band-Resisted Bench Press",
+   "coef": {
+    "chest": 1.0,
+    "shoulders": 0.3,
+    "back": 0.1,
+    "legs": 0.0,
+    "arms": 0.3,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 1.0,
+    "delts_ant": 0.3,
+    "delts_lat": 0.05,
+    "triceps": 0.3,
+    "upper_back": 0.1,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Vari.Control|cluster bench": {
+   "cat": "B.Vari.Control",
+   "en": "Cluster Bench",
+   "coef": {
+    "chest": 1.0,
+    "shoulders": 0.3,
+    "back": 0.1,
+    "legs": 0.0,
+    "arms": 0.3,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 1.0,
+    "delts_ant": 0.3,
+    "delts_lat": 0.05,
+    "triceps": 0.3,
+    "upper_back": 0.1,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Vari.Control|feet-up bench": {
+   "cat": "B.Vari.Control",
+   "en": "Feet-Up Bench",
+   "coef": {
+    "chest": 1.0,
+    "shoulders": 0.3,
+    "back": 0.1,
+    "legs": 0.0,
+    "arms": 0.3,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 1.0,
+    "delts_ant": 0.3,
+    "delts_lat": 0.05,
+    "triceps": 0.3,
+    "upper_back": 0.1,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Vari.Control|larsen press": {
+   "cat": "B.Vari.Control",
+   "en": "Larsen Press",
+   "coef": {
+    "chest": 1.0,
+    "shoulders": 0.3,
+    "back": 0.1,
+    "legs": 0.0,
+    "arms": 0.3,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 1.0,
+    "delts_ant": 0.3,
+    "delts_lat": 0.05,
+    "triceps": 0.3,
+    "upper_back": 0.1,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Vari.Control|neutral-grip db / machine press": {
+   "cat": "B.Vari.Control",
+   "en": "Neutral-Grip DB / Machine Press",
+   "coef": {
+    "chest": 0.9,
+    "shoulders": 0.3,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.25,
+    "abs": 0.1
+   },
+   "leaf": {
+    "chest": 0.9,
+    "delts_ant": 0.3,
+    "triceps": 0.25,
+    "core": 0.1
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Vari.Control|touch&go bench": {
+   "cat": "B.Vari.Control",
+   "en": "Touch&Go Bench",
+   "coef": {
+    "chest": 1.0,
+    "shoulders": 0.3,
+    "back": 0.1,
+    "legs": 0.0,
+    "arms": 0.3,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 1.0,
+    "delts_ant": 0.3,
+    "delts_lat": 0.05,
+    "triceps": 0.3,
+    "upper_back": 0.1,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "D.Main|conventional deadlift": {
+   "cat": "D.Main",
+   "en": "Conventional Deadlift",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.9,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.4
+   },
+   "leaf": {
+    "upper_back": 0.6,
+    "erectors": 0.9,
+    "quads": 0.6,
+    "hamstrings": 0.8,
+    "glutes": 1.0,
+    "adductors": 0.2,
+    "forearms": 0.5,
+    "core": 0.4
+   },
+   "primary_muscle": "glutes",
+   "tier": "B"
+  },
+  "D.Main|sumo deadlift": {
+   "cat": "D.Main",
+   "en": "Sumo Deadlift",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.7,
+    "legs": 0.95,
+    "arms": 0.0,
+    "abs": 0.4
+   },
+   "leaf": {
+    "upper_back": 0.5,
+    "erectors": 0.7,
+    "quads": 0.8,
+    "hamstrings": 0.6,
+    "glutes": 0.95,
+    "adductors": 0.4,
+    "forearms": 0.5,
+    "core": 0.4
+   },
+   "primary_muscle": "glutes",
+   "tier": "B"
+  },
+  "D.Main|semi-sumo deadlift": {
+   "cat": "D.Main",
+   "en": "Semi-Sumo Deadlift",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.7,
+    "legs": 0.95,
+    "arms": 0.0,
+    "abs": 0.4
+   },
+   "leaf": {
+    "upper_back": 0.5,
+    "erectors": 0.7,
+    "quads": 0.8,
+    "hamstrings": 0.6,
+    "glutes": 0.95,
+    "adductors": 0.4,
+    "forearms": 0.5,
+    "core": 0.4
+   },
+   "primary_muscle": "glutes",
+   "tier": "B"
+  },
+  "D.Vari.Start|deficit deadlift": {
+   "cat": "D.Vari.Start",
+   "en": "Deficit Deadlift",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.9,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.4
+   },
+   "leaf": {
+    "upper_back": 0.6,
+    "erectors": 0.9,
+    "quads": 0.6,
+    "hamstrings": 0.8,
+    "glutes": 1.0,
+    "adductors": 0.2,
+    "forearms": 0.5,
+    "core": 0.4
+   },
+   "primary_muscle": "glutes",
+   "tier": "B"
+  },
+  "D.Vari.Start|dumbbell deadlift": {
+   "cat": "D.Vari.Start",
+   "en": "Dumbbell Deadlift",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.7,
+    "legs": 0.8,
+    "arms": 0.0,
+    "abs": 0.3
+   },
+   "leaf": {
+    "upper_back": 0.4,
+    "erectors": 0.7,
+    "quads": 0.5,
+    "hamstrings": 0.7,
+    "glutes": 0.8,
+    "forearms": 0.4,
+    "core": 0.3
+   },
+   "primary_muscle": "glutes",
+   "tier": "C"
+  },
+  "D.Vari.Start|halting deadlift": {
+   "cat": "D.Vari.Start",
+   "en": "Halting Deadlift",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.9,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.4
+   },
+   "leaf": {
+    "upper_back": 0.6,
+    "erectors": 0.9,
+    "quads": 0.6,
+    "hamstrings": 0.8,
+    "glutes": 1.0,
+    "adductors": 0.2,
+    "forearms": 0.5,
+    "core": 0.4
+   },
+   "primary_muscle": "glutes",
+   "tier": "B"
+  },
+  "D.Vari.Start|kettlebell deadlift": {
+   "cat": "D.Vari.Start",
+   "en": "Kettlebell Deadlift",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.7,
+    "legs": 0.8,
+    "arms": 0.0,
+    "abs": 0.3
+   },
+   "leaf": {
+    "upper_back": 0.4,
+    "erectors": 0.7,
+    "quads": 0.5,
+    "hamstrings": 0.7,
+    "glutes": 0.8,
+    "forearms": 0.4,
+    "core": 0.3
+   },
+   "primary_muscle": "glutes",
+   "tier": "C"
+  },
+  "D.Vari.Start|snatch-grip deadlift": {
+   "cat": "D.Vari.Start",
+   "en": "Snatch-Grip Deadlift",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.8,
+    "legs": 0.9,
+    "arms": 0.0,
+    "abs": 0.3
+   },
+   "leaf": {
+    "upper_back": 0.6,
+    "erectors": 0.8,
+    "quads": 0.5,
+    "hamstrings": 0.9,
+    "glutes": 0.8,
+    "forearms": 0.5,
+    "core": 0.3
+   },
+   "primary_muscle": "hamstrings",
+   "tier": "B"
+  },
+  "D.Vari.Start|trap-bar / leverage squat pull": {
+   "cat": "D.Vari.Start",
+   "en": "Trap-Bar / Leverage Squat Pull",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.9,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.4
+   },
+   "leaf": {
+    "upper_back": 0.6,
+    "erectors": 0.9,
+    "quads": 0.6,
+    "hamstrings": 0.8,
+    "glutes": 1.0,
+    "adductors": 0.2,
+    "forearms": 0.5,
+    "core": 0.4
+   },
+   "primary_muscle": "glutes",
+   "tier": "B"
+  },
+  "D.Vari.Mid|narrow sumo deadlift": {
+   "cat": "D.Vari.Mid",
+   "en": "Narrow Sumo Deadlift",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.7,
+    "legs": 0.95,
+    "arms": 0.0,
+    "abs": 0.4
+   },
+   "leaf": {
+    "upper_back": 0.5,
+    "erectors": 0.7,
+    "quads": 0.8,
+    "hamstrings": 0.6,
+    "glutes": 0.95,
+    "adductors": 0.4,
+    "forearms": 0.5,
+    "core": 0.4
+   },
+   "primary_muscle": "glutes",
+   "tier": "B"
+  },
+  "D.Vari.Mid|paused deadlift": {
+   "cat": "D.Vari.Mid",
+   "en": "Paused Deadlift",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.9,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.4
+   },
+   "leaf": {
+    "upper_back": 0.6,
+    "erectors": 0.9,
+    "quads": 0.6,
+    "hamstrings": 0.8,
+    "glutes": 1.0,
+    "adductors": 0.2,
+    "forearms": 0.5,
+    "core": 0.4
+   },
+   "primary_muscle": "glutes",
+   "tier": "B"
+  },
+  "D.Vari.Mid|romanian deadlift": {
+   "cat": "D.Vari.Mid",
+   "en": "Romanian Deadlift",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.4,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.15
+   },
+   "leaf": {
+    "upper_back": 0.2,
+    "erectors": 0.4,
+    "hamstrings": 1.0,
+    "glutes": 0.7,
+    "forearms": 0.2,
+    "core": 0.15
+   },
+   "primary_muscle": "hamstrings",
+   "tier": "B"
+  },
+  "D.Vari.Mid|snatch-grip block pull": {
+   "cat": "D.Vari.Mid",
+   "en": "Snatch-Grip Block Pull",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.8,
+    "legs": 0.9,
+    "arms": 0.0,
+    "abs": 0.3
+   },
+   "leaf": {
+    "upper_back": 0.6,
+    "erectors": 0.8,
+    "quads": 0.5,
+    "hamstrings": 0.9,
+    "glutes": 0.8,
+    "forearms": 0.5,
+    "core": 0.3
+   },
+   "primary_muscle": "hamstrings",
+   "tier": "B"
+  },
+  "D.Vari.Mid|semi-sumo deadlift": {
+   "cat": "D.Vari.Mid",
+   "en": "Semi-Sumo Deadlift",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.7,
+    "legs": 0.95,
+    "arms": 0.0,
+    "abs": 0.4
+   },
+   "leaf": {
+    "upper_back": 0.5,
+    "erectors": 0.7,
+    "quads": 0.8,
+    "hamstrings": 0.6,
+    "glutes": 0.95,
+    "adductors": 0.4,
+    "forearms": 0.5,
+    "core": 0.4
+   },
+   "primary_muscle": "glutes",
+   "tier": "B"
+  },
+  "D.Vari.Mid|tempo deadlift": {
+   "cat": "D.Vari.Mid",
+   "en": "Tempo Deadlift",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.9,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.4
+   },
+   "leaf": {
+    "upper_back": 0.6,
+    "erectors": 0.9,
+    "quads": 0.6,
+    "hamstrings": 0.8,
+    "glutes": 1.0,
+    "adductors": 0.2,
+    "forearms": 0.5,
+    "core": 0.4
+   },
+   "primary_muscle": "glutes",
+   "tier": "B"
+  },
+  "D.Vari.End|banded / reverse-band deadlift": {
+   "cat": "D.Vari.End",
+   "en": "Banded / Reverse-Band Deadlift",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.9,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.4
+   },
+   "leaf": {
+    "upper_back": 0.6,
+    "erectors": 0.9,
+    "quads": 0.6,
+    "hamstrings": 0.8,
+    "glutes": 1.0,
+    "adductors": 0.2,
+    "forearms": 0.5,
+    "core": 0.4
+   },
+   "primary_muscle": "glutes",
+   "tier": "B"
+  },
+  "D.Vari.End|block pull": {
+   "cat": "D.Vari.End",
+   "en": "Block Pull",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.9,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.4
+   },
+   "leaf": {
+    "upper_back": 0.6,
+    "erectors": 0.9,
+    "quads": 0.6,
+    "hamstrings": 0.8,
+    "glutes": 1.0,
+    "adductors": 0.2,
+    "forearms": 0.5,
+    "core": 0.4
+   },
+   "primary_muscle": "glutes",
+   "tier": "B"
+  },
+  "D.Vari.End|deadlift-bar pull (whip bar)": {
+   "cat": "D.Vari.End",
+   "en": "Deadlift-Bar Pull (Whip Bar)",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.9,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.4
+   },
+   "leaf": {
+    "upper_back": 0.6,
+    "erectors": 0.9,
+    "quads": 0.6,
+    "hamstrings": 0.8,
+    "glutes": 1.0,
+    "adductors": 0.2,
+    "forearms": 0.5,
+    "core": 0.4
+   },
+   "primary_muscle": "glutes",
+   "tier": "B"
+  },
+  "D.Vari.End|dumbbell rack pull": {
+   "cat": "D.Vari.End",
+   "en": "Dumbbell Rack Pull",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.7,
+    "legs": 0.8,
+    "arms": 0.0,
+    "abs": 0.3
+   },
+   "leaf": {
+    "upper_back": 0.4,
+    "erectors": 0.7,
+    "quads": 0.5,
+    "hamstrings": 0.7,
+    "glutes": 0.8,
+    "forearms": 0.4,
+    "core": 0.3
+   },
+   "primary_muscle": "glutes",
+   "tier": "C"
+  },
+  "D.Vari.End|good morning": {
+   "cat": "D.Vari.End",
+   "en": "Good Morning",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.7,
+    "legs": 0.8,
+    "arms": 0.0,
+    "abs": 0.2
+   },
+   "leaf": {
+    "upper_back": 0.3,
+    "erectors": 0.7,
+    "hamstrings": 0.8,
+    "glutes": 0.7,
+    "core": 0.2
+   },
+   "primary_muscle": "hamstrings",
+   "tier": "B"
+  },
+  "D.Vari.End|rack pull": {
+   "cat": "D.Vari.End",
+   "en": "Rack Pull",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.9,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.4
+   },
+   "leaf": {
+    "upper_back": 0.6,
+    "erectors": 0.9,
+    "quads": 0.6,
+    "hamstrings": 0.8,
+    "glutes": 1.0,
+    "adductors": 0.2,
+    "forearms": 0.5,
+    "core": 0.4
+   },
+   "primary_muscle": "glutes",
+   "tier": "B"
+  },
+  "D.Vari.Power|box deadlift (vert pull)": {
+   "cat": "D.Vari.Power",
+   "en": "Box Deadlift (Vert Pull)",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.9,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.4
+   },
+   "leaf": {
+    "upper_back": 0.6,
+    "erectors": 0.9,
+    "quads": 0.6,
+    "hamstrings": 0.8,
+    "glutes": 1.0,
+    "adductors": 0.2,
+    "forearms": 0.5,
+    "core": 0.4
+   },
+   "primary_muscle": "glutes",
+   "tier": "B"
+  },
+  "D.Vari.Power|cluster deadlift": {
+   "cat": "D.Vari.Power",
+   "en": "Cluster Deadlift",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.9,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.4
+   },
+   "leaf": {
+    "upper_back": 0.6,
+    "erectors": 0.9,
+    "quads": 0.6,
+    "hamstrings": 0.8,
+    "glutes": 1.0,
+    "adductors": 0.2,
+    "forearms": 0.5,
+    "core": 0.4
+   },
+   "primary_muscle": "glutes",
+   "tier": "B"
+  },
+  "D.Vari.Power|kettlebell swing": {
+   "cat": "D.Vari.Power",
+   "en": "Kettlebell Swing",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.4,
+    "legs": 0.9,
+    "arms": 0.0,
+    "abs": 0.3
+   },
+   "leaf": {
+    "upper_back": 0.2,
+    "erectors": 0.4,
+    "quads": 0.2,
+    "hamstrings": 0.7,
+    "glutes": 0.9,
+    "forearms": 0.3,
+    "core": 0.3
+   },
+   "primary_muscle": "glutes",
+   "tier": "B"
+  },
+  "D.Vari.Power|power clean": {
+   "cat": "D.Vari.Power",
+   "en": "Power Clean",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.8,
+    "legs": 0.8,
+    "arms": 0.0,
+    "abs": 0.3
+   },
+   "leaf": {
+    "upper_back": 0.8,
+    "erectors": 0.6,
+    "quads": 0.7,
+    "hamstrings": 0.7,
+    "glutes": 0.8,
+    "forearms": 0.4,
+    "core": 0.3,
+    "calves": 0.3
+   },
+   "primary_muscle": "upper_back",
+   "tier": "C"
+  },
+  "D.Vari.Power|sumo deadlift": {
+   "cat": "D.Vari.Power",
+   "en": "Sumo Deadlift",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.7,
+    "legs": 0.95,
+    "arms": 0.0,
+    "abs": 0.4
+   },
+   "leaf": {
+    "upper_back": 0.5,
+    "erectors": 0.7,
+    "quads": 0.8,
+    "hamstrings": 0.6,
+    "glutes": 0.95,
+    "adductors": 0.4,
+    "forearms": 0.5,
+    "core": 0.4
+   },
+   "primary_muscle": "glutes",
+   "tier": "B"
+  },
+  "SBD.UpperBack|bent-over barbell row": {
+   "cat": "SBD.UpperBack",
+   "en": "Bent-Over Barbell Row",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.0,
+    "arms": 0.4,
+    "abs": 0.2
+   },
+   "leaf": {
+    "upper_back": 1.0,
+    "lats": 0.85,
+    "erectors": 0.3,
+    "biceps": 0.4,
+    "forearms": 0.3,
+    "core": 0.2
+   },
+   "primary_muscle": "upper_back",
+   "tier": "A"
+  },
+  "SBD.UpperBack|chest-supported row (elbows out)": {
+   "cat": "SBD.UpperBack",
+   "en": "Chest-Supported Row (Elbows Out)",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.0,
+    "arms": 0.4,
+    "abs": 0.05
+   },
+   "leaf": {
+    "upper_back": 1.0,
+    "lats": 0.8,
+    "erectors": 0.05,
+    "biceps": 0.4,
+    "forearms": 0.25,
+    "core": 0.05
+   },
+   "primary_muscle": "upper_back",
+   "tier": "B"
+  },
+  "SBD.UpperBack|face pull": {
+   "cat": "SBD.UpperBack",
+   "en": "Face Pull",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.8,
+    "back": 0.8,
+    "legs": 0.0,
+    "arms": 0.2,
+    "abs": 0.0
+   },
+   "leaf": {
+    "delts_post": 0.8,
+    "upper_back": 0.8,
+    "biceps": 0.2,
+    "forearms": 0.1
+   },
+   "primary_muscle": "delts_post",
+   "tier": "B"
+  },
+  "SBD.UpperBack|hoist roc-it mid row": {
+   "cat": "SBD.UpperBack",
+   "en": "Hoist ROC-IT Mid Row",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.0,
+    "arms": 0.4,
+    "abs": 0.05
+   },
+   "leaf": {
+    "upper_back": 1.0,
+    "lats": 0.8,
+    "erectors": 0.05,
+    "biceps": 0.4,
+    "forearms": 0.25,
+    "core": 0.05
+   },
+   "primary_muscle": "upper_back",
+   "tier": "B"
+  },
+  "SBD.UpperBack|inward converging seated row": {
+   "cat": "SBD.UpperBack",
+   "en": "Inward Converging Seated Row",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.0,
+    "arms": 0.4,
+    "abs": 0.05
+   },
+   "leaf": {
+    "upper_back": 1.0,
+    "lats": 0.8,
+    "erectors": 0.05,
+    "biceps": 0.4,
+    "forearms": 0.25,
+    "core": 0.05
+   },
+   "primary_muscle": "upper_back",
+   "tier": "B"
+  },
+  "SBD.UpperBack|iso-lateral plate-loaded row": {
+   "cat": "SBD.UpperBack",
+   "en": "Iso-Lateral Plate-Loaded Row",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.0,
+    "arms": 0.4,
+    "abs": 0.05
+   },
+   "leaf": {
+    "upper_back": 1.0,
+    "lats": 0.8,
+    "erectors": 0.05,
+    "biceps": 0.4,
+    "forearms": 0.25,
+    "core": 0.05
+   },
+   "primary_muscle": "upper_back",
+   "tier": "B"
+  },
+  "SBD.UpperBack|kelso / barbell shrug": {
+   "cat": "SBD.UpperBack",
+   "en": "Kelso / Barbell Shrug",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.0,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "upper_back": 1.0,
+    "forearms": 0.3
+   },
+   "primary_muscle": "upper_back",
+   "tier": "B"
+  },
+  "SBD.UpperBack|meadows row": {
+   "cat": "SBD.UpperBack",
+   "en": "Meadows Row",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.0,
+    "arms": 0.4,
+    "abs": 0.2
+   },
+   "leaf": {
+    "upper_back": 1.0,
+    "lats": 0.85,
+    "erectors": 0.3,
+    "biceps": 0.4,
+    "forearms": 0.3,
+    "core": 0.2
+   },
+   "primary_muscle": "upper_back",
+   "tier": "B"
+  },
+  "SBD.UpperBack|one-arm dumbbell row": {
+   "cat": "SBD.UpperBack",
+   "en": "One-Arm Dumbbell Row",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.0,
+    "arms": 0.4,
+    "abs": 0.2
+   },
+   "leaf": {
+    "upper_back": 1.0,
+    "lats": 0.85,
+    "erectors": 0.3,
+    "biceps": 0.4,
+    "forearms": 0.3,
+    "core": 0.2
+   },
+   "primary_muscle": "upper_back",
+   "tier": "B"
+  },
+  "SBD.UpperBack|pendlay row": {
+   "cat": "SBD.UpperBack",
+   "en": "Pendlay Row",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.0,
+    "arms": 0.4,
+    "abs": 0.2
+   },
+   "leaf": {
+    "upper_back": 1.0,
+    "lats": 0.85,
+    "erectors": 0.3,
+    "biceps": 0.4,
+    "forearms": 0.3,
+    "core": 0.2
+   },
+   "primary_muscle": "upper_back",
+   "tier": "B"
+  },
+  "SBD.UpperBack|seal row": {
+   "cat": "SBD.UpperBack",
+   "en": "Seal Row",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.0,
+    "arms": 0.4,
+    "abs": 0.05
+   },
+   "leaf": {
+    "upper_back": 1.0,
+    "lats": 0.8,
+    "erectors": 0.05,
+    "biceps": 0.4,
+    "forearms": 0.25,
+    "core": 0.05
+   },
+   "primary_muscle": "upper_back",
+   "tier": "B"
+  },
+  "SBD.UpperBack|seated row": {
+   "cat": "SBD.UpperBack",
+   "en": "Seated Row",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.0,
+    "arms": 0.4,
+    "abs": 0.05
+   },
+   "leaf": {
+    "upper_back": 1.0,
+    "lats": 0.8,
+    "erectors": 0.05,
+    "biceps": 0.4,
+    "forearms": 0.25,
+    "core": 0.05
+   },
+   "primary_muscle": "upper_back",
+   "tier": "B"
+  },
+  "SBD.UpperBack|single-arm cable row": {
+   "cat": "SBD.UpperBack",
+   "en": "Single-Arm Cable Row",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.0,
+    "arms": 0.4,
+    "abs": 0.05
+   },
+   "leaf": {
+    "upper_back": 1.0,
+    "lats": 0.8,
+    "erectors": 0.05,
+    "biceps": 0.4,
+    "forearms": 0.25,
+    "core": 0.05
+   },
+   "primary_muscle": "upper_back",
+   "tier": "B"
+  },
+  "SBD.UpperBack|smith machine shrug": {
+   "cat": "SBD.UpperBack",
+   "en": "Smith Machine Shrug",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.0,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "upper_back": 1.0,
+    "forearms": 0.3
+   },
+   "primary_muscle": "upper_back",
+   "tier": "B"
+  },
+  "SBD.UpperBack|t-bar row": {
+   "cat": "SBD.UpperBack",
+   "en": "T-Bar Row",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.0,
+    "arms": 0.4,
+    "abs": 0.2
+   },
+   "leaf": {
+    "upper_back": 1.0,
+    "lats": 0.85,
+    "erectors": 0.3,
+    "biceps": 0.4,
+    "forearms": 0.3,
+    "core": 0.2
+   },
+   "primary_muscle": "upper_back",
+   "tier": "B"
+  },
+  "S.Core|ab wheel rollout": {
+   "cat": "S.Core",
+   "en": "Ab Wheel Rollout",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.05,
+    "back": 0.1,
+    "legs": 0.1,
+    "arms": 0.0,
+    "abs": 1.0
+   },
+   "leaf": {
+    "delts_ant": 0.05,
+    "lats": 0.1,
+    "quads": 0.1,
+    "core": 1.0
+   },
+   "primary_muscle": "core",
+   "tier": "B"
+  },
+  "S.Core|bird dog": {
+   "cat": "S.Core",
+   "en": "Bird Dog",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.1,
+    "back": 0.1,
+    "legs": 0.0,
+    "arms": 0.0,
+    "abs": 1.0
+   },
+   "leaf": {
+    "delts_ant": 0.1,
+    "upper_back": 0.1,
+    "forearms": 0.2,
+    "core": 1.0
+   },
+   "primary_muscle": "core",
+   "tier": "B"
+  },
+  "S.Core|cable crunch": {
+   "cat": "S.Core",
+   "en": "Cable Crunch",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.05,
+    "back": 0.1,
+    "legs": 0.1,
+    "arms": 0.0,
+    "abs": 1.0
+   },
+   "leaf": {
+    "delts_ant": 0.05,
+    "lats": 0.1,
+    "quads": 0.1,
+    "core": 1.0
+   },
+   "primary_muscle": "core",
+   "tier": "B"
+  },
+  "S.Core|cable woodchop / lift": {
+   "cat": "S.Core",
+   "en": "Cable Woodchop / Lift",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.05,
+    "back": 0.1,
+    "legs": 0.1,
+    "arms": 0.0,
+    "abs": 1.0
+   },
+   "leaf": {
+    "delts_ant": 0.05,
+    "lats": 0.1,
+    "quads": 0.1,
+    "core": 1.0
+   },
+   "primary_muscle": "core",
+   "tier": "B"
+  },
+  "S.Core|dead bug": {
+   "cat": "S.Core",
+   "en": "Dead Bug",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.1,
+    "back": 0.1,
+    "legs": 0.0,
+    "arms": 0.0,
+    "abs": 1.0
+   },
+   "leaf": {
+    "delts_ant": 0.1,
+    "upper_back": 0.1,
+    "forearms": 0.2,
+    "core": 1.0
+   },
+   "primary_muscle": "core",
+   "tier": "B"
+  },
+  "S.Core|decline bench sit-up / crunch": {
+   "cat": "S.Core",
+   "en": "Decline Bench Sit-Up / Crunch",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.05,
+    "back": 0.1,
+    "legs": 0.1,
+    "arms": 0.0,
+    "abs": 1.0
+   },
+   "leaf": {
+    "delts_ant": 0.05,
+    "lats": 0.1,
+    "quads": 0.1,
+    "core": 1.0
+   },
+   "primary_muscle": "core",
+   "tier": "B"
+  },
+  "S.Core|dragon flag": {
+   "cat": "S.Core",
+   "en": "Dragon Flag",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.05,
+    "back": 0.1,
+    "legs": 0.1,
+    "arms": 0.0,
+    "abs": 1.0
+   },
+   "leaf": {
+    "delts_ant": 0.05,
+    "lats": 0.1,
+    "quads": 0.1,
+    "core": 1.0
+   },
+   "primary_muscle": "core",
+   "tier": "B"
+  },
+  "S.Core|ghd sit-up": {
+   "cat": "S.Core",
+   "en": "GHD Sit-Up",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.05,
+    "back": 0.1,
+    "legs": 0.1,
+    "arms": 0.0,
+    "abs": 1.0
+   },
+   "leaf": {
+    "delts_ant": 0.05,
+    "lats": 0.1,
+    "quads": 0.1,
+    "core": 1.0
+   },
+   "primary_muscle": "core",
+   "tier": "B"
+  },
+  "S.Core|leverage ab crunch machine": {
+   "cat": "S.Core",
+   "en": "Leverage Ab Crunch Machine",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.05,
+    "back": 0.1,
+    "legs": 0.1,
+    "arms": 0.0,
+    "abs": 1.0
+   },
+   "leaf": {
+    "delts_ant": 0.05,
+    "lats": 0.1,
+    "quads": 0.1,
+    "core": 1.0
+   },
+   "primary_muscle": "core",
+   "tier": "B"
+  },
+  "S.Core|machine / hanging leg raise": {
+   "cat": "S.Core",
+   "en": "Machine / Hanging Leg Raise",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.05,
+    "back": 0.1,
+    "legs": 0.1,
+    "arms": 0.0,
+    "abs": 1.0
+   },
+   "leaf": {
+    "delts_ant": 0.05,
+    "lats": 0.1,
+    "quads": 0.1,
+    "core": 1.0
+   },
+   "primary_muscle": "core",
+   "tier": "B"
+  },
+  "S.Core|pallof press": {
+   "cat": "S.Core",
+   "en": "Pallof Press",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.1,
+    "back": 0.1,
+    "legs": 0.0,
+    "arms": 0.0,
+    "abs": 1.0
+   },
+   "leaf": {
+    "delts_ant": 0.1,
+    "upper_back": 0.1,
+    "forearms": 0.2,
+    "core": 1.0
+   },
+   "primary_muscle": "core",
+   "tier": "B"
+  },
+  "S.Core|side plank": {
+   "cat": "S.Core",
+   "en": "Side Plank",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.1,
+    "back": 0.1,
+    "legs": 0.0,
+    "arms": 0.0,
+    "abs": 1.0
+   },
+   "leaf": {
+    "delts_ant": 0.1,
+    "upper_back": 0.1,
+    "forearms": 0.2,
+    "core": 1.0
+   },
+   "primary_muscle": "core",
+   "tier": "B"
+  },
+  "S.Core|suitcase carry": {
+   "cat": "S.Core",
+   "en": "Suitcase Carry",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.1,
+    "back": 0.1,
+    "legs": 0.0,
+    "arms": 0.0,
+    "abs": 1.0
+   },
+   "leaf": {
+    "delts_ant": 0.1,
+    "upper_back": 0.1,
+    "forearms": 0.2,
+    "core": 1.0
+   },
+   "primary_muscle": "core",
+   "tier": "B"
+  },
+  "S.Core|weighted plank": {
+   "cat": "S.Core",
+   "en": "Weighted Plank",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.1,
+    "back": 0.1,
+    "legs": 0.0,
+    "arms": 0.0,
+    "abs": 1.0
+   },
+   "leaf": {
+    "delts_ant": 0.1,
+    "upper_back": 0.1,
+    "forearms": 0.2,
+    "core": 1.0
+   },
+   "primary_muscle": "core",
+   "tier": "B"
+  },
+  "D.Lats|chin-up": {
+   "cat": "D.Lats",
+   "en": "Chin-Up",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.0,
+    "arms": 0.6,
+    "abs": 0.2
+   },
+   "leaf": {
+    "upper_back": 0.4,
+    "lats": 1.0,
+    "biceps": 0.6,
+    "forearms": 0.3,
+    "core": 0.2
+   },
+   "primary_muscle": "lats",
+   "tier": "B"
+  },
+  "D.Lats|iso-lateral front lat row": {
+   "cat": "D.Lats",
+   "en": "Iso-Lateral Front Lat Row",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.0,
+    "arms": 0.4,
+    "abs": 0.2
+   },
+   "leaf": {
+    "upper_back": 1.0,
+    "lats": 0.85,
+    "erectors": 0.3,
+    "biceps": 0.4,
+    "forearms": 0.3,
+    "core": 0.2
+   },
+   "primary_muscle": "upper_back",
+   "tier": "B"
+  },
+  "D.Lats|meadows row": {
+   "cat": "D.Lats",
+   "en": "Meadows Row",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.0,
+    "arms": 0.4,
+    "abs": 0.2
+   },
+   "leaf": {
+    "upper_back": 1.0,
+    "lats": 0.85,
+    "erectors": 0.3,
+    "biceps": 0.4,
+    "forearms": 0.3,
+    "core": 0.2
+   },
+   "primary_muscle": "upper_back",
+   "tier": "B"
+  },
+  "D.Lats|plate-loaded high row": {
+   "cat": "D.Lats",
+   "en": "Plate-Loaded High Row",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.0,
+    "arms": 0.45,
+    "abs": 0.15
+   },
+   "leaf": {
+    "upper_back": 0.45,
+    "lats": 1.0,
+    "biceps": 0.45,
+    "forearms": 0.25,
+    "core": 0.15
+   },
+   "primary_muscle": "lats",
+   "tier": "B"
+  },
+  "D.Lats|plate-loaded vertical pulldown": {
+   "cat": "D.Lats",
+   "en": "Plate-Loaded Vertical Pulldown",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.0,
+    "arms": 0.45,
+    "abs": 0.15
+   },
+   "leaf": {
+    "upper_back": 0.45,
+    "lats": 1.0,
+    "biceps": 0.45,
+    "forearms": 0.25,
+    "core": 0.15
+   },
+   "primary_muscle": "lats",
+   "tier": "B"
+  },
+  "D.Lats|pull-up": {
+   "cat": "D.Lats",
+   "en": "Pull-Up",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.0,
+    "arms": 0.5,
+    "abs": 0.2
+   },
+   "leaf": {
+    "upper_back": 0.5,
+    "lats": 1.0,
+    "biceps": 0.5,
+    "forearms": 0.3,
+    "core": 0.2
+   },
+   "primary_muscle": "lats",
+   "tier": "B"
+  },
+  "D.Lats|pull-up (standing assisted)": {
+   "cat": "D.Lats",
+   "en": "Pull-up (Standing Assisted)",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.0,
+    "arms": 0.5,
+    "abs": 0.2
+   },
+   "leaf": {
+    "upper_back": 0.5,
+    "lats": 1.0,
+    "biceps": 0.5,
+    "forearms": 0.3,
+    "core": 0.2
+   },
+   "primary_muscle": "lats",
+   "tier": "B"
+  },
+  "D.Lats|rope lat prayer": {
+   "cat": "D.Lats",
+   "en": "Rope Lat Prayer",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.0,
+    "arms": 0.1,
+    "abs": 0.1
+   },
+   "leaf": {
+    "triceps": 0.1,
+    "lats": 1.0,
+    "core": 0.1
+   },
+   "primary_muscle": "lats",
+   "tier": "B"
+  },
+  "D.Lats|scissor converging pulldown": {
+   "cat": "D.Lats",
+   "en": "Scissor Converging Pulldown",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.0,
+    "arms": 0.45,
+    "abs": 0.15
+   },
+   "leaf": {
+    "upper_back": 0.45,
+    "lats": 1.0,
+    "biceps": 0.45,
+    "forearms": 0.25,
+    "core": 0.15
+   },
+   "primary_muscle": "lats",
+   "tier": "B"
+  },
+  "D.Lats|straight-arm pulldown": {
+   "cat": "D.Lats",
+   "en": "Straight-Arm Pulldown",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.0,
+    "arms": 0.1,
+    "abs": 0.1
+   },
+   "leaf": {
+    "triceps": 0.1,
+    "lats": 1.0,
+    "core": 0.1
+   },
+   "primary_muscle": "lats",
+   "tier": "B"
+  },
+  "D.Lats|technogym vertical traction": {
+   "cat": "D.Lats",
+   "en": "Technogym Vertical Traction",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.0,
+    "arms": 0.45,
+    "abs": 0.15
+   },
+   "leaf": {
+    "upper_back": 0.45,
+    "lats": 1.0,
+    "biceps": 0.45,
+    "forearms": 0.25,
+    "core": 0.15
+   },
+   "primary_muscle": "lats",
+   "tier": "B"
+  },
+  "D.Lats|towel-grip pull-up": {
+   "cat": "D.Lats",
+   "en": "Towel-Grip Pull-Up",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.0,
+    "arms": 0.5,
+    "abs": 0.2
+   },
+   "leaf": {
+    "upper_back": 0.5,
+    "lats": 1.0,
+    "biceps": 0.5,
+    "forearms": 0.3,
+    "core": 0.2
+   },
+   "primary_muscle": "lats",
+   "tier": "B"
+  },
+  "D.Lats|wide / neutral lat pulldown": {
+   "cat": "D.Lats",
+   "en": "Wide / Neutral Lat Pulldown",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.0,
+    "arms": 0.45,
+    "abs": 0.15
+   },
+   "leaf": {
+    "upper_back": 0.45,
+    "lats": 1.0,
+    "biceps": 0.45,
+    "forearms": 0.25,
+    "core": 0.15
+   },
+   "primary_muscle": "lats",
+   "tier": "A"
+  },
+  "D.Lats|weighted pull-up": {
+   "cat": "D.Lats",
+   "en": "Weighted Pull-Up",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.0,
+    "arms": 0.5,
+    "abs": 0.2
+   },
+   "leaf": {
+    "upper_back": 0.5,
+    "lats": 1.0,
+    "biceps": 0.5,
+    "forearms": 0.3,
+    "core": 0.2
+   },
+   "primary_muscle": "lats",
+   "tier": "B"
+  },
+  "D.GluteHam|45-degree back extension": {
+   "cat": "D.GluteHam",
+   "en": "45-Degree Back Extension",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.6,
+    "arms": 0.0,
+    "abs": 0.1
+   },
+   "leaf": {
+    "erectors": 1.0,
+    "hamstrings": 0.4,
+    "glutes": 0.6,
+    "core": 0.1
+   },
+   "primary_muscle": "erectors",
+   "tier": "B"
+  },
+  "D.GluteHam|barbell hip thrust": {
+   "cat": "D.GluteHam",
+   "en": "Barbell Hip Thrust",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.1
+   },
+   "leaf": {
+    "quads": 0.2,
+    "hamstrings": 0.4,
+    "glutes": 1.0,
+    "adductors": 0.05,
+    "core": 0.1
+   },
+   "primary_muscle": "glutes",
+   "tier": "A"
+  },
+  "D.GluteHam|booty builder split deadlift": {
+   "cat": "D.GluteHam",
+   "en": "Booty Builder Split Deadlift",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.1
+   },
+   "leaf": {
+    "quads": 0.2,
+    "hamstrings": 0.4,
+    "glutes": 1.0,
+    "adductors": 0.05,
+    "core": 0.1
+   },
+   "primary_muscle": "glutes",
+   "tier": "B"
+  },
+  "D.GluteHam|cable glute kickback": {
+   "cat": "D.GluteHam",
+   "en": "Cable Glute Kickback",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "hamstrings": 0.3,
+    "glutes": 1.0
+   },
+   "primary_muscle": "glutes",
+   "tier": "B"
+  },
+  "D.GluteHam|cable pull-through": {
+   "cat": "D.GluteHam",
+   "en": "Cable Pull-Through",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.3,
+    "legs": 0.8,
+    "arms": 0.0,
+    "abs": 0.2
+   },
+   "leaf": {
+    "erectors": 0.3,
+    "hamstrings": 0.6,
+    "glutes": 0.8,
+    "core": 0.2
+   },
+   "primary_muscle": "glutes",
+   "tier": "B"
+  },
+  "D.GluteHam|glute-ham raise / nordic curl": {
+   "cat": "D.GluteHam",
+   "en": "Glute-Ham Raise / Nordic Curl",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.1
+   },
+   "leaf": {
+    "hamstrings": 1.0,
+    "glutes": 0.4,
+    "core": 0.1,
+    "calves": 0.2
+   },
+   "primary_muscle": "hamstrings",
+   "tier": "B"
+  },
+  "D.GluteHam|kettlebell / db swing": {
+   "cat": "D.GluteHam",
+   "en": "Kettlebell / DB Swing",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.4,
+    "legs": 0.9,
+    "arms": 0.0,
+    "abs": 0.3
+   },
+   "leaf": {
+    "upper_back": 0.2,
+    "erectors": 0.4,
+    "quads": 0.2,
+    "hamstrings": 0.7,
+    "glutes": 0.9,
+    "forearms": 0.3,
+    "core": 0.3
+   },
+   "primary_muscle": "glutes",
+   "tier": "B"
+  },
+  "D.GluteHam|kneeling single-leg curl": {
+   "cat": "D.GluteHam",
+   "en": "Kneeling Single-Leg Curl",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "hamstrings": 1.0,
+    "calves": 0.1
+   },
+   "primary_muscle": "hamstrings",
+   "tier": "B"
+  },
+  "D.GluteHam|machine hip thrust (glute drive)": {
+   "cat": "D.GluteHam",
+   "en": "Machine Hip Thrust (Glute Drive)",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.1
+   },
+   "leaf": {
+    "quads": 0.2,
+    "hamstrings": 0.4,
+    "glutes": 1.0,
+    "adductors": 0.05,
+    "core": 0.1
+   },
+   "primary_muscle": "glutes",
+   "tier": "B"
+  },
+  "D.GluteHam|natural leg curl": {
+   "cat": "D.GluteHam",
+   "en": "Natural Leg Curl",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.1
+   },
+   "leaf": {
+    "hamstrings": 1.0,
+    "glutes": 0.4,
+    "core": 0.1,
+    "calves": 0.2
+   },
+   "primary_muscle": "hamstrings",
+   "tier": "B"
+  },
+  "D.GluteHam|romanian deadlift": {
+   "cat": "D.GluteHam",
+   "en": "Romanian Deadlift",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.4,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.15
+   },
+   "leaf": {
+    "upper_back": 0.2,
+    "erectors": 0.4,
+    "hamstrings": 1.0,
+    "glutes": 0.7,
+    "forearms": 0.2,
+    "core": 0.15
+   },
+   "primary_muscle": "hamstrings",
+   "tier": "B"
+  },
+  "D.GluteHam|seated leg curl": {
+   "cat": "D.GluteHam",
+   "en": "Seated Leg Curl",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "hamstrings": 1.0,
+    "calves": 0.1
+   },
+   "primary_muscle": "hamstrings",
+   "tier": "B"
+  },
+  "D.GluteHam|single-leg rdl": {
+   "cat": "D.GluteHam",
+   "en": "Single-Leg RDL",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.4,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.15
+   },
+   "leaf": {
+    "upper_back": 0.2,
+    "erectors": 0.4,
+    "hamstrings": 1.0,
+    "glutes": 0.7,
+    "forearms": 0.2,
+    "core": 0.15
+   },
+   "primary_muscle": "hamstrings",
+   "tier": "B"
+  },
+  "D.GluteHam|standing single-leg curl": {
+   "cat": "D.GluteHam",
+   "en": "Standing Single-Leg Curl",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "hamstrings": 1.0,
+    "calves": 0.1
+   },
+   "primary_muscle": "hamstrings",
+   "tier": "B"
+  },
+  "D.GluteHam|stiff-leg deadlift": {
+   "cat": "D.GluteHam",
+   "en": "Stiff-Leg Deadlift",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.4,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.15
+   },
+   "leaf": {
+    "upper_back": 0.2,
+    "erectors": 0.4,
+    "hamstrings": 1.0,
+    "glutes": 0.7,
+    "forearms": 0.2,
+    "core": 0.15
+   },
+   "primary_muscle": "hamstrings",
+   "tier": "B"
+  },
+  "S.Quads|belt squat": {
+   "cat": "S.Quads",
+   "en": "Belt Squat",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.05,
+    "legs": 0.95,
+    "arms": 0.0,
+    "abs": 0.05
+   },
+   "leaf": {
+    "erectors": 0.05,
+    "quads": 0.95,
+    "hamstrings": 0.1,
+    "glutes": 0.45,
+    "adductors": 0.3,
+    "core": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Quads|copenhagen plank": {
+   "cat": "S.Quads",
+   "en": "Copenhagen Plank",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.2
+   },
+   "leaf": {
+    "quads": 0.1,
+    "adductors": 1.0,
+    "core": 0.2
+   },
+   "primary_muscle": "adductors",
+   "tier": "B"
+  },
+  "S.Quads|dumbbell bulgarian split squat": {
+   "cat": "S.Quads",
+   "en": "Dumbbell Bulgarian Split Squat",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.85,
+    "arms": 0.0,
+    "abs": 0.1
+   },
+   "leaf": {
+    "quads": 0.85,
+    "hamstrings": 0.2,
+    "glutes": 0.7,
+    "adductors": 0.35,
+    "core": 0.1,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Quads|hack squat": {
+   "cat": "S.Quads",
+   "en": "Hack Squat",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.05
+   },
+   "leaf": {
+    "quads": 1.0,
+    "hamstrings": 0.1,
+    "glutes": 0.35,
+    "adductors": 0.3,
+    "core": 0.05,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Quads|heels-elevated goblet squat": {
+   "cat": "S.Quads",
+   "en": "Heels-Elevated Goblet Squat",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.05
+   },
+   "leaf": {
+    "quads": 1.0,
+    "hamstrings": 0.1,
+    "glutes": 0.35,
+    "adductors": 0.3,
+    "core": 0.05,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Quads|leg extension": {
+   "cat": "S.Quads",
+   "en": "Leg Extension",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "quads": 1.0
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Quads|leg press": {
+   "cat": "S.Quads",
+   "en": "Leg Press",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "quads": 1.0,
+    "hamstrings": 0.1,
+    "glutes": 0.4,
+    "adductors": 0.3,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Quads|leverage squat (v-squat)": {
+   "cat": "S.Quads",
+   "en": "Leverage Squat (V-Squat)",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.05
+   },
+   "leaf": {
+    "quads": 1.0,
+    "hamstrings": 0.1,
+    "glutes": 0.35,
+    "adductors": 0.3,
+    "core": 0.05,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Quads|machine hip adduction": {
+   "cat": "S.Quads",
+   "en": "Machine Hip Adduction",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.2
+   },
+   "leaf": {
+    "quads": 0.1,
+    "adductors": 1.0,
+    "core": 0.2
+   },
+   "primary_muscle": "adductors",
+   "tier": "B"
+  },
+  "S.Quads|seated leg press": {
+   "cat": "S.Quads",
+   "en": "Seated Leg Press",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "quads": 1.0,
+    "hamstrings": 0.1,
+    "glutes": 0.4,
+    "adductors": 0.3,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Quads|single-leg leg press": {
+   "cat": "S.Quads",
+   "en": "Single-Leg Leg Press",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "quads": 1.0,
+    "hamstrings": 0.1,
+    "glutes": 0.4,
+    "adductors": 0.3,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Quads|smith machine squat (feet forward)": {
+   "cat": "S.Quads",
+   "en": "Smith Machine Squat (Feet Forward)",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.2,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.15
+   },
+   "leaf": {
+    "erectors": 0.2,
+    "quads": 1.0,
+    "hamstrings": 0.1,
+    "glutes": 0.6,
+    "adductors": 0.4,
+    "core": 0.15,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Quads|smith reverse lunge": {
+   "cat": "S.Quads",
+   "en": "Smith Reverse Lunge",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.85,
+    "arms": 0.0,
+    "abs": 0.1
+   },
+   "leaf": {
+    "quads": 0.85,
+    "hamstrings": 0.2,
+    "glutes": 0.7,
+    "adductors": 0.35,
+    "core": 0.1,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "S.Quads|walking lunge / step-up": {
+   "cat": "S.Quads",
+   "en": "Walking Lunge / Step-Up",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.85,
+    "arms": 0.0,
+    "abs": 0.1
+   },
+   "leaf": {
+    "quads": 0.85,
+    "hamstrings": 0.2,
+    "glutes": 0.7,
+    "adductors": 0.35,
+    "core": 0.1,
+    "calves": 0.05
+   },
+   "primary_muscle": "quads",
+   "tier": "B"
+  },
+  "B.Pecs|cable fly (low-to-high / mid)": {
+   "cat": "B.Pecs",
+   "en": "Cable Fly (Low-to-High / Mid)",
+   "coef": {
+    "chest": 1.0,
+    "shoulders": 0.2,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.05,
+    "abs": 0.0
+   },
+   "leaf": {
+    "chest": 1.0,
+    "delts_ant": 0.2,
+    "biceps": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Pecs|dip (standing assisted)": {
+   "cat": "B.Pecs",
+   "en": "Dip (Standing Assisted)",
+   "coef": {
+    "chest": 0.75,
+    "shoulders": 0.3,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.65,
+    "abs": 0.1
+   },
+   "leaf": {
+    "chest": 0.75,
+    "delts_ant": 0.3,
+    "triceps": 0.65,
+    "core": 0.1
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Pecs|dumbbell bench press": {
+   "cat": "B.Pecs",
+   "en": "Dumbbell Bench Press",
+   "coef": {
+    "chest": 0.9,
+    "shoulders": 0.3,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.25,
+    "abs": 0.1
+   },
+   "leaf": {
+    "chest": 0.9,
+    "delts_ant": 0.3,
+    "triceps": 0.25,
+    "core": 0.1
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Pecs|dumbbell squeeze press": {
+   "cat": "B.Pecs",
+   "en": "Dumbbell Squeeze Press",
+   "coef": {
+    "chest": 1.0,
+    "shoulders": 0.2,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.05,
+    "abs": 0.0
+   },
+   "leaf": {
+    "chest": 1.0,
+    "delts_ant": 0.2,
+    "biceps": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Pecs|incline bench press": {
+   "cat": "B.Pecs",
+   "en": "Incline Bench Press",
+   "coef": {
+    "chest": 0.9,
+    "shoulders": 0.5,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.3,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 0.9,
+    "delts_ant": 0.5,
+    "delts_lat": 0.05,
+    "triceps": 0.3,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Pecs|incline cable fly": {
+   "cat": "B.Pecs",
+   "en": "Incline Cable Fly",
+   "coef": {
+    "chest": 1.0,
+    "shoulders": 0.2,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.05,
+    "abs": 0.0
+   },
+   "leaf": {
+    "chest": 1.0,
+    "delts_ant": 0.2,
+    "biceps": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Pecs|incline dumbbell press": {
+   "cat": "B.Pecs",
+   "en": "Incline Dumbbell Press",
+   "coef": {
+    "chest": 0.9,
+    "shoulders": 0.5,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.3,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 0.9,
+    "delts_ant": 0.5,
+    "delts_lat": 0.05,
+    "triceps": 0.3,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Pecs|machine chest press": {
+   "cat": "B.Pecs",
+   "en": "Machine Chest Press",
+   "coef": {
+    "chest": 1.0,
+    "shoulders": 0.25,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.35,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 1.0,
+    "delts_ant": 0.25,
+    "triceps": 0.35,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Pecs|nautilus leverage press": {
+   "cat": "B.Pecs",
+   "en": "Nautilus Leverage Press",
+   "coef": {
+    "chest": 1.0,
+    "shoulders": 0.25,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.35,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 1.0,
+    "delts_ant": 0.25,
+    "triceps": 0.35,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Pecs|panatta multi-grip flat press": {
+   "cat": "B.Pecs",
+   "en": "Panatta Multi-Grip Flat Press",
+   "coef": {
+    "chest": 1.0,
+    "shoulders": 0.25,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.35,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 1.0,
+    "delts_ant": 0.25,
+    "triceps": 0.35,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Pecs|pec deck": {
+   "cat": "B.Pecs",
+   "en": "Pec Deck",
+   "coef": {
+    "chest": 1.0,
+    "shoulders": 0.2,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.05,
+    "abs": 0.0
+   },
+   "leaf": {
+    "chest": 1.0,
+    "delts_ant": 0.2,
+    "biceps": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Pecs|plate-loaded decline press": {
+   "cat": "B.Pecs",
+   "en": "Plate-Loaded Decline Press",
+   "coef": {
+    "chest": 1.0,
+    "shoulders": 0.15,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.3,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 1.0,
+    "delts_ant": 0.15,
+    "triceps": 0.3,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Pecs|plate-loaded incline press": {
+   "cat": "B.Pecs",
+   "en": "Plate-Loaded Incline Press",
+   "coef": {
+    "chest": 0.9,
+    "shoulders": 0.5,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.3,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 0.9,
+    "delts_ant": 0.5,
+    "delts_lat": 0.05,
+    "triceps": 0.3,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Pecs|rotary converging chest press": {
+   "cat": "B.Pecs",
+   "en": "Rotary Converging Chest Press",
+   "coef": {
+    "chest": 1.0,
+    "shoulders": 0.25,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.35,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 1.0,
+    "delts_ant": 0.25,
+    "triceps": 0.35,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Pecs|weighted dip": {
+   "cat": "B.Pecs",
+   "en": "Weighted Dip",
+   "coef": {
+    "chest": 0.75,
+    "shoulders": 0.3,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.65,
+    "abs": 0.1
+   },
+   "leaf": {
+    "chest": 0.75,
+    "delts_ant": 0.3,
+    "triceps": 0.65,
+    "core": 0.1
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Delts|bradford press": {
+   "cat": "B.Delts",
+   "en": "Bradford Press",
+   "coef": {
+    "chest": 0.1,
+    "shoulders": 1.0,
+    "back": 0.2,
+    "legs": 0.0,
+    "arms": 0.5,
+    "abs": 0.3
+   },
+   "leaf": {
+    "chest": 0.1,
+    "delts_ant": 1.0,
+    "delts_lat": 0.4,
+    "triceps": 0.5,
+    "upper_back": 0.2,
+    "core": 0.3
+   },
+   "primary_muscle": "delts_ant",
+   "tier": "B"
+  },
+  "B.Delts|cable y-raise": {
+   "cat": "B.Delts",
+   "en": "Cable Y-Raise",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.7,
+    "back": 0.4,
+    "legs": 0.0,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "delts_lat": 0.7,
+    "delts_post": 0.5,
+    "upper_back": 0.4
+   },
+   "primary_muscle": "delts_lat",
+   "tier": "C"
+  },
+  "B.Delts|landmine / arnold press": {
+   "cat": "B.Delts",
+   "en": "Landmine / Arnold Press",
+   "coef": {
+    "chest": 0.1,
+    "shoulders": 1.0,
+    "back": 0.2,
+    "legs": 0.0,
+    "arms": 0.5,
+    "abs": 0.3
+   },
+   "leaf": {
+    "chest": 0.1,
+    "delts_ant": 1.0,
+    "delts_lat": 0.4,
+    "triceps": 0.5,
+    "upper_back": 0.2,
+    "core": 0.3
+   },
+   "primary_muscle": "delts_ant",
+   "tier": "B"
+  },
+  "B.Delts|ohp": {
+   "cat": "B.Delts",
+   "en": "OHP",
+   "coef": {
+    "chest": 0.1,
+    "shoulders": 1.0,
+    "back": 0.2,
+    "legs": 0.0,
+    "arms": 0.5,
+    "abs": 0.3
+   },
+   "leaf": {
+    "chest": 0.1,
+    "delts_ant": 1.0,
+    "delts_lat": 0.4,
+    "triceps": 0.5,
+    "upper_back": 0.2,
+    "core": 0.3
+   },
+   "primary_muscle": "delts_ant",
+   "tier": "A"
+  },
+  "B.Delts|pin-loaded machine shoulder press": {
+   "cat": "B.Delts",
+   "en": "Pin-Loaded Machine Shoulder Press",
+   "coef": {
+    "chest": 0.1,
+    "shoulders": 1.0,
+    "back": 0.2,
+    "legs": 0.0,
+    "arms": 0.5,
+    "abs": 0.3
+   },
+   "leaf": {
+    "chest": 0.1,
+    "delts_ant": 1.0,
+    "delts_lat": 0.4,
+    "triceps": 0.5,
+    "upper_back": 0.2,
+    "core": 0.3
+   },
+   "primary_muscle": "delts_ant",
+   "tier": "B"
+  },
+  "B.Delts|plate-loaded shoulder press": {
+   "cat": "B.Delts",
+   "en": "Plate-Loaded Shoulder Press",
+   "coef": {
+    "chest": 0.1,
+    "shoulders": 1.0,
+    "back": 0.2,
+    "legs": 0.0,
+    "arms": 0.5,
+    "abs": 0.3
+   },
+   "leaf": {
+    "chest": 0.1,
+    "delts_ant": 1.0,
+    "delts_lat": 0.4,
+    "triceps": 0.5,
+    "upper_back": 0.2,
+    "core": 0.3
+   },
+   "primary_muscle": "delts_ant",
+   "tier": "B"
+  },
+  "B.Delts|seated barbell / smith ohp": {
+   "cat": "B.Delts",
+   "en": "Seated Barbell / Smith OHP",
+   "coef": {
+    "chest": 0.1,
+    "shoulders": 1.0,
+    "back": 0.2,
+    "legs": 0.0,
+    "arms": 0.5,
+    "abs": 0.3
+   },
+   "leaf": {
+    "chest": 0.1,
+    "delts_ant": 1.0,
+    "delts_lat": 0.4,
+    "triceps": 0.5,
+    "upper_back": 0.2,
+    "core": 0.3
+   },
+   "primary_muscle": "delts_ant",
+   "tier": "B"
+  },
+  "B.Delts|seated db shoulder press": {
+   "cat": "B.Delts",
+   "en": "Seated DB Shoulder Press",
+   "coef": {
+    "chest": 0.1,
+    "shoulders": 1.0,
+    "back": 0.2,
+    "legs": 0.0,
+    "arms": 0.5,
+    "abs": 0.3
+   },
+   "leaf": {
+    "chest": 0.1,
+    "delts_ant": 1.0,
+    "delts_lat": 0.4,
+    "triceps": 0.5,
+    "upper_back": 0.2,
+    "core": 0.3
+   },
+   "primary_muscle": "delts_ant",
+   "tier": "B"
+  },
+  "B.Delts|z-press": {
+   "cat": "B.Delts",
+   "en": "Z-Press",
+   "coef": {
+    "chest": 0.1,
+    "shoulders": 1.0,
+    "back": 0.2,
+    "legs": 0.0,
+    "arms": 0.5,
+    "abs": 0.3
+   },
+   "leaf": {
+    "chest": 0.1,
+    "delts_ant": 1.0,
+    "delts_lat": 0.4,
+    "triceps": 0.5,
+    "upper_back": 0.2,
+    "core": 0.3
+   },
+   "primary_muscle": "delts_ant",
+   "tier": "B"
+  },
+  "B.Triceps|cable pushdown": {
+   "cat": "B.Triceps",
+   "en": "Cable Pushdown",
+   "coef": {
+    "chest": 0.05,
+    "shoulders": 0.05,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 1.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "chest": 0.05,
+    "delts_ant": 0.05,
+    "triceps": 1.0
+   },
+   "primary_muscle": "triceps",
+   "tier": "B"
+  },
+  "B.Triceps|close-grip floor press": {
+   "cat": "B.Triceps",
+   "en": "Close-Grip Floor Press",
+   "coef": {
+    "chest": 0.7,
+    "shoulders": 0.25,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.65,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 0.7,
+    "delts_ant": 0.25,
+    "triceps": 0.65,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Triceps|cross-body dual cable extension": {
+   "cat": "B.Triceps",
+   "en": "Cross-Body Dual Cable Extension",
+   "coef": {
+    "chest": 0.05,
+    "shoulders": 0.05,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 1.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "chest": 0.05,
+    "delts_ant": 0.05,
+    "triceps": 1.0
+   },
+   "primary_muscle": "triceps",
+   "tier": "B"
+  },
+  "B.Triceps|jm press (barbell / smith)": {
+   "cat": "B.Triceps",
+   "en": "JM Press (Barbell / Smith)",
+   "coef": {
+    "chest": 0.05,
+    "shoulders": 0.05,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 1.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "chest": 0.05,
+    "delts_ant": 0.05,
+    "triceps": 1.0
+   },
+   "primary_muscle": "triceps",
+   "tier": "B"
+  },
+  "B.Triceps|machine triceps dip / extension": {
+   "cat": "B.Triceps",
+   "en": "Machine Triceps Dip / Extension",
+   "coef": {
+    "chest": 0.5,
+    "shoulders": 0.25,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.8,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 0.5,
+    "delts_ant": 0.25,
+    "triceps": 0.8,
+    "core": 0.05
+   },
+   "primary_muscle": "triceps",
+   "tier": "B"
+  },
+  "B.Triceps|overhead cable extension": {
+   "cat": "B.Triceps",
+   "en": "Overhead Cable Extension",
+   "coef": {
+    "chest": 0.05,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 1.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "chest": 0.05,
+    "triceps": 1.0
+   },
+   "primary_muscle": "triceps",
+   "tier": "A"
+  },
+  "B.Triceps|plate-loaded overhead triceps extension": {
+   "cat": "B.Triceps",
+   "en": "Plate-Loaded Overhead Triceps Extension",
+   "coef": {
+    "chest": 0.05,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 1.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "chest": 0.05,
+    "triceps": 1.0
+   },
+   "primary_muscle": "triceps",
+   "tier": "A"
+  },
+  "B.Triceps|rolling db / tate press": {
+   "cat": "B.Triceps",
+   "en": "Rolling DB / Tate Press",
+   "coef": {
+    "chest": 0.05,
+    "shoulders": 0.05,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 1.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "chest": 0.05,
+    "delts_ant": 0.05,
+    "triceps": 1.0
+   },
+   "primary_muscle": "triceps",
+   "tier": "B"
+  },
+  "B.Triceps|rolling triceps extension": {
+   "cat": "B.Triceps",
+   "en": "Rolling Triceps Extension",
+   "coef": {
+    "chest": 0.05,
+    "shoulders": 0.05,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 1.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "chest": 0.05,
+    "delts_ant": 0.05,
+    "triceps": 1.0
+   },
+   "primary_muscle": "triceps",
+   "tier": "B"
+  },
+  "B.Triceps|skull crusher": {
+   "cat": "B.Triceps",
+   "en": "Skull Crusher",
+   "coef": {
+    "chest": 0.05,
+    "shoulders": 0.05,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 1.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "chest": 0.05,
+    "delts_ant": 0.05,
+    "triceps": 1.0
+   },
+   "primary_muscle": "triceps",
+   "tier": "A"
+  },
+  "B.Triceps|smith close-grip bench": {
+   "cat": "B.Triceps",
+   "en": "Smith Close-Grip Bench",
+   "coef": {
+    "chest": 0.7,
+    "shoulders": 0.25,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.65,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 0.7,
+    "delts_ant": 0.25,
+    "triceps": 0.65,
+    "core": 0.05
+   },
+   "primary_muscle": "chest",
+   "tier": "B"
+  },
+  "B.Triceps|tate press": {
+   "cat": "B.Triceps",
+   "en": "Tate Press",
+   "coef": {
+    "chest": 0.05,
+    "shoulders": 0.05,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 1.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "chest": 0.05,
+    "delts_ant": 0.05,
+    "triceps": 1.0
+   },
+   "primary_muscle": "triceps",
+   "tier": "B"
+  },
+  "B.Triceps|weighted dip": {
+   "cat": "B.Triceps",
+   "en": "Weighted Dip",
+   "coef": {
+    "chest": 0.5,
+    "shoulders": 0.25,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.8,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 0.5,
+    "delts_ant": 0.25,
+    "triceps": 0.8,
+    "core": 0.05
+   },
+   "primary_muscle": "triceps",
+   "tier": "B"
+  },
+  "D.LowerBack|45-degree back extension": {
+   "cat": "D.LowerBack",
+   "en": "45-Degree Back Extension",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.6,
+    "arms": 0.0,
+    "abs": 0.1
+   },
+   "leaf": {
+    "erectors": 1.0,
+    "hamstrings": 0.4,
+    "glutes": 0.6,
+    "core": 0.1
+   },
+   "primary_muscle": "erectors",
+   "tier": "B"
+  },
+  "D.LowerBack|back extension (ghd)": {
+   "cat": "D.LowerBack",
+   "en": "Back Extension (GHD)",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.6,
+    "arms": 0.0,
+    "abs": 0.1
+   },
+   "leaf": {
+    "erectors": 1.0,
+    "hamstrings": 0.4,
+    "glutes": 0.6,
+    "core": 0.1
+   },
+   "primary_muscle": "erectors",
+   "tier": "B"
+  },
+  "D.LowerBack|good morning": {
+   "cat": "D.LowerBack",
+   "en": "Good Morning",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.7,
+    "legs": 0.8,
+    "arms": 0.0,
+    "abs": 0.2
+   },
+   "leaf": {
+    "upper_back": 0.3,
+    "erectors": 0.7,
+    "hamstrings": 0.8,
+    "glutes": 0.7,
+    "core": 0.2
+   },
+   "primary_muscle": "hamstrings",
+   "tier": "B"
+  },
+  "D.LowerBack|good morning from pins": {
+   "cat": "D.LowerBack",
+   "en": "Good Morning from Pins",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.7,
+    "legs": 0.8,
+    "arms": 0.0,
+    "abs": 0.2
+   },
+   "leaf": {
+    "upper_back": 0.3,
+    "erectors": 0.7,
+    "hamstrings": 0.8,
+    "glutes": 0.7,
+    "core": 0.2
+   },
+   "primary_muscle": "hamstrings",
+   "tier": "B"
+  },
+  "D.LowerBack|jefferson curl": {
+   "cat": "D.LowerBack",
+   "en": "Jefferson Curl",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.4,
+    "arms": 0.0,
+    "abs": 0.3
+   },
+   "leaf": {
+    "erectors": 1.0,
+    "hamstrings": 0.4,
+    "glutes": 0.3,
+    "core": 0.3
+   },
+   "primary_muscle": "erectors",
+   "tier": "B"
+  },
+  "D.LowerBack|machine back extension": {
+   "cat": "D.LowerBack",
+   "en": "Machine Back Extension",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.6,
+    "arms": 0.0,
+    "abs": 0.1
+   },
+   "leaf": {
+    "erectors": 1.0,
+    "hamstrings": 0.4,
+    "glutes": 0.6,
+    "core": 0.1
+   },
+   "primary_muscle": "erectors",
+   "tier": "B"
+  },
+  "D.LowerBack|plate-loaded roman chair extension": {
+   "cat": "D.LowerBack",
+   "en": "Plate-Loaded Roman Chair Extension",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.6,
+    "arms": 0.0,
+    "abs": 0.1
+   },
+   "leaf": {
+    "erectors": 1.0,
+    "hamstrings": 0.4,
+    "glutes": 0.6,
+    "core": 0.1
+   },
+   "primary_muscle": "erectors",
+   "tier": "B"
+  },
+  "D.LowerBack|reverse hyper": {
+   "cat": "D.LowerBack",
+   "en": "Reverse Hyper",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.6,
+    "arms": 0.0,
+    "abs": 0.1
+   },
+   "leaf": {
+    "erectors": 1.0,
+    "hamstrings": 0.4,
+    "glutes": 0.6,
+    "core": 0.1
+   },
+   "primary_muscle": "erectors",
+   "tier": "B"
+  },
+  "D.LowerBack|seated good morning": {
+   "cat": "D.LowerBack",
+   "en": "Seated Good Morning",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.7,
+    "legs": 0.8,
+    "arms": 0.0,
+    "abs": 0.2
+   },
+   "leaf": {
+    "upper_back": 0.3,
+    "erectors": 0.7,
+    "hamstrings": 0.8,
+    "glutes": 0.7,
+    "core": 0.2
+   },
+   "primary_muscle": "hamstrings",
+   "tier": "B"
+  },
+  "D.LowerBack|snatch-grip rdl": {
+   "cat": "D.LowerBack",
+   "en": "Snatch-Grip RDL",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.8,
+    "legs": 0.9,
+    "arms": 0.0,
+    "abs": 0.3
+   },
+   "leaf": {
+    "upper_back": 0.6,
+    "erectors": 0.8,
+    "quads": 0.5,
+    "hamstrings": 0.9,
+    "glutes": 0.8,
+    "forearms": 0.5,
+    "core": 0.3
+   },
+   "primary_muscle": "hamstrings",
+   "tier": "B"
+  },
+  "D.LowerBack|suitcase deadlift": {
+   "cat": "D.LowerBack",
+   "en": "Suitcase Deadlift",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.8,
+    "legs": 0.6,
+    "arms": 0.0,
+    "abs": 0.5
+   },
+   "leaf": {
+    "erectors": 0.8,
+    "quads": 0.4,
+    "hamstrings": 0.5,
+    "glutes": 0.6,
+    "forearms": 0.6,
+    "core": 0.5
+   },
+   "primary_muscle": "erectors",
+   "tier": "B"
+  },
+  "D.LowerBack|zercher good morning": {
+   "cat": "D.LowerBack",
+   "en": "Zercher Good Morning",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.7,
+    "legs": 0.8,
+    "arms": 0.0,
+    "abs": 0.2
+   },
+   "leaf": {
+    "upper_back": 0.3,
+    "erectors": 0.7,
+    "hamstrings": 0.8,
+    "glutes": 0.7,
+    "core": 0.2
+   },
+   "primary_muscle": "hamstrings",
+   "tier": "B"
+  },
+  "D.Forearms|barbell static hold": {
+   "cat": "D.Forearms",
+   "en": "Barbell Static Hold",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.1,
+    "abs": 0.0
+   },
+   "leaf": {
+    "biceps": 0.1,
+    "forearms": 1.0
+   },
+   "primary_muscle": "forearms",
+   "tier": "B"
+  },
+  "D.Forearms|deadlift hold": {
+   "cat": "D.Forearms",
+   "en": "Deadlift Hold",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.1,
+    "abs": 0.0
+   },
+   "leaf": {
+    "biceps": 0.1,
+    "forearms": 1.0
+   },
+   "primary_muscle": "forearms",
+   "tier": "B"
+  },
+  "D.Forearms|farmer's carry": {
+   "cat": "D.Forearms",
+   "en": "Farmer's Carry",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.4,
+    "legs": 0.2,
+    "arms": 0.0,
+    "abs": 0.4
+   },
+   "leaf": {
+    "upper_back": 0.4,
+    "quads": 0.2,
+    "glutes": 0.2,
+    "forearms": 1.0,
+    "core": 0.4,
+    "calves": 0.1
+   },
+   "primary_muscle": "forearms",
+   "tier": "B"
+  },
+  "D.Forearms|fat bar hold": {
+   "cat": "D.Forearms",
+   "en": "Fat Bar Hold",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.1,
+    "abs": 0.0
+   },
+   "leaf": {
+    "biceps": 0.1,
+    "forearms": 1.0
+   },
+   "primary_muscle": "forearms",
+   "tier": "B"
+  },
+  "D.Forearms|plate pinch": {
+   "cat": "D.Forearms",
+   "en": "Plate Pinch",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.1,
+    "abs": 0.0
+   },
+   "leaf": {
+    "biceps": 0.1,
+    "forearms": 1.0
+   },
+   "primary_muscle": "forearms",
+   "tier": "B"
+  },
+  "D.Forearms|reverse wrist curl": {
+   "cat": "D.Forearms",
+   "en": "Reverse Wrist Curl",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.1,
+    "abs": 0.0
+   },
+   "leaf": {
+    "biceps": 0.1,
+    "forearms": 1.0
+   },
+   "primary_muscle": "forearms",
+   "tier": "B"
+  },
+  "D.Forearms|suitcase carry": {
+   "cat": "D.Forearms",
+   "en": "Suitcase Carry",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.4,
+    "legs": 0.2,
+    "arms": 0.0,
+    "abs": 0.4
+   },
+   "leaf": {
+    "upper_back": 0.4,
+    "quads": 0.2,
+    "glutes": 0.2,
+    "forearms": 1.0,
+    "core": 0.4,
+    "calves": 0.1
+   },
+   "primary_muscle": "forearms",
+   "tier": "B"
+  },
+  "D.Forearms|thick-bar hold": {
+   "cat": "D.Forearms",
+   "en": "Thick-Bar Hold",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.1,
+    "abs": 0.0
+   },
+   "leaf": {
+    "biceps": 0.1,
+    "forearms": 1.0
+   },
+   "primary_muscle": "forearms",
+   "tier": "B"
+  },
+  "D.Forearms|towel-grip pull-up": {
+   "cat": "D.Forearms",
+   "en": "Towel-Grip Pull-Up",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.1,
+    "abs": 0.0
+   },
+   "leaf": {
+    "biceps": 0.1,
+    "forearms": 1.0
+   },
+   "primary_muscle": "forearms",
+   "tier": "B"
+  },
+  "D.Forearms|wrist curl": {
+   "cat": "D.Forearms",
+   "en": "Wrist Curl",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.1,
+    "abs": 0.0
+   },
+   "leaf": {
+    "biceps": 0.1,
+    "forearms": 1.0
+   },
+   "primary_muscle": "forearms",
+   "tier": "B"
+  },
+  "Hyper.Biceps|bayesian cable curl": {
+   "cat": "Hyper.Biceps",
+   "en": "Bayesian Cable Curl",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 1.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "biceps": 1.0,
+    "forearms": 0.25
+   },
+   "primary_muscle": "biceps",
+   "tier": "A"
+  },
+  "Hyper.Biceps|chin-up": {
+   "cat": "Hyper.Biceps",
+   "en": "Chin-Up",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 1.0,
+    "legs": 0.0,
+    "arms": 0.6,
+    "abs": 0.2
+   },
+   "leaf": {
+    "upper_back": 0.4,
+    "lats": 1.0,
+    "biceps": 0.6,
+    "forearms": 0.3,
+    "core": 0.2
+   },
+   "primary_muscle": "lats",
+   "tier": "B"
+  },
+  "Hyper.Biceps|cross-body hammer curl": {
+   "cat": "Hyper.Biceps",
+   "en": "Cross-Body Hammer Curl",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.8,
+    "abs": 0.0
+   },
+   "leaf": {
+    "biceps": 0.8,
+    "forearms": 0.6
+   },
+   "primary_muscle": "biceps",
+   "tier": "B"
+  },
+  "Hyper.Biceps|ez-bar / barbell curl": {
+   "cat": "Hyper.Biceps",
+   "en": "EZ-Bar / Barbell Curl",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 1.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "biceps": 1.0,
+    "forearms": 0.25
+   },
+   "primary_muscle": "biceps",
+   "tier": "B"
+  },
+  "Hyper.Biceps|hammer curl": {
+   "cat": "Hyper.Biceps",
+   "en": "Hammer Curl",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.8,
+    "abs": 0.0
+   },
+   "leaf": {
+    "biceps": 0.8,
+    "forearms": 0.6
+   },
+   "primary_muscle": "biceps",
+   "tier": "B"
+  },
+  "Hyper.Biceps|incline db curl": {
+   "cat": "Hyper.Biceps",
+   "en": "Incline DB Curl",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 1.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "biceps": 1.0,
+    "forearms": 0.25
+   },
+   "primary_muscle": "biceps",
+   "tier": "B"
+  },
+  "Hyper.Biceps|leverage / machine bicep curl": {
+   "cat": "Hyper.Biceps",
+   "en": "Leverage / Machine Bicep Curl",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 1.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "biceps": 1.0,
+    "forearms": 0.25
+   },
+   "primary_muscle": "biceps",
+   "tier": "B"
+  },
+  "Hyper.Biceps|preacher curl": {
+   "cat": "Hyper.Biceps",
+   "en": "Preacher Curl",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 1.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "biceps": 1.0,
+    "forearms": 0.25
+   },
+   "primary_muscle": "biceps",
+   "tier": "A"
+  },
+  "Hyper.Biceps|reverse curl": {
+   "cat": "Hyper.Biceps",
+   "en": "Reverse Curl",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.6,
+    "abs": 0.0
+   },
+   "leaf": {
+    "biceps": 0.6,
+    "forearms": 0.8
+   },
+   "primary_muscle": "forearms",
+   "tier": "B"
+  },
+  "Hyper.Biceps|spider curl": {
+   "cat": "Hyper.Biceps",
+   "en": "Spider Curl",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 1.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "biceps": 1.0,
+    "forearms": 0.25
+   },
+   "primary_muscle": "biceps",
+   "tier": "B"
+  },
+  "Hyper.Biceps|zottman curl": {
+   "cat": "Hyper.Biceps",
+   "en": "Zottman Curl",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.8,
+    "abs": 0.0
+   },
+   "leaf": {
+    "biceps": 0.8,
+    "forearms": 0.6
+   },
+   "primary_muscle": "biceps",
+   "tier": "B"
+  },
+  "Hyper.LatDelts|behind-the-back / leaning cable raise": {
+   "cat": "Hyper.LatDelts",
+   "en": "Behind-the-Back / Leaning Cable Raise",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 1.0,
+    "back": 0.1,
+    "legs": 0.0,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "delts_ant": 0.1,
+    "delts_lat": 1.0,
+    "upper_back": 0.1
+   },
+   "primary_muscle": "delts_lat",
+   "tier": "B"
+  },
+  "Hyper.LatDelts|bent-over reverse fly": {
+   "cat": "Hyper.LatDelts",
+   "en": "Bent-Over Reverse Fly",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 1.0,
+    "back": 0.5,
+    "legs": 0.0,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "delts_post": 1.0,
+    "upper_back": 0.5
+   },
+   "primary_muscle": "delts_post",
+   "tier": "B"
+  },
+  "Hyper.LatDelts|cable lateral raise": {
+   "cat": "Hyper.LatDelts",
+   "en": "Cable Lateral Raise",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 1.0,
+    "back": 0.1,
+    "legs": 0.0,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "delts_ant": 0.1,
+    "delts_lat": 1.0,
+    "upper_back": 0.1
+   },
+   "primary_muscle": "delts_lat",
+   "tier": "B"
+  },
+  "Hyper.LatDelts|lu raise": {
+   "cat": "Hyper.LatDelts",
+   "en": "Lu Raise",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.7,
+    "back": 0.4,
+    "legs": 0.0,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "delts_lat": 0.7,
+    "delts_post": 0.5,
+    "upper_back": 0.4
+   },
+   "primary_muscle": "delts_lat",
+   "tier": "C"
+  },
+  "Hyper.LatDelts|multi / seated machine lateral raise": {
+   "cat": "Hyper.LatDelts",
+   "en": "Multi / Seated Machine Lateral Raise",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 1.0,
+    "back": 0.1,
+    "legs": 0.0,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "delts_ant": 0.1,
+    "delts_lat": 1.0,
+    "upper_back": 0.1
+   },
+   "primary_muscle": "delts_lat",
+   "tier": "B"
+  },
+  "Hyper.LatDelts|reverse pec deck": {
+   "cat": "Hyper.LatDelts",
+   "en": "Reverse Pec Deck",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 1.0,
+    "back": 0.5,
+    "legs": 0.0,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "delts_post": 1.0,
+    "upper_back": 0.5
+   },
+   "primary_muscle": "delts_post",
+   "tier": "B"
+  },
+  "Hyper.LatDelts|seated db lateral raise": {
+   "cat": "Hyper.LatDelts",
+   "en": "Seated DB Lateral Raise",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 1.0,
+    "back": 0.1,
+    "legs": 0.0,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "delts_ant": 0.1,
+    "delts_lat": 1.0,
+    "upper_back": 0.1
+   },
+   "primary_muscle": "delts_lat",
+   "tier": "B"
+  },
+  "Hyper.LatDelts|standing db lateral raise": {
+   "cat": "Hyper.LatDelts",
+   "en": "Standing DB Lateral Raise",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 1.0,
+    "back": 0.1,
+    "legs": 0.0,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "delts_ant": 0.1,
+    "delts_lat": 1.0,
+    "upper_back": 0.1
+   },
+   "primary_muscle": "delts_lat",
+   "tier": "A"
+  },
+  "Hyper.LatDelts|standing machine lateral raise": {
+   "cat": "Hyper.LatDelts",
+   "en": "Standing Machine Lateral Raise",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 1.0,
+    "back": 0.1,
+    "legs": 0.0,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "delts_ant": 0.1,
+    "delts_lat": 1.0,
+    "upper_back": 0.1
+   },
+   "primary_muscle": "delts_lat",
+   "tier": "B"
+  },
+  "B.Rotator|band external rotation": {
+   "cat": "B.Rotator",
+   "en": "Band External Rotation",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.3,
+    "back": 0.2,
+    "legs": 0.0,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "delts_post": 0.3,
+    "upper_back": 0.2
+   },
+   "primary_muscle": "delts_post",
+   "tier": "C"
+  },
+  "B.Rotator|cable external rotation": {
+   "cat": "B.Rotator",
+   "en": "Cable External Rotation",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.3,
+    "back": 0.2,
+    "legs": 0.0,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "delts_post": 0.3,
+    "upper_back": 0.2
+   },
+   "primary_muscle": "delts_post",
+   "tier": "C"
+  },
+  "B.Rotator|face pull": {
+   "cat": "B.Rotator",
+   "en": "Face Pull",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.8,
+    "back": 0.8,
+    "legs": 0.0,
+    "arms": 0.2,
+    "abs": 0.0
+   },
+   "leaf": {
+    "delts_post": 0.8,
+    "upper_back": 0.8,
+    "biceps": 0.2,
+    "forearms": 0.1
+   },
+   "primary_muscle": "delts_post",
+   "tier": "B"
+  },
+  "B.Rotator|full can raise": {
+   "cat": "B.Rotator",
+   "en": "Full Can Raise",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.3,
+    "back": 0.2,
+    "legs": 0.0,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "delts_post": 0.3,
+    "upper_back": 0.2
+   },
+   "primary_muscle": "delts_post",
+   "tier": "C"
+  },
+  "B.Rotator|overhead band pull-apart": {
+   "cat": "B.Rotator",
+   "en": "Overhead Band Pull-Apart",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.3,
+    "back": 0.2,
+    "legs": 0.0,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "delts_post": 0.3,
+    "upper_back": 0.2
+   },
+   "primary_muscle": "delts_post",
+   "tier": "C"
+  },
+  "B.Rotator|prone y-t-w raise": {
+   "cat": "B.Rotator",
+   "en": "Prone Y-T-W Raise",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.3,
+    "back": 0.2,
+    "legs": 0.0,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "delts_post": 0.3,
+    "upper_back": 0.2
+   },
+   "primary_muscle": "delts_post",
+   "tier": "C"
+  },
+  "B.Rotator|side-lying external rotation": {
+   "cat": "B.Rotator",
+   "en": "Side-Lying External Rotation",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.3,
+    "back": 0.2,
+    "legs": 0.0,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "delts_post": 0.3,
+    "upper_back": 0.2
+   },
+   "primary_muscle": "delts_post",
+   "tier": "C"
+  },
+  "B.Rotator|sleeper stretch": {
+   "cat": "B.Rotator",
+   "en": "Sleeper Stretch",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {},
+   "primary_muscle": null,
+   "tier": "C"
+  },
+  "S.GluteMed|band lateral walk": {
+   "cat": "S.GluteMed",
+   "en": "Band Lateral Walk",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.05
+   },
+   "leaf": {
+    "quads": 0.1,
+    "glutes": 1.0,
+    "core": 0.05
+   },
+   "primary_muscle": "glutes",
+   "tier": "C"
+  },
+  "S.GluteMed|clamshell": {
+   "cat": "S.GluteMed",
+   "en": "Clamshell",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.05
+   },
+   "leaf": {
+    "quads": 0.1,
+    "glutes": 1.0,
+    "core": 0.05
+   },
+   "primary_muscle": "glutes",
+   "tier": "C"
+  },
+  "S.GluteMed|hip airplane": {
+   "cat": "S.GluteMed",
+   "en": "Hip Airplane",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.05
+   },
+   "leaf": {
+    "quads": 0.1,
+    "glutes": 1.0,
+    "core": 0.05
+   },
+   "primary_muscle": "glutes",
+   "tier": "C"
+  },
+  "S.GluteMed|lateral step-down": {
+   "cat": "S.GluteMed",
+   "en": "Lateral Step-Down",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.05
+   },
+   "leaf": {
+    "quads": 0.1,
+    "glutes": 1.0,
+    "core": 0.05
+   },
+   "primary_muscle": "glutes",
+   "tier": "C"
+  },
+  "S.GluteMed|machine hip abduction": {
+   "cat": "S.GluteMed",
+   "en": "Machine Hip Abduction",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.05
+   },
+   "leaf": {
+    "quads": 0.1,
+    "glutes": 1.0,
+    "core": 0.05
+   },
+   "primary_muscle": "glutes",
+   "tier": "C"
+  },
+  "S.GluteMed|monster walk": {
+   "cat": "S.GluteMed",
+   "en": "Monster Walk",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.05
+   },
+   "leaf": {
+    "quads": 0.1,
+    "glutes": 1.0,
+    "core": 0.05
+   },
+   "primary_muscle": "glutes",
+   "tier": "C"
+  },
+  "S.GluteMed|side-lying hip abduction": {
+   "cat": "S.GluteMed",
+   "en": "Side-Lying Hip Abduction",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.05
+   },
+   "leaf": {
+    "quads": 0.1,
+    "glutes": 1.0,
+    "core": 0.05
+   },
+   "primary_muscle": "glutes",
+   "tier": "C"
+  },
+  "S.GluteMed|standing cable hip abduction": {
+   "cat": "S.GluteMed",
+   "en": "Standing Cable Hip Abduction",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 1.0,
+    "arms": 0.0,
+    "abs": 0.05
+   },
+   "leaf": {
+    "quads": 0.1,
+    "glutes": 1.0,
+    "core": 0.05
+   },
+   "primary_muscle": "glutes",
+   "tier": "C"
+  },
+  "S.Calves|seated calf raise": {
+   "cat": "S.Calves",
+   "en": "Seated Calf Raise",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.05,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "hamstrings": 0.05,
+    "calves": 1.0
+   },
+   "primary_muscle": "calves",
+   "tier": "B"
+  },
+  "S.Calves|single-leg calf raise": {
+   "cat": "S.Calves",
+   "en": "Single-Leg Calf Raise",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.05,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "hamstrings": 0.05,
+    "calves": 1.0
+   },
+   "primary_muscle": "calves",
+   "tier": "B"
+  },
+  "S.Calves|standing calf raise": {
+   "cat": "S.Calves",
+   "en": "Standing Calf Raise",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.05,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {
+    "hamstrings": 0.05,
+    "calves": 1.0
+   },
+   "primary_muscle": "calves",
+   "tier": "B"
+  },
+  "SBD.Power|box jump": {
+   "cat": "SBD.Power",
+   "en": "Box Jump",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.7,
+    "arms": 0.0,
+    "abs": 0.2
+   },
+   "leaf": {
+    "quads": 0.7,
+    "hamstrings": 0.3,
+    "glutes": 0.7,
+    "core": 0.2,
+    "calves": 0.6
+   },
+   "primary_muscle": "quads",
+   "tier": "C"
+  },
+  "SBD.Power|broad jump": {
+   "cat": "SBD.Power",
+   "en": "Broad Jump",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.7,
+    "arms": 0.0,
+    "abs": 0.2
+   },
+   "leaf": {
+    "quads": 0.7,
+    "hamstrings": 0.3,
+    "glutes": 0.7,
+    "core": 0.2,
+    "calves": 0.6
+   },
+   "primary_muscle": "quads",
+   "tier": "C"
+  },
+  "SBD.Power|jump squat": {
+   "cat": "SBD.Power",
+   "en": "Jump Squat",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.7,
+    "arms": 0.0,
+    "abs": 0.2
+   },
+   "leaf": {
+    "quads": 0.7,
+    "hamstrings": 0.3,
+    "glutes": 0.7,
+    "core": 0.2,
+    "calves": 0.6
+   },
+   "primary_muscle": "quads",
+   "tier": "C"
+  },
+  "SBD.Power|med ball slam": {
+   "cat": "SBD.Power",
+   "en": "Med Ball Slam",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.3,
+    "back": 0.5,
+    "legs": 0.0,
+    "arms": 0.4,
+    "abs": 0.7
+   },
+   "leaf": {
+    "delts_ant": 0.3,
+    "triceps": 0.4,
+    "lats": 0.5,
+    "core": 0.7
+   },
+   "primary_muscle": "core",
+   "tier": "C"
+  },
+  "SBD.Power|plyo push-up": {
+   "cat": "SBD.Power",
+   "en": "Plyo Push-Up",
+   "coef": {
+    "chest": 0.65,
+    "shoulders": 0.3,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.5,
+    "abs": 0.2
+   },
+   "leaf": {
+    "chest": 0.65,
+    "delts_ant": 0.3,
+    "triceps": 0.5,
+    "core": 0.2
+   },
+   "primary_muscle": "chest",
+   "tier": "C"
+  },
+  "SBD.Power|rotational med ball throw": {
+   "cat": "SBD.Power",
+   "en": "Rotational Med Ball Throw",
+   "coef": {
+    "chest": 0.2,
+    "shoulders": 0.3,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.2,
+    "abs": 0.8
+   },
+   "leaf": {
+    "chest": 0.2,
+    "delts_ant": 0.3,
+    "triceps": 0.2,
+    "core": 0.8
+   },
+   "primary_muscle": "core",
+   "tier": "C"
+  },
+  "SBD.Power|vertical jump": {
+   "cat": "SBD.Power",
+   "en": "Vertical Jump",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.7,
+    "arms": 0.0,
+    "abs": 0.2
+   },
+   "leaf": {
+    "quads": 0.7,
+    "hamstrings": 0.3,
+    "glutes": 0.7,
+    "core": 0.2,
+    "calves": 0.6
+   },
+   "primary_muscle": "quads",
+   "tier": "C"
+  },
+  "SBD.Sled|prowler sprint": {
+   "cat": "SBD.Sled",
+   "en": "Prowler Sprint",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.9,
+    "arms": 0.0,
+    "abs": 0.2
+   },
+   "leaf": {
+    "quads": 0.9,
+    "glutes": 0.6,
+    "core": 0.2,
+    "calves": 0.4
+   },
+   "primary_muscle": "quads",
+   "tier": "C"
+  },
+  "SBD.Sled|sled drag": {
+   "cat": "SBD.Sled",
+   "en": "Sled Drag",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.4,
+    "legs": 0.7,
+    "arms": 0.0,
+    "abs": 0.2
+   },
+   "leaf": {
+    "upper_back": 0.4,
+    "quads": 0.5,
+    "hamstrings": 0.6,
+    "glutes": 0.7,
+    "forearms": 0.4,
+    "core": 0.2
+   },
+   "primary_muscle": "glutes",
+   "tier": "C"
+  },
+  "SBD.Sled|sled pull": {
+   "cat": "SBD.Sled",
+   "en": "Sled Pull",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.4,
+    "legs": 0.7,
+    "arms": 0.0,
+    "abs": 0.2
+   },
+   "leaf": {
+    "upper_back": 0.4,
+    "quads": 0.5,
+    "hamstrings": 0.6,
+    "glutes": 0.7,
+    "forearms": 0.4,
+    "core": 0.2
+   },
+   "primary_muscle": "glutes",
+   "tier": "C"
+  },
+  "SBD.Sled|sled push": {
+   "cat": "SBD.Sled",
+   "en": "Sled Push",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.9,
+    "arms": 0.0,
+    "abs": 0.2
+   },
+   "leaf": {
+    "quads": 0.9,
+    "glutes": 0.6,
+    "core": 0.2,
+    "calves": 0.4
+   },
+   "primary_muscle": "quads",
+   "tier": "C"
+  },
+  "Unmapped|unmapped": {
+   "cat": "Unmapped",
+   "en": "Unmapped",
+   "coef": {
+    "chest": 0.0,
+    "shoulders": 0.0,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.0,
+    "abs": 0.0
+   },
+   "leaf": {},
+   "primary_muscle": null,
+   "tier": "C",
+   "placeholder": true
+  },
+  "B.Triceps|dip": {
+   "cat": "B.Triceps",
+   "en": "Dip",
+   "coef": {
+    "chest": 0.5,
+    "shoulders": 0.25,
+    "back": 0.0,
+    "legs": 0.0,
+    "arms": 0.8,
+    "abs": 0.05
+   },
+   "leaf": {
+    "chest": 0.5,
+    "delts_ant": 0.25,
+    "triceps": 0.8,
+    "core": 0.05
+   },
+   "primary_muscle": "triceps",
+   "tier": "B"
+  }
+ },
+ "sbd": {
+  "S.Main|high-bar squat": {
+   "lift": "S",
+   "why": "category"
+  },
+  "S.Main|low-bar squat": {
+   "lift": "S",
+   "why": "category"
+  },
+  "S.Vari.Start|anderson squat": {
+   "lift": "S",
+   "why": "category"
+  },
+  "S.Vari.Start|box squat": {
+   "lift": "S",
+   "why": "category"
+  },
+  "S.Vari.Start|cyclist squat": {
+   "lift": "S",
+   "why": "category"
+  },
+  "S.Vari.Start|paused squat": {
+   "lift": "S",
+   "why": "category"
+  },
+  "S.Vari.Start|tempo squat": {
+   "lift": "S",
+   "why": "category"
+  },
+  "S.Vari.Start|zercher squat": {
+   "lift": "S",
+   "why": "category"
+  },
+  "S.Vari.Mid|front squat": {
+   "lift": "S",
+   "why": "category"
+  },
+  "S.Vari.Mid|kang squat": {
+   "lift": "S",
+   "why": "category"
+  },
+  "S.Vari.Mid|narrow-stance squat": {
+   "lift": "S",
+   "why": "category"
+  },
+  "S.Vari.Mid|pause above parallel squat": {
+   "lift": "S",
+   "why": "category"
+  },
+  "S.Vari.Mid|pin squat": {
+   "lift": "S",
+   "why": "category"
+  },
+  "S.Vari.End|banded squat": {
+   "lift": "S",
+   "why": "category"
+  },
+  "S.Vari.End|cossack squat": {
+   "lift": "S",
+   "why": "category"
+  },
+  "S.Vari.End|hatfield squat": {
+   "lift": "S",
+   "why": "category"
+  },
+  "S.Vari.End|leverage squat (v-squat)": {
+   "lift": "S",
+   "why": "category"
+  },
+  "S.Vari.End|low-bar squat": {
+   "lift": "S",
+   "why": "category"
+  },
+  "S.Vari.End|pendulum squat": {
+   "lift": "S",
+   "why": "category"
+  },
+  "S.Vari.End|skater squat": {
+   "lift": "S",
+   "why": "category"
+  },
+  "S.Vari.End|squat & calf raise machine": {
+   "lift": "S",
+   "why": "category"
+  },
+  "S.Vari.End|wide-stance squat": {
+   "lift": "S",
+   "why": "category"
+  },
+  "S.Vari.Balance|belt squat": {
+   "lift": "S",
+   "why": "category"
+  },
+  "S.Vari.Balance|cambered-bar squat": {
+   "lift": "S",
+   "why": "category"
+  },
+  "S.Vari.Balance|overhead squat": {
+   "lift": "S",
+   "why": "category"
+  },
+  "S.Vari.Balance|safety-bar squat": {
+   "lift": "S",
+   "why": "category"
+  },
+  "S.Vari.Balance|zombie squat": {
+   "lift": "S",
+   "why": "category"
+  },
+  "B.Main|mid-grip bench": {
+   "lift": "B",
+   "why": "category"
+  },
+  "B.Main|ultra-wide-grip bench": {
+   "lift": "B",
+   "why": "category"
+  },
+  "B.Vari.Start|dead bench": {
+   "lift": "B",
+   "why": "category"
+  },
+  "B.Vari.Start|fat bar bench press": {
+   "lift": "B",
+   "why": "category"
+  },
+  "B.Vari.Start|long paused bench": {
+   "lift": "B",
+   "why": "category"
+  },
+  "B.Vari.Start|panatta multi-grip flat press": {
+   "lift": "B",
+   "why": "category"
+  },
+  "B.Vari.Start|tempo bench": {
+   "lift": "B",
+   "why": "category"
+  },
+  "B.Vari.Start|wide-grip bench": {
+   "lift": "B",
+   "why": "category"
+  },
+  "B.Vari.Mid|cambered bar bench press": {
+   "lift": "B",
+   "why": "category"
+  },
+  "B.Vari.Mid|floor press": {
+   "lift": "B",
+   "why": "category"
+  },
+  "B.Vari.Mid|incline bench press": {
+   "lift": "B",
+   "why": "category"
+  },
+  "B.Vari.Mid|pin bench": {
+   "lift": "B",
+   "why": "category"
+  },
+  "B.Vari.Mid|spoto bench": {
+   "lift": "B",
+   "why": "category"
+  },
+  "B.Vari.End|board press": {
+   "lift": "B",
+   "why": "category"
+  },
+  "B.Vari.End|close-grip floor press": {
+   "lift": "B",
+   "why": "category"
+  },
+  "B.Vari.End|narrow-grip bench": {
+   "lift": "B",
+   "why": "category"
+  },
+  "B.Vari.End|plate-loaded decline press": {
+   "lift": "B",
+   "why": "category"
+  },
+  "B.Vari.End|slingshot bench": {
+   "lift": "B",
+   "why": "category"
+  },
+  "B.Vari.End|ultra-wide-grip bench": {
+   "lift": "B",
+   "why": "category"
+  },
+  "B.Vari.Control|band-resisted bench press": {
+   "lift": "B",
+   "why": "category"
+  },
+  "B.Vari.Control|cluster bench": {
+   "lift": "B",
+   "why": "category"
+  },
+  "B.Vari.Control|feet-up bench": {
+   "lift": "B",
+   "why": "category"
+  },
+  "B.Vari.Control|larsen press": {
+   "lift": "B",
+   "why": "category"
+  },
+  "B.Vari.Control|neutral-grip db / machine press": {
+   "lift": "B",
+   "why": "category"
+  },
+  "B.Vari.Control|touch&go bench": {
+   "lift": "B",
+   "why": "category"
+  },
+  "D.Main|conventional deadlift": {
+   "lift": "D",
+   "why": "category"
+  },
+  "D.Main|sumo deadlift": {
+   "lift": "D",
+   "why": "category"
+  },
+  "D.Main|semi-sumo deadlift": {
+   "lift": "D",
+   "why": "category"
+  },
+  "D.Vari.Start|deficit deadlift": {
+   "lift": "D",
+   "why": "category"
+  },
+  "D.Vari.Start|dumbbell deadlift": {
+   "lift": "D",
+   "why": "category"
+  },
+  "D.Vari.Start|halting deadlift": {
+   "lift": "D",
+   "why": "category"
+  },
+  "D.Vari.Start|kettlebell deadlift": {
+   "lift": "D",
+   "why": "category"
+  },
+  "D.Vari.Start|snatch-grip deadlift": {
+   "lift": "D",
+   "why": "category"
+  },
+  "D.Vari.Start|trap-bar / leverage squat pull": {
+   "lift": "D",
+   "why": "category"
+  },
+  "D.Vari.Mid|narrow sumo deadlift": {
+   "lift": "D",
+   "why": "category"
+  },
+  "D.Vari.Mid|paused deadlift": {
+   "lift": "D",
+   "why": "category"
+  },
+  "D.Vari.Mid|romanian deadlift": {
+   "lift": "D",
+   "why": "category"
+  },
+  "D.Vari.Mid|snatch-grip block pull": {
+   "lift": "D",
+   "why": "category"
+  },
+  "D.Vari.Mid|semi-sumo deadlift": {
+   "lift": "D",
+   "why": "category"
+  },
+  "D.Vari.Mid|tempo deadlift": {
+   "lift": "D",
+   "why": "category"
+  },
+  "D.Vari.End|banded / reverse-band deadlift": {
+   "lift": "D",
+   "why": "category"
+  },
+  "D.Vari.End|block pull": {
+   "lift": "D",
+   "why": "category"
+  },
+  "D.Vari.End|deadlift-bar pull (whip bar)": {
+   "lift": "D",
+   "why": "category"
+  },
+  "D.Vari.End|dumbbell rack pull": {
+   "lift": "D",
+   "why": "category"
+  },
+  "D.Vari.End|good morning": {
+   "lift": "D",
+   "why": "category"
+  },
+  "D.Vari.End|rack pull": {
+   "lift": "D",
+   "why": "category"
+  },
+  "D.Vari.Power|box deadlift (vert pull)": {
+   "lift": "D",
+   "why": "category"
+  },
+  "D.Vari.Power|cluster deadlift": {
+   "lift": "D",
+   "why": "category"
+  },
+  "D.Vari.Power|kettlebell swing": {
+   "lift": "D",
+   "why": "category"
+  },
+  "D.Vari.Power|power clean": {
+   "lift": "D",
+   "why": "category"
+  },
+  "D.Vari.Power|sumo deadlift": {
+   "lift": "D",
+   "why": "category"
+  },
+  "SBD.UpperBack|bent-over barbell row": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "SBD.UpperBack|chest-supported row (elbows out)": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "SBD.UpperBack|face pull": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "SBD.UpperBack|hoist roc-it mid row": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "SBD.UpperBack|inward converging seated row": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "SBD.UpperBack|iso-lateral plate-loaded row": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "SBD.UpperBack|kelso / barbell shrug": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "SBD.UpperBack|meadows row": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "SBD.UpperBack|one-arm dumbbell row": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "SBD.UpperBack|pendlay row": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "SBD.UpperBack|seal row": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "SBD.UpperBack|seated row": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "SBD.UpperBack|single-arm cable row": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "SBD.UpperBack|smith machine shrug": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "SBD.UpperBack|t-bar row": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Core|ab wheel rollout": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Core|bird dog": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Core|cable crunch": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Core|cable woodchop / lift": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Core|dead bug": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Core|decline bench sit-up / crunch": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Core|dragon flag": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Core|ghd sit-up": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Core|leverage ab crunch machine": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Core|machine / hanging leg raise": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Core|pallof press": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Core|side plank": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Core|suitcase carry": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Core|weighted plank": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.Lats|chin-up": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.Lats|iso-lateral front lat row": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.Lats|meadows row": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.Lats|plate-loaded high row": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.Lats|plate-loaded vertical pulldown": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.Lats|pull-up": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.Lats|pull-up (standing assisted)": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.Lats|rope lat prayer": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.Lats|scissor converging pulldown": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.Lats|straight-arm pulldown": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.Lats|technogym vertical traction": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.Lats|towel-grip pull-up": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.Lats|wide / neutral lat pulldown": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.Lats|weighted pull-up": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.GluteHam|45-degree back extension": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.GluteHam|barbell hip thrust": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.GluteHam|booty builder split deadlift": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.GluteHam|cable glute kickback": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.GluteHam|cable pull-through": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.GluteHam|glute-ham raise / nordic curl": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.GluteHam|kettlebell / db swing": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.GluteHam|kneeling single-leg curl": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.GluteHam|machine hip thrust (glute drive)": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.GluteHam|natural leg curl": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.GluteHam|romanian deadlift": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.GluteHam|seated leg curl": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.GluteHam|single-leg rdl": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.GluteHam|standing single-leg curl": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.GluteHam|stiff-leg deadlift": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Quads|belt squat": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Quads|copenhagen plank": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Quads|dumbbell bulgarian split squat": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Quads|hack squat": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Quads|heels-elevated goblet squat": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Quads|leg extension": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Quads|leg press": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Quads|leverage squat (v-squat)": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Quads|machine hip adduction": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Quads|seated leg press": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Quads|single-leg leg press": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Quads|smith machine squat (feet forward)": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Quads|smith reverse lunge": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Quads|walking lunge / step-up": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Pecs|cable fly (low-to-high / mid)": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Pecs|dip (standing assisted)": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Pecs|dumbbell bench press": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Pecs|dumbbell squeeze press": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Pecs|incline bench press": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Pecs|incline cable fly": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Pecs|incline dumbbell press": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Pecs|machine chest press": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Pecs|nautilus leverage press": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Pecs|panatta multi-grip flat press": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Pecs|pec deck": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Pecs|plate-loaded decline press": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Pecs|plate-loaded incline press": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Pecs|rotary converging chest press": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Pecs|weighted dip": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Delts|bradford press": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Delts|cable y-raise": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Delts|landmine / arnold press": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Delts|ohp": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Delts|pin-loaded machine shoulder press": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Delts|plate-loaded shoulder press": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Delts|seated barbell / smith ohp": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Delts|seated db shoulder press": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Delts|z-press": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Triceps|cable pushdown": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Triceps|close-grip floor press": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Triceps|cross-body dual cable extension": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Triceps|jm press (barbell / smith)": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Triceps|machine triceps dip / extension": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Triceps|overhead cable extension": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Triceps|plate-loaded overhead triceps extension": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Triceps|rolling db / tate press": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Triceps|rolling triceps extension": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Triceps|skull crusher": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Triceps|smith close-grip bench": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Triceps|tate press": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Triceps|weighted dip": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.LowerBack|45-degree back extension": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.LowerBack|back extension (ghd)": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.LowerBack|good morning": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.LowerBack|good morning from pins": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.LowerBack|jefferson curl": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.LowerBack|machine back extension": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.LowerBack|plate-loaded roman chair extension": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.LowerBack|reverse hyper": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.LowerBack|seated good morning": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.LowerBack|snatch-grip rdl": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.LowerBack|suitcase deadlift": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.LowerBack|zercher good morning": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.Forearms|barbell static hold": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.Forearms|deadlift hold": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.Forearms|farmer's carry": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.Forearms|fat bar hold": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.Forearms|plate pinch": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.Forearms|reverse wrist curl": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.Forearms|suitcase carry": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.Forearms|thick-bar hold": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.Forearms|towel-grip pull-up": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "D.Forearms|wrist curl": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "Hyper.Biceps|bayesian cable curl": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "Hyper.Biceps|chin-up": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "Hyper.Biceps|cross-body hammer curl": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "Hyper.Biceps|ez-bar / barbell curl": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "Hyper.Biceps|hammer curl": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "Hyper.Biceps|incline db curl": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "Hyper.Biceps|leverage / machine bicep curl": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "Hyper.Biceps|preacher curl": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "Hyper.Biceps|reverse curl": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "Hyper.Biceps|spider curl": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "Hyper.Biceps|zottman curl": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "Hyper.LatDelts|behind-the-back / leaning cable raise": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "Hyper.LatDelts|bent-over reverse fly": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "Hyper.LatDelts|cable lateral raise": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "Hyper.LatDelts|lu raise": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "Hyper.LatDelts|multi / seated machine lateral raise": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "Hyper.LatDelts|reverse pec deck": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "Hyper.LatDelts|seated db lateral raise": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "Hyper.LatDelts|standing db lateral raise": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "Hyper.LatDelts|standing machine lateral raise": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Rotator|band external rotation": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Rotator|cable external rotation": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Rotator|face pull": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Rotator|full can raise": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Rotator|overhead band pull-apart": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Rotator|prone y-t-w raise": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Rotator|side-lying external rotation": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Rotator|sleeper stretch": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.GluteMed|band lateral walk": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.GluteMed|clamshell": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.GluteMed|hip airplane": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.GluteMed|lateral step-down": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.GluteMed|machine hip abduction": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.GluteMed|monster walk": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.GluteMed|side-lying hip abduction": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.GluteMed|standing cable hip abduction": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Calves|seated calf raise": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Calves|single-leg calf raise": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "S.Calves|standing calf raise": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "SBD.Power|box jump": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "SBD.Power|broad jump": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "SBD.Power|jump squat": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "SBD.Power|med ball slam": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "SBD.Power|plyo push-up": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "SBD.Power|rotational med ball throw": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "SBD.Power|vertical jump": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "SBD.Sled|prowler sprint": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "SBD.Sled|sled drag": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "SBD.Sled|sled pull": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "SBD.Sled|sled push": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "Unmapped|unmapped": {
+   "lift": "none",
+   "why": "non-main"
+  },
+  "B.Triceps|dip": {
+   "lift": "none",
+   "why": "non-main"
+  }
+ },
+ "by_name": {
+  "45-degree back extension": {
+   "en": "45-Degree Back Extension",
+   "keys": [
+    "D.GluteHam|45-degree back extension",
+    "D.LowerBack|45-degree back extension"
+   ],
+   "unique": true
+  },
+  "ab wheel rollout": {
+   "en": "Ab Wheel Rollout",
+   "keys": [
+    "S.Core|ab wheel rollout"
+   ],
+   "unique": true
+  },
+  "anderson squat": {
+   "en": "Anderson Squat",
+   "keys": [
+    "S.Vari.Start|anderson squat"
+   ],
+   "unique": true
+  },
+  "back extension (ghd)": {
+   "en": "Back Extension (GHD)",
+   "keys": [
+    "D.LowerBack|back extension (ghd)"
+   ],
+   "unique": true
+  },
+  "band external rotation": {
+   "en": "Band External Rotation",
+   "keys": [
+    "B.Rotator|band external rotation"
+   ],
+   "unique": true
+  },
+  "band lateral walk": {
+   "en": "Band Lateral Walk",
+   "keys": [
+    "S.GluteMed|band lateral walk"
+   ],
+   "unique": true
+  },
+  "band-resisted bench press": {
+   "en": "Band-Resisted Bench Press",
+   "keys": [
+    "B.Vari.Control|band-resisted bench press"
+   ],
+   "unique": true
+  },
+  "banded / reverse-band deadlift": {
+   "en": "Banded / Reverse-Band Deadlift",
+   "keys": [
+    "D.Vari.End|banded / reverse-band deadlift"
+   ],
+   "unique": true
+  },
+  "banded squat": {
+   "en": "Banded Squat",
+   "keys": [
+    "S.Vari.End|banded squat"
+   ],
+   "unique": true
+  },
+  "barbell hip thrust": {
+   "en": "Barbell Hip Thrust",
+   "keys": [
+    "D.GluteHam|barbell hip thrust"
+   ],
+   "unique": true
+  },
+  "barbell static hold": {
+   "en": "Barbell Static Hold",
+   "keys": [
+    "D.Forearms|barbell static hold"
+   ],
+   "unique": true
+  },
+  "bayesian cable curl": {
+   "en": "Bayesian Cable Curl",
+   "keys": [
+    "Hyper.Biceps|bayesian cable curl"
+   ],
+   "unique": true
+  },
+  "behind-the-back / leaning cable raise": {
+   "en": "Behind-the-Back / Leaning Cable Raise",
+   "keys": [
+    "Hyper.LatDelts|behind-the-back / leaning cable raise"
+   ],
+   "unique": true
+  },
+  "belt squat": {
+   "en": "Belt Squat",
+   "keys": [
+    "S.Vari.Balance|belt squat",
+    "S.Quads|belt squat"
+   ],
+   "unique": true
+  },
+  "bent-over barbell row": {
+   "en": "Bent-Over Barbell Row",
+   "keys": [
+    "SBD.UpperBack|bent-over barbell row"
+   ],
+   "unique": true
+  },
+  "bent-over reverse fly": {
+   "en": "Bent-Over Reverse Fly",
+   "keys": [
+    "Hyper.LatDelts|bent-over reverse fly"
+   ],
+   "unique": true
+  },
+  "bird dog": {
+   "en": "Bird Dog",
+   "keys": [
+    "S.Core|bird dog"
+   ],
+   "unique": true
+  },
+  "block pull": {
+   "en": "Block Pull",
+   "keys": [
+    "D.Vari.End|block pull"
+   ],
+   "unique": true
+  },
+  "board press": {
+   "en": "Board Press",
+   "keys": [
+    "B.Vari.End|board press"
+   ],
+   "unique": true
+  },
+  "booty builder split deadlift": {
+   "en": "Booty Builder Split Deadlift",
+   "keys": [
+    "D.GluteHam|booty builder split deadlift"
+   ],
+   "unique": true
+  },
+  "box deadlift (vert pull)": {
+   "en": "Box Deadlift (Vert Pull)",
+   "keys": [
+    "D.Vari.Power|box deadlift (vert pull)"
+   ],
+   "unique": true
+  },
+  "box jump": {
+   "en": "Box Jump",
+   "keys": [
+    "SBD.Power|box jump"
+   ],
+   "unique": true
+  },
+  "box squat": {
+   "en": "Box Squat",
+   "keys": [
+    "S.Vari.Start|box squat"
+   ],
+   "unique": true
+  },
+  "bradford press": {
+   "en": "Bradford Press",
+   "keys": [
+    "B.Delts|bradford press"
+   ],
+   "unique": true
+  },
+  "broad jump": {
+   "en": "Broad Jump",
+   "keys": [
+    "SBD.Power|broad jump"
+   ],
+   "unique": true
+  },
+  "cable crunch": {
+   "en": "Cable Crunch",
+   "keys": [
+    "S.Core|cable crunch"
+   ],
+   "unique": true
+  },
+  "cable external rotation": {
+   "en": "Cable External Rotation",
+   "keys": [
+    "B.Rotator|cable external rotation"
+   ],
+   "unique": true
+  },
+  "cable fly (low-to-high / mid)": {
+   "en": "Cable Fly (Low-to-High / Mid)",
+   "keys": [
+    "B.Pecs|cable fly (low-to-high / mid)"
+   ],
+   "unique": true
+  },
+  "cable glute kickback": {
+   "en": "Cable Glute Kickback",
+   "keys": [
+    "D.GluteHam|cable glute kickback"
+   ],
+   "unique": true
+  },
+  "cable lateral raise": {
+   "en": "Cable Lateral Raise",
+   "keys": [
+    "Hyper.LatDelts|cable lateral raise"
+   ],
+   "unique": true
+  },
+  "cable pull-through": {
+   "en": "Cable Pull-Through",
+   "keys": [
+    "D.GluteHam|cable pull-through"
+   ],
+   "unique": true
+  },
+  "cable pushdown": {
+   "en": "Cable Pushdown",
+   "keys": [
+    "B.Triceps|cable pushdown"
+   ],
+   "unique": true
+  },
+  "cable woodchop / lift": {
+   "en": "Cable Woodchop / Lift",
+   "keys": [
+    "S.Core|cable woodchop / lift"
+   ],
+   "unique": true
+  },
+  "cable y-raise": {
+   "en": "Cable Y-Raise",
+   "keys": [
+    "B.Delts|cable y-raise"
+   ],
+   "unique": true
+  },
+  "cambered bar bench press": {
+   "en": "Cambered Bar Bench Press",
+   "keys": [
+    "B.Vari.Mid|cambered bar bench press"
+   ],
+   "unique": true
+  },
+  "cambered-bar squat": {
+   "en": "Cambered-Bar Squat",
+   "keys": [
+    "S.Vari.Balance|cambered-bar squat"
+   ],
+   "unique": true
+  },
+  "chest-supported row (elbows out)": {
+   "en": "Chest-Supported Row (Elbows Out)",
+   "keys": [
+    "SBD.UpperBack|chest-supported row (elbows out)"
+   ],
+   "unique": true
+  },
+  "chin-up": {
+   "en": "Chin-Up",
+   "keys": [
+    "D.Lats|chin-up",
+    "Hyper.Biceps|chin-up"
+   ],
+   "unique": true
+  },
+  "clamshell": {
+   "en": "Clamshell",
+   "keys": [
+    "S.GluteMed|clamshell"
+   ],
+   "unique": true
+  },
+  "close-grip floor press": {
+   "en": "Close-Grip Floor Press",
+   "keys": [
+    "B.Vari.End|close-grip floor press",
+    "B.Triceps|close-grip floor press"
+   ],
+   "unique": true
+  },
+  "cluster bench": {
+   "en": "Cluster Bench",
+   "keys": [
+    "B.Vari.Control|cluster bench"
+   ],
+   "unique": true
+  },
+  "cluster deadlift": {
+   "en": "Cluster Deadlift",
+   "keys": [
+    "D.Vari.Power|cluster deadlift"
+   ],
+   "unique": true
+  },
+  "conventional deadlift": {
+   "en": "Conventional Deadlift",
+   "keys": [
+    "D.Main|conventional deadlift"
+   ],
+   "unique": true
+  },
+  "copenhagen plank": {
+   "en": "Copenhagen Plank",
+   "keys": [
+    "S.Quads|copenhagen plank"
+   ],
+   "unique": true
+  },
+  "cossack squat": {
+   "en": "Cossack Squat",
+   "keys": [
+    "S.Vari.End|cossack squat"
+   ],
+   "unique": true
+  },
+  "cross-body dual cable extension": {
+   "en": "Cross-Body Dual Cable Extension",
+   "keys": [
+    "B.Triceps|cross-body dual cable extension"
+   ],
+   "unique": true
+  },
+  "cross-body hammer curl": {
+   "en": "Cross-Body Hammer Curl",
+   "keys": [
+    "Hyper.Biceps|cross-body hammer curl"
+   ],
+   "unique": true
+  },
+  "cyclist squat": {
+   "en": "Cyclist Squat",
+   "keys": [
+    "S.Vari.Start|cyclist squat"
+   ],
+   "unique": true
+  },
+  "dead bench": {
+   "en": "Dead Bench",
+   "keys": [
+    "B.Vari.Start|dead bench"
+   ],
+   "unique": true
+  },
+  "dead bug": {
+   "en": "Dead Bug",
+   "keys": [
+    "S.Core|dead bug"
+   ],
+   "unique": true
+  },
+  "deadlift hold": {
+   "en": "Deadlift Hold",
+   "keys": [
+    "D.Forearms|deadlift hold"
+   ],
+   "unique": true
+  },
+  "deadlift-bar pull (whip bar)": {
+   "en": "Deadlift-Bar Pull (Whip Bar)",
+   "keys": [
+    "D.Vari.End|deadlift-bar pull (whip bar)"
+   ],
+   "unique": true
+  },
+  "decline bench sit-up / crunch": {
+   "en": "Decline Bench Sit-Up / Crunch",
+   "keys": [
+    "S.Core|decline bench sit-up / crunch"
+   ],
+   "unique": true
+  },
+  "deficit deadlift": {
+   "en": "Deficit Deadlift",
+   "keys": [
+    "D.Vari.Start|deficit deadlift"
+   ],
+   "unique": true
+  },
+  "dip": {
+   "en": "Dip",
+   "keys": [
+    "B.Triceps|dip"
+   ],
+   "unique": true
+  },
+  "dip (standing assisted)": {
+   "en": "Dip (Standing Assisted)",
+   "keys": [
+    "B.Pecs|dip (standing assisted)"
+   ],
+   "unique": true
+  },
+  "dragon flag": {
+   "en": "Dragon Flag",
+   "keys": [
+    "S.Core|dragon flag"
+   ],
+   "unique": true
+  },
+  "dumbbell bench press": {
+   "en": "Dumbbell Bench Press",
+   "keys": [
+    "B.Pecs|dumbbell bench press"
+   ],
+   "unique": true
+  },
+  "dumbbell bulgarian split squat": {
+   "en": "Dumbbell Bulgarian Split Squat",
+   "keys": [
+    "S.Quads|dumbbell bulgarian split squat"
+   ],
+   "unique": true
+  },
+  "dumbbell deadlift": {
+   "en": "Dumbbell Deadlift",
+   "keys": [
+    "D.Vari.Start|dumbbell deadlift"
+   ],
+   "unique": true
+  },
+  "dumbbell rack pull": {
+   "en": "Dumbbell Rack Pull",
+   "keys": [
+    "D.Vari.End|dumbbell rack pull"
+   ],
+   "unique": true
+  },
+  "dumbbell squeeze press": {
+   "en": "Dumbbell Squeeze Press",
+   "keys": [
+    "B.Pecs|dumbbell squeeze press"
+   ],
+   "unique": true
+  },
+  "ez-bar / barbell curl": {
+   "en": "EZ-Bar / Barbell Curl",
+   "keys": [
+    "Hyper.Biceps|ez-bar / barbell curl"
+   ],
+   "unique": true
+  },
+  "face pull": {
+   "en": "Face Pull",
+   "keys": [
+    "SBD.UpperBack|face pull",
+    "B.Rotator|face pull"
+   ],
+   "unique": true
+  },
+  "farmer's carry": {
+   "en": "Farmer's Carry",
+   "keys": [
+    "D.Forearms|farmer's carry"
+   ],
+   "unique": true
+  },
+  "fat bar bench press": {
+   "en": "Fat Bar Bench Press",
+   "keys": [
+    "B.Vari.Start|fat bar bench press"
+   ],
+   "unique": true
+  },
+  "fat bar hold": {
+   "en": "Fat Bar Hold",
+   "keys": [
+    "D.Forearms|fat bar hold"
+   ],
+   "unique": true
+  },
+  "feet-up bench": {
+   "en": "Feet-Up Bench",
+   "keys": [
+    "B.Vari.Control|feet-up bench"
+   ],
+   "unique": true
+  },
+  "floor press": {
+   "en": "Floor Press",
+   "keys": [
+    "B.Vari.Mid|floor press"
+   ],
+   "unique": true
+  },
+  "front squat": {
+   "en": "Front Squat",
+   "keys": [
+    "S.Vari.Mid|front squat"
+   ],
+   "unique": true
+  },
+  "full can raise": {
+   "en": "Full Can Raise",
+   "keys": [
+    "B.Rotator|full can raise"
+   ],
+   "unique": true
+  },
+  "ghd sit-up": {
+   "en": "GHD Sit-Up",
+   "keys": [
+    "S.Core|ghd sit-up"
+   ],
+   "unique": true
+  },
+  "glute-ham raise / nordic curl": {
+   "en": "Glute-Ham Raise / Nordic Curl",
+   "keys": [
+    "D.GluteHam|glute-ham raise / nordic curl"
+   ],
+   "unique": true
+  },
+  "good morning": {
+   "en": "Good Morning",
+   "keys": [
+    "D.Vari.End|good morning",
+    "D.LowerBack|good morning"
+   ],
+   "unique": true
+  },
+  "good morning from pins": {
+   "en": "Good Morning from Pins",
+   "keys": [
+    "D.LowerBack|good morning from pins"
+   ],
+   "unique": true
+  },
+  "hack squat": {
+   "en": "Hack Squat",
+   "keys": [
+    "S.Quads|hack squat"
+   ],
+   "unique": true
+  },
+  "halting deadlift": {
+   "en": "Halting Deadlift",
+   "keys": [
+    "D.Vari.Start|halting deadlift"
+   ],
+   "unique": true
+  },
+  "hammer curl": {
+   "en": "Hammer Curl",
+   "keys": [
+    "Hyper.Biceps|hammer curl"
+   ],
+   "unique": true
+  },
+  "hatfield squat": {
+   "en": "Hatfield Squat",
+   "keys": [
+    "S.Vari.End|hatfield squat"
+   ],
+   "unique": true
+  },
+  "heels-elevated goblet squat": {
+   "en": "Heels-Elevated Goblet Squat",
+   "keys": [
+    "S.Quads|heels-elevated goblet squat"
+   ],
+   "unique": true
+  },
+  "high-bar squat": {
+   "en": "High-bar Squat",
+   "keys": [
+    "S.Main|high-bar squat"
+   ],
+   "unique": true
+  },
+  "hip airplane": {
+   "en": "Hip Airplane",
+   "keys": [
+    "S.GluteMed|hip airplane"
+   ],
+   "unique": true
+  },
+  "hoist roc-it mid row": {
+   "en": "Hoist ROC-IT Mid Row",
+   "keys": [
+    "SBD.UpperBack|hoist roc-it mid row"
+   ],
+   "unique": true
+  },
+  "incline bench press": {
+   "en": "Incline Bench Press",
+   "keys": [
+    "B.Vari.Mid|incline bench press",
+    "B.Pecs|incline bench press"
+   ],
+   "unique": true
+  },
+  "incline cable fly": {
+   "en": "Incline Cable Fly",
+   "keys": [
+    "B.Pecs|incline cable fly"
+   ],
+   "unique": true
+  },
+  "incline db curl": {
+   "en": "Incline DB Curl",
+   "keys": [
+    "Hyper.Biceps|incline db curl"
+   ],
+   "unique": true
+  },
+  "incline dumbbell press": {
+   "en": "Incline Dumbbell Press",
+   "keys": [
+    "B.Pecs|incline dumbbell press"
+   ],
+   "unique": true
+  },
+  "inward converging seated row": {
+   "en": "Inward Converging Seated Row",
+   "keys": [
+    "SBD.UpperBack|inward converging seated row"
+   ],
+   "unique": true
+  },
+  "iso-lateral front lat row": {
+   "en": "Iso-Lateral Front Lat Row",
+   "keys": [
+    "D.Lats|iso-lateral front lat row"
+   ],
+   "unique": true
+  },
+  "iso-lateral plate-loaded row": {
+   "en": "Iso-Lateral Plate-Loaded Row",
+   "keys": [
+    "SBD.UpperBack|iso-lateral plate-loaded row"
+   ],
+   "unique": true
+  },
+  "jefferson curl": {
+   "en": "Jefferson Curl",
+   "keys": [
+    "D.LowerBack|jefferson curl"
+   ],
+   "unique": true
+  },
+  "jm press (barbell / smith)": {
+   "en": "JM Press (Barbell / Smith)",
+   "keys": [
+    "B.Triceps|jm press (barbell / smith)"
+   ],
+   "unique": true
+  },
+  "jump squat": {
+   "en": "Jump Squat",
+   "keys": [
+    "SBD.Power|jump squat"
+   ],
+   "unique": true
+  },
+  "kang squat": {
+   "en": "Kang Squat",
+   "keys": [
+    "S.Vari.Mid|kang squat"
+   ],
+   "unique": true
+  },
+  "kelso / barbell shrug": {
+   "en": "Kelso / Barbell Shrug",
+   "keys": [
+    "SBD.UpperBack|kelso / barbell shrug"
+   ],
+   "unique": true
+  },
+  "kettlebell / db swing": {
+   "en": "Kettlebell / DB Swing",
+   "keys": [
+    "D.GluteHam|kettlebell / db swing"
+   ],
+   "unique": true
+  },
+  "kettlebell deadlift": {
+   "en": "Kettlebell Deadlift",
+   "keys": [
+    "D.Vari.Start|kettlebell deadlift"
+   ],
+   "unique": true
+  },
+  "kettlebell swing": {
+   "en": "Kettlebell Swing",
+   "keys": [
+    "D.Vari.Power|kettlebell swing"
+   ],
+   "unique": true
+  },
+  "kneeling single-leg curl": {
+   "en": "Kneeling Single-Leg Curl",
+   "keys": [
+    "D.GluteHam|kneeling single-leg curl"
+   ],
+   "unique": true
+  },
+  "landmine / arnold press": {
+   "en": "Landmine / Arnold Press",
+   "keys": [
+    "B.Delts|landmine / arnold press"
+   ],
+   "unique": true
+  },
+  "larsen press": {
+   "en": "Larsen Press",
+   "keys": [
+    "B.Vari.Control|larsen press"
+   ],
+   "unique": true
+  },
+  "lateral step-down": {
+   "en": "Lateral Step-Down",
+   "keys": [
+    "S.GluteMed|lateral step-down"
+   ],
+   "unique": true
+  },
+  "leg extension": {
+   "en": "Leg Extension",
+   "keys": [
+    "S.Quads|leg extension"
+   ],
+   "unique": true
+  },
+  "leg press": {
+   "en": "Leg Press",
+   "keys": [
+    "S.Quads|leg press"
+   ],
+   "unique": true
+  },
+  "leverage / machine bicep curl": {
+   "en": "Leverage / Machine Bicep Curl",
+   "keys": [
+    "Hyper.Biceps|leverage / machine bicep curl"
+   ],
+   "unique": true
+  },
+  "leverage ab crunch machine": {
+   "en": "Leverage Ab Crunch Machine",
+   "keys": [
+    "S.Core|leverage ab crunch machine"
+   ],
+   "unique": true
+  },
+  "leverage squat (v-squat)": {
+   "en": "Leverage Squat (V-Squat)",
+   "keys": [
+    "S.Vari.End|leverage squat (v-squat)",
+    "S.Quads|leverage squat (v-squat)"
+   ],
+   "unique": false
+  },
+  "long paused bench": {
+   "en": "Long Paused Bench",
+   "keys": [
+    "B.Vari.Start|long paused bench"
+   ],
+   "unique": true
+  },
+  "low-bar squat": {
+   "en": "Low-bar Squat",
+   "keys": [
+    "S.Main|low-bar squat",
+    "S.Vari.End|low-bar squat"
+   ],
+   "unique": true
+  },
+  "lu raise": {
+   "en": "Lu Raise",
+   "keys": [
+    "Hyper.LatDelts|lu raise"
+   ],
+   "unique": true
+  },
+  "machine / hanging leg raise": {
+   "en": "Machine / Hanging Leg Raise",
+   "keys": [
+    "S.Core|machine / hanging leg raise"
+   ],
+   "unique": true
+  },
+  "machine back extension": {
+   "en": "Machine Back Extension",
+   "keys": [
+    "D.LowerBack|machine back extension"
+   ],
+   "unique": true
+  },
+  "machine chest press": {
+   "en": "Machine Chest Press",
+   "keys": [
+    "B.Pecs|machine chest press"
+   ],
+   "unique": true
+  },
+  "machine hip abduction": {
+   "en": "Machine Hip Abduction",
+   "keys": [
+    "S.GluteMed|machine hip abduction"
+   ],
+   "unique": true
+  },
+  "machine hip adduction": {
+   "en": "Machine Hip Adduction",
+   "keys": [
+    "S.Quads|machine hip adduction"
+   ],
+   "unique": true
+  },
+  "machine hip thrust (glute drive)": {
+   "en": "Machine Hip Thrust (Glute Drive)",
+   "keys": [
+    "D.GluteHam|machine hip thrust (glute drive)"
+   ],
+   "unique": true
+  },
+  "machine triceps dip / extension": {
+   "en": "Machine Triceps Dip / Extension",
+   "keys": [
+    "B.Triceps|machine triceps dip / extension"
+   ],
+   "unique": true
+  },
+  "meadows row": {
+   "en": "Meadows Row",
+   "keys": [
+    "SBD.UpperBack|meadows row",
+    "D.Lats|meadows row"
+   ],
+   "unique": true
+  },
+  "med ball slam": {
+   "en": "Med Ball Slam",
+   "keys": [
+    "SBD.Power|med ball slam"
+   ],
+   "unique": true
+  },
+  "mid-grip bench": {
+   "en": "Mid-grip Bench",
+   "keys": [
+    "B.Main|mid-grip bench"
+   ],
+   "unique": true
+  },
+  "monster walk": {
+   "en": "Monster Walk",
+   "keys": [
+    "S.GluteMed|monster walk"
+   ],
+   "unique": true
+  },
+  "multi / seated machine lateral raise": {
+   "en": "Multi / Seated Machine Lateral Raise",
+   "keys": [
+    "Hyper.LatDelts|multi / seated machine lateral raise"
+   ],
+   "unique": true
+  },
+  "narrow sumo deadlift": {
+   "en": "Narrow Sumo Deadlift",
+   "keys": [
+    "D.Vari.Mid|narrow sumo deadlift"
+   ],
+   "unique": true
+  },
+  "narrow-grip bench": {
+   "en": "Narrow-Grip Bench",
+   "keys": [
+    "B.Vari.End|narrow-grip bench"
+   ],
+   "unique": true
+  },
+  "narrow-stance squat": {
+   "en": "Narrow-stance Squat",
+   "keys": [
+    "S.Vari.Mid|narrow-stance squat"
+   ],
+   "unique": true
+  },
+  "natural leg curl": {
+   "en": "Natural Leg Curl",
+   "keys": [
+    "D.GluteHam|natural leg curl"
+   ],
+   "unique": true
+  },
+  "nautilus leverage press": {
+   "en": "Nautilus Leverage Press",
+   "keys": [
+    "B.Pecs|nautilus leverage press"
+   ],
+   "unique": true
+  },
+  "neutral-grip db / machine press": {
+   "en": "Neutral-Grip DB / Machine Press",
+   "keys": [
+    "B.Vari.Control|neutral-grip db / machine press"
+   ],
+   "unique": true
+  },
+  "ohp": {
+   "en": "OHP",
+   "keys": [
+    "B.Delts|ohp"
+   ],
+   "unique": true
+  },
+  "one-arm dumbbell row": {
+   "en": "One-Arm Dumbbell Row",
+   "keys": [
+    "SBD.UpperBack|one-arm dumbbell row"
+   ],
+   "unique": true
+  },
+  "overhead band pull-apart": {
+   "en": "Overhead Band Pull-Apart",
+   "keys": [
+    "B.Rotator|overhead band pull-apart"
+   ],
+   "unique": true
+  },
+  "overhead cable extension": {
+   "en": "Overhead Cable Extension",
+   "keys": [
+    "B.Triceps|overhead cable extension"
+   ],
+   "unique": true
+  },
+  "overhead squat": {
+   "en": "Overhead Squat",
+   "keys": [
+    "S.Vari.Balance|overhead squat"
+   ],
+   "unique": true
+  },
+  "pallof press": {
+   "en": "Pallof Press",
+   "keys": [
+    "S.Core|pallof press"
+   ],
+   "unique": true
+  },
+  "panatta multi-grip flat press": {
+   "en": "Panatta Multi-Grip Flat Press",
+   "keys": [
+    "B.Vari.Start|panatta multi-grip flat press",
+    "B.Pecs|panatta multi-grip flat press"
+   ],
+   "unique": false
+  },
+  "pause above parallel squat": {
+   "en": "Pause Above Parallel Squat",
+   "keys": [
+    "S.Vari.Mid|pause above parallel squat"
+   ],
+   "unique": true
+  },
+  "paused deadlift": {
+   "en": "Paused Deadlift",
+   "keys": [
+    "D.Vari.Mid|paused deadlift"
+   ],
+   "unique": true
+  },
+  "paused squat": {
+   "en": "Paused Squat",
+   "keys": [
+    "S.Vari.Start|paused squat"
+   ],
+   "unique": true
+  },
+  "pec deck": {
+   "en": "Pec Deck",
+   "keys": [
+    "B.Pecs|pec deck"
+   ],
+   "unique": true
+  },
+  "pendlay row": {
+   "en": "Pendlay Row",
+   "keys": [
+    "SBD.UpperBack|pendlay row"
+   ],
+   "unique": true
+  },
+  "pendulum squat": {
+   "en": "Pendulum Squat",
+   "keys": [
+    "S.Vari.End|pendulum squat"
+   ],
+   "unique": true
+  },
+  "pin bench": {
+   "en": "Pin Bench",
+   "keys": [
+    "B.Vari.Mid|pin bench"
+   ],
+   "unique": true
+  },
+  "pin squat": {
+   "en": "Pin Squat",
+   "keys": [
+    "S.Vari.Mid|pin squat"
+   ],
+   "unique": true
+  },
+  "pin-loaded machine shoulder press": {
+   "en": "Pin-Loaded Machine Shoulder Press",
+   "keys": [
+    "B.Delts|pin-loaded machine shoulder press"
+   ],
+   "unique": true
+  },
+  "plate pinch": {
+   "en": "Plate Pinch",
+   "keys": [
+    "D.Forearms|plate pinch"
+   ],
+   "unique": true
+  },
+  "plate-loaded decline press": {
+   "en": "Plate-Loaded Decline Press",
+   "keys": [
+    "B.Vari.End|plate-loaded decline press",
+    "B.Pecs|plate-loaded decline press"
+   ],
+   "unique": true
+  },
+  "plate-loaded high row": {
+   "en": "Plate-Loaded High Row",
+   "keys": [
+    "D.Lats|plate-loaded high row"
+   ],
+   "unique": true
+  },
+  "plate-loaded incline press": {
+   "en": "Plate-Loaded Incline Press",
+   "keys": [
+    "B.Pecs|plate-loaded incline press"
+   ],
+   "unique": true
+  },
+  "plate-loaded overhead triceps extension": {
+   "en": "Plate-Loaded Overhead Triceps Extension",
+   "keys": [
+    "B.Triceps|plate-loaded overhead triceps extension"
+   ],
+   "unique": true
+  },
+  "plate-loaded roman chair extension": {
+   "en": "Plate-Loaded Roman Chair Extension",
+   "keys": [
+    "D.LowerBack|plate-loaded roman chair extension"
+   ],
+   "unique": true
+  },
+  "plate-loaded shoulder press": {
+   "en": "Plate-Loaded Shoulder Press",
+   "keys": [
+    "B.Delts|plate-loaded shoulder press"
+   ],
+   "unique": true
+  },
+  "plate-loaded vertical pulldown": {
+   "en": "Plate-Loaded Vertical Pulldown",
+   "keys": [
+    "D.Lats|plate-loaded vertical pulldown"
+   ],
+   "unique": true
+  },
+  "plyo push-up": {
+   "en": "Plyo Push-Up",
+   "keys": [
+    "SBD.Power|plyo push-up"
+   ],
+   "unique": true
+  },
+  "power clean": {
+   "en": "Power Clean",
+   "keys": [
+    "D.Vari.Power|power clean"
+   ],
+   "unique": true
+  },
+  "preacher curl": {
+   "en": "Preacher Curl",
+   "keys": [
+    "Hyper.Biceps|preacher curl"
+   ],
+   "unique": true
+  },
+  "prone y-t-w raise": {
+   "en": "Prone Y-T-W Raise",
+   "keys": [
+    "B.Rotator|prone y-t-w raise"
+   ],
+   "unique": true
+  },
+  "prowler sprint": {
+   "en": "Prowler Sprint",
+   "keys": [
+    "SBD.Sled|prowler sprint"
+   ],
+   "unique": true
+  },
+  "pull-up": {
+   "en": "Pull-Up",
+   "keys": [
+    "D.Lats|pull-up"
+   ],
+   "unique": true
+  },
+  "pull-up (standing assisted)": {
+   "en": "Pull-up (Standing Assisted)",
+   "keys": [
+    "D.Lats|pull-up (standing assisted)"
+   ],
+   "unique": true
+  },
+  "rack pull": {
+   "en": "Rack Pull",
+   "keys": [
+    "D.Vari.End|rack pull"
+   ],
+   "unique": true
+  },
+  "reverse curl": {
+   "en": "Reverse Curl",
+   "keys": [
+    "Hyper.Biceps|reverse curl"
+   ],
+   "unique": true
+  },
+  "reverse hyper": {
+   "en": "Reverse Hyper",
+   "keys": [
+    "D.LowerBack|reverse hyper"
+   ],
+   "unique": true
+  },
+  "reverse pec deck": {
+   "en": "Reverse Pec Deck",
+   "keys": [
+    "Hyper.LatDelts|reverse pec deck"
+   ],
+   "unique": true
+  },
+  "reverse wrist curl": {
+   "en": "Reverse Wrist Curl",
+   "keys": [
+    "D.Forearms|reverse wrist curl"
+   ],
+   "unique": true
+  },
+  "rolling db / tate press": {
+   "en": "Rolling DB / Tate Press",
+   "keys": [
+    "B.Triceps|rolling db / tate press"
+   ],
+   "unique": true
+  },
+  "rolling triceps extension": {
+   "en": "Rolling Triceps Extension",
+   "keys": [
+    "B.Triceps|rolling triceps extension"
+   ],
+   "unique": true
+  },
+  "romanian deadlift": {
+   "en": "Romanian Deadlift",
+   "keys": [
+    "D.Vari.Mid|romanian deadlift",
+    "D.GluteHam|romanian deadlift"
+   ],
+   "unique": true
+  },
+  "rope lat prayer": {
+   "en": "Rope Lat Prayer",
+   "keys": [
+    "D.Lats|rope lat prayer"
+   ],
+   "unique": true
+  },
+  "rotary converging chest press": {
+   "en": "Rotary Converging Chest Press",
+   "keys": [
+    "B.Pecs|rotary converging chest press"
+   ],
+   "unique": true
+  },
+  "rotational med ball throw": {
+   "en": "Rotational Med Ball Throw",
+   "keys": [
+    "SBD.Power|rotational med ball throw"
+   ],
+   "unique": true
+  },
+  "safety-bar squat": {
+   "en": "Safety-Bar Squat",
+   "keys": [
+    "S.Vari.Balance|safety-bar squat"
+   ],
+   "unique": true
+  },
+  "scissor converging pulldown": {
+   "en": "Scissor Converging Pulldown",
+   "keys": [
+    "D.Lats|scissor converging pulldown"
+   ],
+   "unique": true
+  },
+  "seal row": {
+   "en": "Seal Row",
+   "keys": [
+    "SBD.UpperBack|seal row"
+   ],
+   "unique": true
+  },
+  "seated barbell / smith ohp": {
+   "en": "Seated Barbell / Smith OHP",
+   "keys": [
+    "B.Delts|seated barbell / smith ohp"
+   ],
+   "unique": true
+  },
+  "seated calf raise": {
+   "en": "Seated Calf Raise",
+   "keys": [
+    "S.Calves|seated calf raise"
+   ],
+   "unique": true
+  },
+  "seated db lateral raise": {
+   "en": "Seated DB Lateral Raise",
+   "keys": [
+    "Hyper.LatDelts|seated db lateral raise"
+   ],
+   "unique": true
+  },
+  "seated db shoulder press": {
+   "en": "Seated DB Shoulder Press",
+   "keys": [
+    "B.Delts|seated db shoulder press"
+   ],
+   "unique": true
+  },
+  "seated good morning": {
+   "en": "Seated Good Morning",
+   "keys": [
+    "D.LowerBack|seated good morning"
+   ],
+   "unique": true
+  },
+  "seated leg curl": {
+   "en": "Seated Leg Curl",
+   "keys": [
+    "D.GluteHam|seated leg curl"
+   ],
+   "unique": true
+  },
+  "seated leg press": {
+   "en": "Seated Leg Press",
+   "keys": [
+    "S.Quads|seated leg press"
+   ],
+   "unique": true
+  },
+  "seated row": {
+   "en": "Seated Row",
+   "keys": [
+    "SBD.UpperBack|seated row"
+   ],
+   "unique": true
+  },
+  "semi-sumo deadlift": {
+   "en": "Semi-Sumo Deadlift",
+   "keys": [
+    "D.Main|semi-sumo deadlift",
+    "D.Vari.Mid|semi-sumo deadlift"
+   ],
+   "unique": true
+  },
+  "side plank": {
+   "en": "Side Plank",
+   "keys": [
+    "S.Core|side plank"
+   ],
+   "unique": true
+  },
+  "side-lying external rotation": {
+   "en": "Side-Lying External Rotation",
+   "keys": [
+    "B.Rotator|side-lying external rotation"
+   ],
+   "unique": true
+  },
+  "side-lying hip abduction": {
+   "en": "Side-Lying Hip Abduction",
+   "keys": [
+    "S.GluteMed|side-lying hip abduction"
+   ],
+   "unique": true
+  },
+  "single-arm cable row": {
+   "en": "Single-Arm Cable Row",
+   "keys": [
+    "SBD.UpperBack|single-arm cable row"
+   ],
+   "unique": true
+  },
+  "single-leg calf raise": {
+   "en": "Single-Leg Calf Raise",
+   "keys": [
+    "S.Calves|single-leg calf raise"
+   ],
+   "unique": true
+  },
+  "single-leg leg press": {
+   "en": "Single-Leg Leg Press",
+   "keys": [
+    "S.Quads|single-leg leg press"
+   ],
+   "unique": true
+  },
+  "single-leg rdl": {
+   "en": "Single-Leg RDL",
+   "keys": [
+    "D.GluteHam|single-leg rdl"
+   ],
+   "unique": true
+  },
+  "skater squat": {
+   "en": "Skater Squat",
+   "keys": [
+    "S.Vari.End|skater squat"
+   ],
+   "unique": true
+  },
+  "skull crusher": {
+   "en": "Skull Crusher",
+   "keys": [
+    "B.Triceps|skull crusher"
+   ],
+   "unique": true
+  },
+  "sled drag": {
+   "en": "Sled Drag",
+   "keys": [
+    "SBD.Sled|sled drag"
+   ],
+   "unique": true
+  },
+  "sled pull": {
+   "en": "Sled Pull",
+   "keys": [
+    "SBD.Sled|sled pull"
+   ],
+   "unique": true
+  },
+  "sled push": {
+   "en": "Sled Push",
+   "keys": [
+    "SBD.Sled|sled push"
+   ],
+   "unique": true
+  },
+  "sleeper stretch": {
+   "en": "Sleeper Stretch",
+   "keys": [
+    "B.Rotator|sleeper stretch"
+   ],
+   "unique": true
+  },
+  "slingshot bench": {
+   "en": "Slingshot Bench",
+   "keys": [
+    "B.Vari.End|slingshot bench"
+   ],
+   "unique": true
+  },
+  "smith close-grip bench": {
+   "en": "Smith Close-Grip Bench",
+   "keys": [
+    "B.Triceps|smith close-grip bench"
+   ],
+   "unique": true
+  },
+  "smith machine shrug": {
+   "en": "Smith Machine Shrug",
+   "keys": [
+    "SBD.UpperBack|smith machine shrug"
+   ],
+   "unique": true
+  },
+  "smith machine squat (feet forward)": {
+   "en": "Smith Machine Squat (Feet Forward)",
+   "keys": [
+    "S.Quads|smith machine squat (feet forward)"
+   ],
+   "unique": true
+  },
+  "smith reverse lunge": {
+   "en": "Smith Reverse Lunge",
+   "keys": [
+    "S.Quads|smith reverse lunge"
+   ],
+   "unique": true
+  },
+  "snatch-grip block pull": {
+   "en": "Snatch-Grip Block Pull",
+   "keys": [
+    "D.Vari.Mid|snatch-grip block pull"
+   ],
+   "unique": true
+  },
+  "snatch-grip deadlift": {
+   "en": "Snatch-Grip Deadlift",
+   "keys": [
+    "D.Vari.Start|snatch-grip deadlift"
+   ],
+   "unique": true
+  },
+  "snatch-grip rdl": {
+   "en": "Snatch-Grip RDL",
+   "keys": [
+    "D.LowerBack|snatch-grip rdl"
+   ],
+   "unique": true
+  },
+  "spider curl": {
+   "en": "Spider Curl",
+   "keys": [
+    "Hyper.Biceps|spider curl"
+   ],
+   "unique": true
+  },
+  "spoto bench": {
+   "en": "Spoto Bench",
+   "keys": [
+    "B.Vari.Mid|spoto bench"
+   ],
+   "unique": true
+  },
+  "squat & calf raise machine": {
+   "en": "Squat & Calf Raise Machine",
+   "keys": [
+    "S.Vari.End|squat & calf raise machine"
+   ],
+   "unique": true
+  },
+  "standing cable hip abduction": {
+   "en": "Standing Cable Hip Abduction",
+   "keys": [
+    "S.GluteMed|standing cable hip abduction"
+   ],
+   "unique": true
+  },
+  "standing calf raise": {
+   "en": "Standing Calf Raise",
+   "keys": [
+    "S.Calves|standing calf raise"
+   ],
+   "unique": true
+  },
+  "standing db lateral raise": {
+   "en": "Standing DB Lateral Raise",
+   "keys": [
+    "Hyper.LatDelts|standing db lateral raise"
+   ],
+   "unique": true
+  },
+  "standing machine lateral raise": {
+   "en": "Standing Machine Lateral Raise",
+   "keys": [
+    "Hyper.LatDelts|standing machine lateral raise"
+   ],
+   "unique": true
+  },
+  "standing single-leg curl": {
+   "en": "Standing Single-Leg Curl",
+   "keys": [
+    "D.GluteHam|standing single-leg curl"
+   ],
+   "unique": true
+  },
+  "stiff-leg deadlift": {
+   "en": "Stiff-Leg Deadlift",
+   "keys": [
+    "D.GluteHam|stiff-leg deadlift"
+   ],
+   "unique": true
+  },
+  "straight-arm pulldown": {
+   "en": "Straight-Arm Pulldown",
+   "keys": [
+    "D.Lats|straight-arm pulldown"
+   ],
+   "unique": true
+  },
+  "suitcase carry": {
+   "en": "Suitcase Carry",
+   "keys": [
+    "S.Core|suitcase carry",
+    "D.Forearms|suitcase carry"
+   ],
+   "unique": false
+  },
+  "suitcase deadlift": {
+   "en": "Suitcase Deadlift",
+   "keys": [
+    "D.LowerBack|suitcase deadlift"
+   ],
+   "unique": true
+  },
+  "sumo deadlift": {
+   "en": "Sumo Deadlift",
+   "keys": [
+    "D.Main|sumo deadlift",
+    "D.Vari.Power|sumo deadlift"
+   ],
+   "unique": true
+  },
+  "t-bar row": {
+   "en": "T-Bar Row",
+   "keys": [
+    "SBD.UpperBack|t-bar row"
+   ],
+   "unique": true
+  },
+  "tate press": {
+   "en": "Tate Press",
+   "keys": [
+    "B.Triceps|tate press"
+   ],
+   "unique": true
+  },
+  "technogym vertical traction": {
+   "en": "Technogym Vertical Traction",
+   "keys": [
+    "D.Lats|technogym vertical traction"
+   ],
+   "unique": true
+  },
+  "tempo bench": {
+   "en": "Tempo Bench",
+   "keys": [
+    "B.Vari.Start|tempo bench"
+   ],
+   "unique": true
+  },
+  "tempo deadlift": {
+   "en": "Tempo Deadlift",
+   "keys": [
+    "D.Vari.Mid|tempo deadlift"
+   ],
+   "unique": true
+  },
+  "tempo squat": {
+   "en": "Tempo Squat",
+   "keys": [
+    "S.Vari.Start|tempo squat"
+   ],
+   "unique": true
+  },
+  "thick-bar hold": {
+   "en": "Thick-Bar Hold",
+   "keys": [
+    "D.Forearms|thick-bar hold"
+   ],
+   "unique": true
+  },
+  "touch&go bench": {
+   "en": "Touch&Go Bench",
+   "keys": [
+    "B.Vari.Control|touch&go bench"
+   ],
+   "unique": true
+  },
+  "towel-grip pull-up": {
+   "en": "Towel-Grip Pull-Up",
+   "keys": [
+    "D.Lats|towel-grip pull-up",
+    "D.Forearms|towel-grip pull-up"
+   ],
+   "unique": false
+  },
+  "trap-bar / leverage squat pull": {
+   "en": "Trap-Bar / Leverage Squat Pull",
+   "keys": [
+    "D.Vari.Start|trap-bar / leverage squat pull"
+   ],
+   "unique": true
+  },
+  "ultra-wide-grip bench": {
+   "en": "Ultra-Wide-grip Bench",
+   "keys": [
+    "B.Main|ultra-wide-grip bench",
+    "B.Vari.End|ultra-wide-grip bench"
+   ],
+   "unique": true
+  },
+  "unmapped": {
+   "en": "Unmapped",
+   "keys": [
+    "Unmapped|unmapped"
+   ],
+   "unique": true
+  },
+  "vertical jump": {
+   "en": "Vertical Jump",
+   "keys": [
+    "SBD.Power|vertical jump"
+   ],
+   "unique": true
+  },
+  "walking lunge / step-up": {
+   "en": "Walking Lunge / Step-Up",
+   "keys": [
+    "S.Quads|walking lunge / step-up"
+   ],
+   "unique": true
+  },
+  "weighted dip": {
+   "en": "Weighted Dip",
+   "keys": [
+    "B.Pecs|weighted dip",
+    "B.Triceps|weighted dip"
+   ],
+   "unique": false
+  },
+  "weighted plank": {
+   "en": "Weighted Plank",
+   "keys": [
+    "S.Core|weighted plank"
+   ],
+   "unique": true
+  },
+  "weighted pull-up": {
+   "en": "Weighted Pull-Up",
+   "keys": [
+    "D.Lats|weighted pull-up"
+   ],
+   "unique": true
+  },
+  "wide / neutral lat pulldown": {
+   "en": "Wide / Neutral Lat Pulldown",
+   "keys": [
+    "D.Lats|wide / neutral lat pulldown"
+   ],
+   "unique": true
+  },
+  "wide-grip bench": {
+   "en": "Wide-grip Bench",
+   "keys": [
+    "B.Vari.Start|wide-grip bench"
+   ],
+   "unique": true
+  },
+  "wide-stance squat": {
+   "en": "Wide-stance Squat",
+   "keys": [
+    "S.Vari.End|wide-stance squat"
+   ],
+   "unique": true
+  },
+  "wrist curl": {
+   "en": "Wrist Curl",
+   "keys": [
+    "D.Forearms|wrist curl"
+   ],
+   "unique": true
+  },
+  "z-press": {
+   "en": "Z-Press",
+   "keys": [
+    "B.Delts|z-press"
+   ],
+   "unique": true
+  },
+  "zercher good morning": {
+   "en": "Zercher Good Morning",
+   "keys": [
+    "D.LowerBack|zercher good morning"
+   ],
+   "unique": true
+  },
+  "zercher squat": {
+   "en": "Zercher Squat",
+   "keys": [
+    "S.Vari.Start|zercher squat"
+   ],
+   "unique": true
+  },
+  "zombie squat": {
+   "en": "Zombie Squat",
+   "keys": [
+    "S.Vari.Balance|zombie squat"
+   ],
+   "unique": true
+  },
+  "zottman curl": {
+   "en": "Zottman Curl",
+   "keys": [
+    "Hyper.Biceps|zottman curl"
+   ],
+   "unique": true
+  }
+ },
+ "ambiguous": [
+  "leverage squat (v-squat)",
+  "panatta multi-grip flat press",
+  "suitcase carry",
+  "towel-grip pull-up",
+  "weighted dip"
+ ],
+ "resolve": {
+  "normalize": "strip().casefold()",
+  "key": "<category>|<normalized exercise_en>",
+  "order": [
+   "exact (category, name)",
+   "unique-name fallback"
+  ],
+  "coef_rule": "coef[group] = max(leaf[m] for m in group_leaves[group])；组内取 max，不求和",
+  "weighted_group": "Σ sets × coef[group]（唯一主指标）",
+  "hard_detail": "等权组数只在明细/导出出现；本产物只提供加权系数，不提供等权结果",
+  "unmapped": "未命中必须计入 unresolved 并带组数暴露，禁止按 0 或 1 兜底",
+  "ambiguous": "同名不同向量必须计入 ambiguous 并带组数暴露，禁止猜一个",
+  "leaf": "只存非零叶；缺省即 0.0"
+ }
+}
