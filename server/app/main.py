@@ -692,6 +692,9 @@ def create_app(db_path=None, plan_path=None):
     web = ROOT / 'web' / 'dist'
     if (web / 'index.html').is_file():
         app.mount('/assets', StaticFiles(directory=web / 'assets'), name='assets')
+        shots = web / 'shots'
+        if shots.is_dir():
+            app.mount('/shots', StaticFiles(directory=shots), name='shots')
 
         @app.get('/{path:path}', include_in_schema=False)
         def frontend(path: str):

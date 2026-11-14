@@ -5,9 +5,24 @@ const [major, , patch] = packageInfo.version.split('.');
 const releaseVersion = `${major}.${patch.padStart(2, '0')}`;
 
 const root = ref(null);
-const lightbox = ref(null);
-const bigImage = ref(null);
+const index = ref(0);
 let cleanup = () => {};
+
+const shots = [
+  { src: '/shots/today-390-light.png', k: 'TODAY', title: 'Loads, capacity and the working body.' },
+  { src: '/shots/analysis-390-light.png', k: 'ANALYSIS', title: 'Every contribution, weighted and mapped.' },
+];
+function step(delta) { index.value = (index.value + delta + shots.length) % shots.length; }
+function offset(i) { const n = shots.length; let d = (i - index.value + n) % n; if (d > n / 2) d -= n; return d; }
+function cardStyle(i) {
+  const o = offset(i); const a = Math.abs(o);
+  return {
+    transform: `translateX(${o * 56}%) scale(${1 - Math.min(a, 3) * .07}) rotate(${o * 2.2}deg)`,
+    opacity: a > 2 ? 0 : 1 - a * .26,
+    zIndex: 20 - a,
+    filter: a ? `blur(${(a * 1.1).toFixed(1)}px)` : 'none',
+  };
+}
 
 const features = [
   { n: '01', k: 'THE PLAN', title: 'A calendar that does not move.', copy: 'Fixed weeks in Asia/Shanghai. Phase-colored blocks, deload and test weeks marked. Missed sessions stay missed — nothing slides.' },
@@ -29,7 +44,6 @@ onMounted(() => {
   const hero = el.querySelector('.wl-hero');
   const deck = el.querySelector('.wl-grid');
   const cards = deck ? [...deck.children] : [];
-  const phones = [...el.querySelectorAll('.wl-phone')];
   const seq = {};
   rv.forEach(node => {
     const section = node.closest('section');
@@ -59,15 +73,6 @@ onMounted(() => {
         groups.splice(i, 1);
       }
     }
-    const py = phones.map(phone => {
-      const rect = phone.getBoundingClientRect();
-      const mid = rect.top + rect.height / 2 - vh / 2;
-      return Math.max(-8, Math.min(8, -mid * 0.03));
-    });
-    phones.forEach((phone, index) => {
-      const shot = phone.querySelector('.wl-shot');
-      if (shot) shot.style.setProperty('--py', `${py[index].toFixed(2)}px`);
-    });
     if (deck && cards.length && matchMedia('(max-width:760px)').matches) {
       deck.classList.add('deck');
       const tops = [];
@@ -99,79 +104,10 @@ onMounted(() => {
   requestAnimationFrame(() => requestAnimationFrame(() => hero && hero.classList.add('in')));
   onScroll();
 
-  const fine = matchMedia('(hover:hover) and (pointer:fine)').matches;
-  const shots = [...el.querySelectorAll('.wl-shot')];
-  const tiltHandlers = [];
-  if (fine) shots.forEach(shot => {
-    const move = event => {
-      const rect = shot.getBoundingClientRect();
-      const x = (event.clientX - rect.left) / rect.width - .5;
-      const y = (event.clientY - rect.top) / rect.height - .5;
-      shot.style.setProperty('--ry', `${(x * 7).toFixed(2)}deg`);
-      shot.style.setProperty('--rx', `${(-y * 5).toFixed(2)}deg`);
-      shot.style.setProperty('--mx', `${((x + .5) * 100).toFixed(1)}%`);
-      shot.style.setProperty('--my', `${((y + .5) * 100).toFixed(1)}%`);
-    };
-    const leave = () => ['--rx', '--ry', '--mx', '--my'].forEach(name => shot.style.removeProperty(name));
-    shot.addEventListener('pointermove', move);
-    shot.addEventListener('pointerleave', leave);
-    tiltHandlers.push([shot, move, leave]);
-  });
-  const dlg = lightbox.value;
-  const big = bigImage.value;
-  const openShot = shot => {
-    const visible = [...shot.querySelectorAll('img')].find(img => getComputedStyle(img).visibility !== 'hidden');
-    if (!visible || !dlg || !big) return;
-    const from = shot.getBoundingClientRect();
-    big.style.transition = 'none';
-    big.style.transform = 'none';
-    big.style.opacity = '0';
-    big.src = visible.currentSrc || visible.src;
-    big.alt = visible.alt || '';
-    dlg.showModal();
-    document.documentElement.classList.add('wl-open');
-    const play = () => {
-      const to = big.getBoundingClientRect();
-      if (!to.width || !to.height) return;
-      const sx = from.width / to.width;
-      const sy = from.height / to.height;
-      const dx = (from.left + from.width / 2) - (to.left + to.width / 2);
-      const dy = (from.top + from.height / 2) - (to.top + to.height / 2);
-      big.style.transformOrigin = '50% 50%';
-      big.style.transform = `translate(${dx.toFixed(1)}px,${dy.toFixed(1)}px) scale(${sx.toFixed(4)},${sy.toFixed(4)})`;
-      requestAnimationFrame(() => {
-        big.style.transition = `transform .38s ${ease},opacity .2s`;
-        big.style.transform = 'none';
-        big.style.opacity = '1';
-      });
-    };
-    if (big.complete && big.naturalWidth) requestAnimationFrame(play);
-    else big.addEventListener('load', () => requestAnimationFrame(play), { once: true });
-  };
-  const shotKeys = [];
-  shots.forEach(shot => {
-    const click = () => openShot(shot);
-    const key = event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openShot(shot); } };
-    shot.addEventListener('click', click);
-    shot.addEventListener('keydown', key);
-    shotKeys.push([shot, click, key]);
-  });
-  const backdrop = event => { if (event.target === dlg) dlg.close(); };
-  const closed = () => {
-    document.documentElement.classList.remove('wl-open');
-    big.removeAttribute('src');
-    big.style.transition = 'none';
-    big.style.transform = 'none';
-    big.style.opacity = '1';
-  };
-  if (dlg) { dlg.addEventListener('click', backdrop); dlg.addEventListener('close', closed); }
   cleanup = () => {
     cancelAnimationFrame(raf);
     window.removeEventListener('scroll', onScroll);
     window.removeEventListener('resize', onScroll);
-    tiltHandlers.forEach(([shot, move, leave]) => { shot.removeEventListener('pointermove', move); shot.removeEventListener('pointerleave', leave); });
-    shotKeys.forEach(([shot, click, key]) => { shot.removeEventListener('click', click); shot.removeEventListener('keydown', key); });
-    if (dlg) { dlg.removeEventListener('click', backdrop); dlg.removeEventListener('close', closed); }
     document.documentElement.classList.remove('wl-open');
   };
 });
@@ -199,11 +135,6 @@ onBeforeUnmount(() => cleanup());
           </div>
         </div>
         <p class="wl-lede">A fixed-calendar powerlifting journal. Prescribed loads, actual sets, readiness and working-set capacity — kept separate, kept honest, readable at a glance.</p>
-        <div class="wl-cta">
-          <RouterLink to="/today" class="wl-btn">MyPlan <span class="ar">→</span></RouterLink>
-          <RouterLink to="/login" class="wl-btn ghost">Sign in</RouterLink>
-          <RouterLink to="/plan" class="wl-btn ghost">Read the plan</RouterLink>
-        </div>
         <p class="wl-fine">Single-user release {{ releaseVersion }} · Records live on your server · No offline cache, no sync service.</p>
       </div>
       <div class="wl-facts rv" data-stagger>
@@ -228,26 +159,18 @@ onBeforeUnmount(() => cleanup());
     </section>
 
     <section id="wl-screens" class="wl-sec">
-      <div class="wl-sec-head rv"><span class="section-kicker">AS IT RUNS</span><h2>The journal, on the record.</h2><p class="wl-deck">Captured from the automated regression at phone width. Tap a screen to enlarge it.</p></div>
-      <div class="wl-stage" data-stagger>
-        <figure class="wl-phone">
-          <div class="wl-shot" role="button" tabindex="0" aria-label="Enlarge Today screenshot">
-            <img class="wl-sl" src="/shots/today-390-light.png" alt="Today page, light theme: main lift loads, session capacity and the muscle map.">
-            <img class="wl-sd" src="/shots/today-390-dark.png" alt="Today page, dark theme: main lift loads, session capacity and the muscle map.">
-            <span class="wl-zoom">Enlarge</span>
-          </div>
-          <figcaption>TODAY<b>Loads, capacity and the working body.</b></figcaption>
-        </figure>
-        <figure class="wl-phone wl-mid">
-          <div class="wl-shot" role="button" tabindex="0" aria-label="Enlarge Analysis screenshot">
-            <img class="wl-sl" src="/shots/analysis-390-light.png" alt="Analysis page, light theme: muscle map, weekly capacity and the cycle board.">
-            <img class="wl-sd" src="/shots/analysis-390-dark.png" alt="Analysis page, dark theme: muscle map, weekly capacity and the cycle board.">
-            <span class="wl-zoom">Enlarge</span>
-          </div>
-          <figcaption>ANALYSIS<b>Every contribution, weighted and mapped.</b></figcaption>
-        </figure>
+      <div class="wl-sec-head rv"><span class="section-kicker">AS IT RUNS</span><h2>The journal, on the record.</h2><p class="wl-deck">Captured from the automated regression at phone width. Use the arrows to move through the set.</p></div>
+      <div class="wl-shots rv" data-stagger aria-roledescription="carousel" aria-label="Product screenshots">
+        <button type="button" class="wl-arrow left" aria-label="Previous screenshot" @click="step(-1)">‹</button>
+        <div class="wl-shots-track">
+          <figure v-for="(shot, i) in shots" :key="shot.src" class="wl-card" :class="{ front: offset(i) === 0 }" :style="cardStyle(i)" :aria-hidden="offset(i) !== 0">
+            <img :src="shot.src" :alt="`${shot.k} page screenshot`" loading="lazy">
+          </figure>
+        </div>
+        <button type="button" class="wl-arrow right" aria-label="Next screenshot" @click="step(1)">›</button>
       </div>
-      <p class="wl-note rv">Screenshots follow the active theme. They are delivery evidence from the test suite, refreshed each release.</p>
+      <p class="wl-deck-cap"><b>{{ shots[index].k }}</b><span>{{ shots[index].title }}</span></p>
+      <div class="wl-dots"><button v-for="(shot, i) in shots" :key="shot.src" type="button" :aria-label="`Show ${shot.k}`" :aria-current="index === i ? 'true' : 'false'" @click="index = i"></button></div>
     </section>
 
     <section id="wl-enter" class="wl-sec wl-enter">
@@ -255,16 +178,8 @@ onBeforeUnmount(() => cleanup());
         <span class="section-kicker">RELEASE {{ releaseVersion }}</span>
         <h2>Ready when you are.</h2>
         <p class="wl-deck">The plan is loaded, the calendar is fixed, the ledger is open.</p>
-        <div class="wl-cta"><RouterLink to="/today" class="wl-btn">MyPlan <span class="ar">→</span></RouterLink><RouterLink to="/register" class="wl-btn ghost">Create account</RouterLink></div>
       </div>
     </section>
-
-    <dialog ref="lightbox" class="wl-lb" aria-label="Screenshot">
-      <div class="wl-lb-in">
-        <button type="button" class="wl-lb-x" aria-label="Close" @click="lightbox.close()">×</button>
-        <img ref="bigImage" alt="">
-      </div>
-    </dialog>
   </div>
 </template>
 
@@ -344,31 +259,11 @@ onBeforeUnmount(() => cleanup());
 @supports not (clip-path: inset(0 0 0 0)) { .js .rv, .js .rv.in { clip-path: none; } }
 .js [data-stagger] > * { opacity: 0; transform: translateY(14px); }
 .js [data-stagger].in > * { opacity: 1; transform: none; transition: opacity .55s var(--ease), transform .65s var(--ease); transition-delay: var(--d, 0ms); }
-.wl-stage { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(14px, 2.4vw, 28px); align-items: start; max-width: 760px; margin: 0 auto; }
-.wl-phone { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
-.wl-mid { margin-top: clamp(0px, 2.6vw, 26px); }
-.wl-shot { position: relative; display: grid; overflow: hidden; border: 1px solid var(--line); background: var(--panel2); box-shadow: 0 16px 40px rgba(0, 0, 0, .18); aspect-ratio: 390 / 844; cursor: zoom-in; transform: perspective(1000px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translate3d(0, var(--py, 0px), 0); transform-style: preserve-3d; transition: transform .18s ease-out, box-shadow .3s var(--ease); will-change: transform; }
-.wl-shot:hover { box-shadow: 0 26px 58px rgba(0, 0, 0, .26); }
-.wl-shot::after { content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none; background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 0%), rgba(255, 255, 255, .2), transparent 62%); opacity: 0; transition: opacity .22s; }
-.wl-shot:hover::after { opacity: 1; }
-.wl-shot:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-.wl-zoom { position: absolute; right: 10px; bottom: 10px; z-index: 3; display: inline-flex; align-items: center; height: 30px; padding: 0 10px; border: 1px solid rgba(255, 255, 255, .34); background: rgba(7, 9, 13, .58); color: #fff; font-family: var(--mono); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; pointer-events: none; opacity: 0; transform: translateY(4px); transition: opacity .2s, transform .2s; }
-.wl-shot:hover .wl-zoom, .wl-shot:focus-visible .wl-zoom { opacity: 1; transform: none; }
-.wl-shot > img { grid-area: 1 / 1; width: 100%; height: auto; display: block; visibility: hidden; align-self: start; transform-origin: 50% 0; transition: transform .45s var(--ease); }
-@media (hover: hover) and (pointer: fine) { .wl-shot:hover > img { transform: scale(1.035); } }
-.wl-phone figcaption { font-family: var(--mono); font-size: 10px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
-.wl-phone figcaption b { display: block; margin-top: 2px; font-family: var(--sans); font-size: 13px; letter-spacing: -.01em; text-transform: none; color: var(--ink); }
-.wl-note { margin-top: 18px; font-size: 11px; line-height: 1.75; color: var(--muted); }
 .wl-enter { text-align: left; }
 .wl-enter .wl-cta { margin-top: 20px; }
-.wl-lb { position: fixed; inset: 0; width: 100%; max-width: none; height: 100%; max-height: none; margin: 0; padding: 0; border: 0; background: transparent; overflow: hidden; }
-.wl-lb::backdrop { background: rgba(5, 6, 8, .88); backdrop-filter: blur(6px); }
-.wl-lb-in { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 24px; }
-.wl-lb img { max-width: min(92vw, 620px); max-height: 86vh; width: auto; height: auto; background: var(--panel2); border: 1px solid rgba(255, 255, 255, .16); box-shadow: 0 30px 80px rgba(0, 0, 0, .5); will-change: transform, opacity; }
-.wl-lb-x { position: absolute; top: 18px; right: 18px; z-index: 2; width: 44px; height: 44px; border: 1px solid rgba(255, 255, 255, .28); border-radius: 50%; background: rgba(7, 9, 13, .5); color: #fff; font-size: 20px; line-height: 1; cursor: pointer; }
-:global(html.wl-open) { overflow: hidden; }
+
 @media (max-width: 880px) {
-  .wl-hero-grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'copy' 'visual' 'lede' 'cta' 'fine'; row-gap: 18px; }
+  .wl-hero-grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'copy' 'visual' 'lede' 'fine'; row-gap: 18px; }
   .wl-lede { margin-top: 0; }
 }
 @media (max-width: 760px) {
@@ -381,17 +276,36 @@ onBeforeUnmount(() => cleanup());
 }
 @media (max-width: 560px) {
   .wl-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .wl-stage { grid-template-columns: minmax(0, 1fr); max-width: 420px; }
-  .wl-mid { margin-top: 0; }
 }
 @media (max-width: 400px) {
   .hv-stack { grid-template-columns: minmax(0, 1fr); }
 }
 @media (prefers-reduced-motion: reduce) {
   .wl-progress { display: none; }
-  .wl-shot { transform: none; transition: none; }
-  .wl-shot::after { display: none; }
+  .wl-card { transition: none; }
   .js .rv, .js .rv.in { clip-path: none; }
-  .js [data-stagger] > *, .js .wl-hero .wl-lede, .js .wl-hero .wl-cta, .js .wl-hero .wl-fine, .js .wl-hero .hv-card, .js .wl-hero h1 .li { opacity: 1; transform: none; transition: none; }
+  .js [data-stagger] > *, .js .wl-hero .wl-lede, .js .wl-hero .wl-fine, .js .wl-hero .hv-card, .js .wl-hero h1 .li { opacity: 1; transform: none; transition: none; }
+}
+
+/* Screenshot deck: cards fan behind the active one and cross-fade on switch. */
+.wl-shots { position: relative; overflow: hidden; max-width: 860px; margin: 0 auto; }
+.wl-shots-track { position: relative; height: clamp(340px, 58vh, 600px); }
+.wl-card { position: absolute; inset: 0; margin: auto; height: 100%; width: auto; aspect-ratio: 390 / 844; overflow: hidden; border: 1px solid var(--line); background: var(--panel2); box-shadow: 0 18px 44px rgba(17, 17, 17, .16); transition: transform .62s var(--ease), opacity .52s var(--ease), filter .52s var(--ease); will-change: transform, opacity; }
+.wl-card.front { box-shadow: 0 26px 60px rgba(17, 17, 17, .22); }
+.wl-card img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+.wl-card::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(17, 17, 17, 0) 62%, rgba(17, 17, 17, .10) 100%); }
+.wl-arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 30; width: 44px; min-width: 44px; height: 44px; padding: 0; border: 1px solid var(--line2); border-radius: 50%; background: var(--panel); color: var(--ink); font-size: 20px; line-height: 1; }
+.wl-arrow.left { left: 2px; }
+.wl-arrow.right { right: 2px; }
+.wl-arrow:hover { border-color: var(--ink); background: var(--panel2); }
+.wl-deck-cap { display: flex; align-items: baseline; justify-content: center; gap: 10px; margin-top: 18px; font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); text-align: center; }
+.wl-deck-cap b { color: var(--ink); }
+.wl-dots { display: flex; justify-content: center; gap: 6px; margin-top: 12px; }
+.wl-dots button { width: 26px; height: 26px; min-height: 26px; padding: 0; border: 0; border-radius: 0; background: none; position: relative; }
+.wl-dots button::before { content: ''; position: absolute; inset: 10px 3px; background: var(--line-soft); }
+.wl-dots button[aria-current='true']::before { background: var(--accent); }
+@media (max-width: 760px) {
+  .wl-shots-track { height: clamp(320px, 54vh, 460px); }
+  .wl-arrow { width: 38px; min-width: 38px; height: 38px; }
 }
 </style>
