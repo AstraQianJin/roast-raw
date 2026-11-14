@@ -249,7 +249,7 @@ watch(() => [selectedCycleId.value, props.activeCycleId, retryCount.value], asyn
     controller.abort();
     clearReview();
     cycles.value = [];
-    errorHeading.value = id ? 'Review could not be loaded' : 'Archive could not be loaded';
+    errorHeading.value = id ? 'Review could not be loaded' : 'Vault could not be loaded';
     error.value = failure.message || 'The request failed. Please retry.';
   } finally {
     if (sequence === requestCount) loading.value = false;
@@ -372,12 +372,12 @@ onBeforeUnmount(() => {
 <template>
   <section class="archive-view" data-testid="archive-view" :aria-busy="loading">
     <header v-if="!selectedCycleId" class="archive-heading">
-      <p class="eyebrow">THE TRAINING RECORD</p>
-      <h1>Previous cycles.<br><em>Nothing overwritten.</em></h1>
-      <p class="reading-note">Historical plans and their execution stay together. Reviews are read-only; exporting is not an archive command.</p>
+      <p class="eyebrow">THE VAULT · CLOUD RECORD</p>
+      <h1>Every cycle.<br><em>Nothing overwritten.</em></h1>
+      <p class="reading-note">Plan, execution and bodyweight stay together on the server. Reviews are read-only; exporting is not a vault command.</p>
     </header>
     <nav v-else class="review-navigation" aria-label="Review navigation">
-      <RouterLink to="/archive" class="text-link">Back to archive</RouterLink>
+      <RouterLink to="/archive" class="text-link">Back to vault</RouterLink>
     </nav>
 
     <p v-if="loading" class="loading-note" role="status" data-testid="archive-loading">
@@ -389,7 +389,7 @@ onBeforeUnmount(() => {
       <p v-if="selectedCycleId" class="reading-note">Requested cycle <code>{{ selectedCycleId }}</code></p>
       <div class="actions">
         <button type="button" data-testid="review-retry" @click="retry">Retry</button>
-        <RouterLink to="/archive" class="text-link">Open archive</RouterLink>
+        <RouterLink to="/archive" class="text-link">Open vault</RouterLink>
       </div>
     </section>
 
@@ -573,6 +573,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .archive-view { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.archive-heading h1 { margin-top: 6px; font-family: var(--serif); font-weight: 400; text-transform: none; letter-spacing: -.035em; font-size: clamp(34px, 6vw, 52px); line-height: 1.06; }
 .archive-heading h1 em { color: var(--muted); font-weight: 400; }
 .reading-note { margin-top: 10px; color: var(--muted); font: 12px/1.7 var(--sans); }
 .section-kicker { flex-wrap: wrap; color: var(--accent); }

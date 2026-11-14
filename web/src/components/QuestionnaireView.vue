@@ -761,17 +761,17 @@ onBeforeUnmount(() => { disposed = true; sequence += 1; controller?.abort(); });
 </template>
 
 <style scoped>
-.questionnaire { box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; margin: 24px 0; padding: 20px 16px; border: 1px solid var(--line); color: var(--ink); background: var(--panel); font: 14px/1.6 var(--sans); overflow-wrap: anywhere; }
+.questionnaire { box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; margin: 0; padding: 0; border: 0; color: var(--ink); background: transparent; font: 14px/1.6 var(--sans); overflow-wrap: anywhere; }
 .questionnaire *, .questionnaire *::before, .questionnaire *::after { box-sizing: border-box; }
 p, h2, h3, h4, h5, dl, dd { margin: 0; }
-h2 { margin-top: 8px; font: 800 clamp(28px, 5vw, 36px)/1.15 var(--display); }
+h2 { margin-top: 6px; font: 800 clamp(22px, 4vw, 28px)/1.18 var(--display); }
 h2 em { color: var(--muted); font-weight: 400; }
-h3 { font: 800 24px/1.25 var(--display); }
+h3 { font: 800 20px/1.28 var(--display); }
 h4 { margin-top: 18px; font: 600 15px/1.4 var(--sans); }
 h5 { font: 600 13px/1.4 var(--sans); }
 .kicker { color: var(--accent); font: 11px/1.6 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
 .reading-note { margin-top: 10px; max-width: 75ch; color: var(--muted); font: 12px/1.7 var(--sans); }
-.progress { margin-top: 20px; font: 600 13px/1.5 var(--mono); color: var(--accent); }
+.progress { margin-top: 14px; font: 600 13px/1.5 var(--mono); color: var(--accent); }
 .progress-track { height: 4px; margin-top: 8px; background: var(--panel2); border-radius: 2px; overflow: hidden; }
 .progress-track span { display: block; height: 100%; background: var(--accent); transition: width .2s ease; }
 .wizard { display: grid; gap: 16px; min-width: 0; margin-top: 18px; }
@@ -780,14 +780,14 @@ h5 { font: 600 13px/1.4 var(--sans); }
 .field { display: grid; gap: 6px; min-width: 0; align-content: start; }
 .field.wide { grid-column: 1 / -1; }
 .field > span { font-size: 13px; font-weight: 600; }
-input, select, textarea { width: 100%; min-width: 0; min-height: 44px; padding: 10px; border: 1px solid var(--line); border-radius: 2px; color: var(--ink); background: var(--panel2); font: 14px/1.4 var(--sans); }
+input, select, textarea { width: 100%; min-width: 0; min-height: 46px; padding: 11px 12px; border: 1px solid var(--line-soft); border-radius: 10px; color: var(--ink); background: #FFFFFF; font: 14px/1.4 var(--sans); }
 textarea { min-height: 60px; resize: vertical; }
 input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.readonly-value { min-height: 44px; display: flex; align-items: center; padding: 10px; border: 1px dashed var(--line); border-radius: 2px; background: var(--panel2); color: var(--muted); font: 14px/1.4 var(--mono); }
+.readonly-value { min-height: 46px; display: flex; align-items: center; padding: 11px 12px; border: 1px dashed var(--line2); border-radius: 10px; background: var(--panel2); color: var(--muted); font: 14px/1.4 var(--mono); }
 .choice-row { display: flex; flex-wrap: wrap; gap: 10px; }
-.choice { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 2px; cursor: pointer; }
+.choice { display: flex; align-items: center; gap: 8px; min-height: 46px; padding: 8px 12px; border: 1px solid var(--line-soft); border-radius: 10px; background: #FFFFFF; cursor: pointer; }
 .choice input { width: 20px; height: 20px; min-height: 20px; accent-color: var(--accent); }
-.check-group { display: grid; gap: 8px; margin: 0; padding: 12px; min-width: 0; border: 1px solid var(--line); border-radius: 2px; }
+.check-group { display: grid; gap: 8px; margin: 0; padding: 12px; min-width: 0; border: 1px solid var(--line-soft); border-radius: 12px; background: #FFFFFF; }
 .check-group legend { padding: 0 6px; font-weight: 600; font-size: 13px; }
 .check { display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; }
 .check input { flex: 0 0 22px; width: 22px; height: 22px; min-height: 22px; accent-color: var(--accent); }

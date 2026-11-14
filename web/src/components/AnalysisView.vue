@@ -76,6 +76,36 @@ function blockTone(id) {
   const type = (props.plan.blocks.find(block => block.id === id)?.cycleType || '').toLowerCase();
   return { hyper: 'var(--ct-hyper)', strength: 'var(--ct-strength)', transmute: 'var(--ct-transmute)', peak: 'var(--ct-peak)' }[type] || 'var(--ct-custom)';
 }
+const exerciseGroups = computed(() => {
+  const map = new Map();
+  for (const row of props.plan.workouts || []) {
+    const key = row.movementId || row.nameEn;
+    if (!key) continue;
+    let item = map.get(key);
+    if (!item) {
+      item = {
+        key, name: row.nameEn || row.movement || key, lift: row.lift || '',
+        bucket: row.bucket || (row.role === 'variation' ? 'sbdVar' : row.role),
+        sets: 0, tonnage: 0, sessions: new Set(), weeks: new Set(), topLoad: 0, topPct: 0,
+      };
+      map.set(key, item);
+    }
+    item.sets += Number(row.sets) || 0;
+    item.tonnage += Number(row.tonnageKg) || 0;
+    item.sessions.add(`${row.week}|${row.day}`);
+    item.weeks.add(row.week);
+    item.topLoad = Math.max(item.topLoad, Number(row.loadKg) || 0);
+    item.topPct = Math.max(item.topPct, Number(row.pct) || 0);
+  }
+  const all = [...map.values()].map(item => ({ ...item, weekCount: item.weeks.size, sessionCount: item.sessions.size, topPct: item.topPct * 100 }));
+  const liftOrder = { S: 0, B: 1, D: 2 };
+  const byLift = (a, b) => (liftOrder[a.lift] ?? 9) - (liftOrder[b.lift] ?? 9) || b.sets - a.sets;
+  return [
+    { key: 'main', label: 'Main lifts', note: 'The three competition lifts and their anchor variations.', rows: all.filter(item => item.bucket === 'main').sort((a, b) => b.sets - a.sets || byLift(a, b)) },
+    { key: 'var', label: 'Variations', note: 'SBD-adjacent work; it supports the lift without replacing it.', rows: all.filter(item => item.bucket !== 'main' && item.bucket !== 'accessory').sort(byLift) },
+    { key: 'accessory', label: 'Accessory', note: 'Muscle and joint work. Never converted into SBD capacity.', rows: all.filter(item => item.bucket === 'accessory').sort((a, b) => b.sets - a.sets).slice(0, 14) },
+  ];
+});
 const blocks = computed(() => props.plan.blocks.map(block => {
   const weeks = props.analysis.perWeek.filter(week => week.blockId === block.id);
   return {
@@ -164,22 +194,21 @@ const blocks = computed(() => props.plan.blocks.map(block => {
           <div class="lift-foot"><span>ANCHOR {{ display(lift.start) }} kg</span><span>TARGET {{ display(lift.target) }} kg<template v-if="lift.gain !== null"> · {{ lift.gain > 0 ? '+' : '' }}{{ display(lift.gain) }} kg</template></span></div>
         </article>
       </section>
-      <section class="lift-table-wrap" aria-label="Lift volume by week">
-        <table class="lift-table">
-          <thead><tr><th>WEEK</th><th>S</th><th>B</th><th>D</th><th>TOP S</th><th>TOP B</th><th>TOP D</th><th>KIND</th></tr></thead>
-          <tbody>
-            <tr v-for="week in analysis.perWeek" :key="week.n">
-              <th scope="row">W{{ String(week.n).padStart(2, '0') }}</th>
-              <td>{{ week.lifts.S?.main + week.lifts.S?.var || 0 }}</td>
-              <td>{{ week.lifts.B?.main + week.lifts.B?.var || 0 }}</td>
-              <td>{{ week.lifts.D?.main + week.lifts.D?.var || 0 }}</td>
-              <td>{{ display(week.topPctByLift?.S) }}%</td>
-              <td>{{ display(week.topPctByLift?.B) }}%</td>
-              <td>{{ display(week.topPctByLift?.D) }}%</td>
-              <td>{{ week.kind }}</td>
-            </tr>
-          </tbody>
-        </table>
+      <section class="ex-register" aria-label="Exercise register">
+        <header class="ex-register-head"><div><div class="eyebrow">EXERCISE REGISTER</div><h2>Main, variation, accessory.</h2></div><p class="panel-note">Prescribed rows only, grouped by how each movement serves the lift. Collapsed to one line per movement.</p></header>
+        <div v-for="group in exerciseGroups" :key="group.key" class="ex-group" :class="`ex-group-${group.key}`">
+          <div class="ex-group-head"><h3>{{ group.label }}</h3><small>{{ group.rows.length }} movements · {{ group.rows.reduce((sum, item) => sum + item.sets, 0) }} sets</small></div>
+          <p class="ex-group-note">{{ group.note }}</p>
+          <div class="ex-list">
+            <div v-for="item in group.rows" :key="item.key" class="ex-row" :class="item.lift ? `ex-lift-${item.lift}` : ''">
+              <span class="ex-code">{{ item.lift || '·' }}</span>
+              <div class="ex-name"><strong>{{ item.name }}</strong><small>{{ item.weekCount }} weeks · {{ item.sessionCount }} sessions · {{ display(item.tonnage / 1000) }} t</small></div>
+              <div class="ex-cell"><b>{{ display(item.sets) }}</b><small>SETS</small></div>
+              <div class="ex-cell"><b>{{ display(item.topLoad) }}</b><small>KG TOP</small></div>
+              <div class="ex-cell ex-pct"><b>{{ item.topPct ? display(item.topPct) : "—" }}</b><small>%1RM</small></div>
+            </div>
+          </div>
+        </div>
       </section>
     </template>
 
@@ -217,7 +246,7 @@ const blocks = computed(() => props.plan.blocks.map(block => {
 .panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .panel-head h2 { font-family: var(--serif); font-weight: 400; text-transform: none; letter-spacing: -.02em; font-size: 24px; }
 .panel-note { max-width: 46ch; font-size: 10px; line-height: 1.6; color: var(--muted); text-align: right; }
-.goal-panel, .block-strip, .mix-panel { margin-top: 22px; padding: 16px; border: 1px solid var(--line-soft); border-radius: 18px; background: linear-gradient(180deg, #FFFFFF, #F9F8F3); box-shadow: 0 10px 26px rgba(17,17,17,.06); }
+.goal-panel, .block-strip, .mix-panel { margin-top: 22px; padding: 18px; border: 1px solid var(--line-soft); border-radius: 16px; background: linear-gradient(180deg, #FFFFFF, #F9F8F3); box-shadow: 0 10px 26px rgba(17,17,17,.06); }
 .goal-rows { margin-top: 14px; display: grid; gap: 12px; }
 .goal-row { display: grid; grid-template-columns: 78px minmax(0, 1fr) auto; align-items: center; gap: 10px; }
 .goal-id b { font: 700 13px var(--mono); }
@@ -272,5 +301,31 @@ const blocks = computed(() => props.plan.blocks.map(block => {
   .lift-grid { grid-template-columns: 1fr; }
   .goal-row { grid-template-columns: 64px minmax(0, 1fr) auto; }
   .analysis-stamp { display: none; }
+}
+.ex-register { margin-top: 26px; }
+.ex-register-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.ex-register-head h2 { font-size: clamp(22px, 5vw, 26px); font-family: var(--serif); font-weight: 400; text-transform: none; letter-spacing: -.02em; font-size: 26px; }
+.ex-group { margin-top: 14px; padding: 16px; border: 1px solid var(--line-soft); border-radius: 18px; background: #FFFFFF; box-shadow: 0 10px 26px rgba(17,17,17,.05); }
+.ex-group-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.ex-group-head h3 { font: 800 11px var(--display); letter-spacing: .1em; text-transform: uppercase; }
+.ex-group-head small { font: 9px var(--mono); color: var(--muted); }
+.ex-group-note { margin: 3px 0 10px; font-size: 10px; line-height: 1.5; color: var(--muted); }
+.ex-list { display: grid; }
+.ex-row { display: grid; grid-template-columns: 24px minmax(0, 1fr) 52px 66px 58px; align-items: center; gap: 8px; padding: 9px 0; border-top: 1px solid var(--line-soft); }
+.ex-code { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; background: var(--panel2); font: 700 9px var(--mono); color: var(--muted); }
+.ex-lift-S .ex-code { background: color-mix(in srgb, var(--t1) 12%, #FFF); color: var(--t1); }
+.ex-lift-B .ex-code { background: color-mix(in srgb, var(--t2) 12%, #FFF); color: var(--t2); }
+.ex-lift-D .ex-code { background: color-mix(in srgb, var(--t3) 12%, #FFF); color: var(--t3); }
+.ex-name { min-width: 0; }
+.ex-name strong { display: block; font-size: 12px; line-height: 1.35; overflow-wrap: anywhere; }
+.ex-name small { display: block; margin-top: 1px; font: 8.5px var(--mono); color: var(--muted); }
+.ex-cell { text-align: right; }
+.ex-cell b { display: block; font: 700 13px var(--mono); letter-spacing: -.02em; }
+.ex-cell small { font: 7px var(--mono); letter-spacing: .08em; color: var(--muted); }
+.ex-pct b { color: var(--accent); }
+@media (max-width: 880px) {
+  .ex-row { grid-template-columns: 20px minmax(0, 1fr) 34px 46px 40px; gap: 5px; }
+  .ex-cell b { font-size: 11px; }
+  .ex-cell small { font-size: 6.5px; }
 }
 </style>

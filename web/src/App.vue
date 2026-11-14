@@ -27,6 +27,7 @@ import BeanMark from './components/BeanMark.vue';
 import CyclePrestart from './components/CyclePrestart.vue';
 import LoadProfile from './components/LoadProfile.vue';
 import AnalysisView from './components/AnalysisView.vue';
+import BlockWeekNav from './components/BlockWeekNav.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -231,7 +232,7 @@ watch([() => route.fullPath, loading], async () => {
 <template>
   <div class="shell">
     <header class="masthead"><RouterLink :to="isPublic ? '/' : '/cycle'" class="brand" aria-label="Roast Raw home"><BeanMark class="brand-mark" />Roast Raw</RouterLink><span class="edition">TRAINING JOURNAL / {{ releaseVersion }}</span><RouterLink v-if="!isPublic" :to="todayLink" class="today-cta"><span class="today-dot"></span><span class="today-word">{{ todayCtaLabel }}</span><small>{{ todayCtaDate }}</small></RouterLink><RouterLink v-else-if="page === 'welcome'" :to="session?.authenticated ? '/cycle' : { path: '/login', query: { next: '/cycle' } }" class="masthead-cta">MY CYCLE</RouterLink></header>
-    <nav v-if="!isPublic" class="primary-nav" aria-label="Primary"><RouterLink to="/cycle" :class="{ 'router-link-active': page === 'cycle' }">CYCLE</RouterLink><RouterLink to="/analysis">ANALYSIS</RouterLink><RouterLink to="/questionnaire">OUTLOOK</RouterLink><RouterLink to="/archive">ARCHIVE</RouterLink></nav>
+    <nav v-if="!isPublic" class="primary-nav" aria-label="Primary"><RouterLink to="/cycle" :class="{ 'router-link-active': page === 'cycle' }">CYCLE</RouterLink><RouterLink to="/analysis">ANALYSIS</RouterLink><RouterLink to="/questionnaire">FORESIGHT</RouterLink><RouterLink to="/archive">VAULT</RouterLink></nav>
     <main :aria-busy="loading">
       <WelcomeView v-if="page === 'welcome'" />
       <LoginView v-else-if="page === 'login'" :next="typeof route.query.next === 'string' ? route.query.next : ''" @authed="onAuthed" />
@@ -269,10 +270,9 @@ watch([() => route.fullPath, loading], async () => {
                 <template v-else-if="page === 'cycle'">
           <template v-if="planView === 'cycle'">
             <div class="eyebrow">THE CYCLE · {{ plan.meta.weeks }} WEEKS · {{ plan.meta.sessions }} SESSIONS</div><h1 class="plan-title">The cycle.</h1><p class="hero-subtitle">{{ dateLabel(plan.meta.startDate) }} — {{ dateLabel(plan.meta.endDate) }}</p>
+            <BlockWeekNav :blocks="plan.blocks" :weeks="plan.weeks" :current-week="Number(calendar?.week || 1)" />
             <div class="plan-metrics"><div class="metric"><span class="section-label">START</span><strong>{{ dateLabel(plan.meta.startDate) }}</strong><small>{{ plan.meta.startDate.slice(0, 4) }} · {{ plan.meta.weeks }} WEEKS</small></div><div class="metric"><span class="section-label">TEST DAY</span><strong>{{ plan.testPlan?.dates?.sbd ? dateLabel(plan.testPlan.dates.sbd) : 'Not set' }}</strong><small>{{ plan.testPlan?.dates?.sbd ? `W${String(plan.weeks.find(w => w.kind === 'test')?.n || 0).padStart(2, '0')} · SBD` : 'Add a date in outlook' }}</small></div><div class="metric"><span class="section-label">CYCLE TONNAGE</span><strong>{{ display(analysis.cycle.tonnageKg / 1000) }} t</strong><small>{{ analysis.cycle.auxSets }} AUX SETS</small></div></div>
             <LoadProfile :weeks="plan.weeks" :blocks="plan.blocks" :per-week="analysis.perWeek" :test-date="plan.testPlan?.dates?.sbd" />
-            <div class="section-head"><div class="eyebrow">CYCLE MAP</div><p class="annotation">Each square is one week. Pick a square to open that week; colour is the block.</p></div>
-            <CycleStrip :weeks="plan.weeks" :blocks="plan.blocks" :current="Number(calendar?.week || 1)" />
             <div class="section-head"><div class="eyebrow">BLOCKS IN THIS CYCLE</div><p class="annotation">Each block is a phase with its own ceiling. Open a block to see the weeks inside it, then a week, then a day.</p></div>
             <section class="block-deck" aria-label="Blocks">
               <RouterLink v-for="block in plan.blocks" :key="block.id" :to="`/cycle/block/${block.id}`" class="block-card" :style="{ '--seg': blockColor(block.id) }">
@@ -288,36 +288,52 @@ watch([() => route.fullPath, loading], async () => {
           <template v-else-if="planView === 'block'">
             <div class="eyebrow">BLOCK {{ blockMeta?.id }} · {{ (blockMeta?.cycleType || 'custom').toUpperCase() }}</div><h1 class="plan-title">{{ blockMeta?.nameEn }}</h1><p class="hero-subtitle">W{{ String(blockWeeks[0]?.n || 0).padStart(2, '0') }} — W{{ String(blockWeeks.at(-1)?.n || 0).padStart(2, '0') }} · {{ blockWeeks.length }} WEEKS</p>
             <div class="plan-metrics"><div class="metric"><span class="section-label">SESSIONS</span><strong>{{ blockWeeks.reduce((sum, item) => sum + (item.sessions || 0), 0) }}</strong><small>ACROSS THIS BLOCK</small></div><div class="metric"><span class="section-label">BLOCK TONNAGE</span><strong>{{ display(blockTonnage / 1000) }} t</strong><small>PLANNED WORK</small></div><div class="metric"><span class="section-label">TOP %1RM</span><strong>{{ display(blockTopPct) }}%</strong><small>{{ (blockMeta?.cycleType || 'custom').toUpperCase() }} CEILING</small></div></div>
+            <BlockWeekNav :blocks="plan.blocks" :weeks="plan.weeks" :block-id="blockMeta?.id || ''" :current-week="Number(calendar?.week || 0)" />
             <LoadProfile :weeks="blockWeeks" :blocks="plan.blocks" :per-week="blockPerWeek" :test-date="plan.testPlan?.dates?.sbd" />
             <div class="section-head"><div class="eyebrow">WEEKS IN THIS BLOCK</div><p class="annotation">A week is the unit you actually train. Each card carries its load, its sessions and its phase.</p></div>
             <section class="week-deck" aria-label="Weeks in this block">
               <RouterLink v-for="week in blockWeeks" :key="week.n" :to="`/cycle/week/${week.n}`" class="week-card" :class="week.kind">
-                <header><b>W{{ String(week.n).padStart(2, '0') }}</b><span class="week-kind">{{ week.kind }}</span></header>
+                <header><b>W{{ String(week.n).padStart(2, '0') }}</b><span class="week-kind">{{ week.kind === 'training' ? blockMeta?.cycleType || 'TRAINING' : week.kind }}</span></header>
                 <p class="week-dates">{{ dateLabel(week.dateStart) }} — {{ dateLabel(week.dateEnd) }}</p>
-                <dl><div><dt>TONNAGE</dt><dd>{{ display(week.tonnageKg / 1000) }}<small> t</small></dd></div><div><dt>SESSIONS</dt><dd>{{ week.sessions }}</dd></div></dl>
+                <div class="week-lift-row"><span v-for="code in ['S', 'B', 'D']" :key="code" :class="`l-${code}`"><b>{{ code }}</b>{{ display(analysis.perWeek.find(row => row.n === week.n)?.topPctByLift?.[code] ?? week.topPctByLift?.[code]) }}<small>%</small></span></div>
+                <dl class="week-stats"><div><dt>TONNAGE</dt><dd>{{ display(week.tonnageKg / 1000) }}<small> t</small></dd></div><div><dt>SETS</dt><dd>{{ analysis.perWeek.find(row => row.n === week.n)?.total ?? week.sets }}</dd></div><div><dt>SESSIONS</dt><dd>{{ week.sessions }}</dd></div></dl>
                 <div class="week-meter"><i :style="{ width: `${Math.min(100, (analysis.perWeek.find(row => row.n === week.n)?.topPct || 0))}%` }"></i></div>
-                <span class="week-open">TOP {{ display(analysis.perWeek.find(row => row.n === week.n)?.topPct || 0) }}% · OPEN <b>→</b></span>
+                <span class="week-open"><span>{{ week.kind === 'test' ? 'MEET / TEST WEEK' : week.kind === 'deload' ? 'RECOVERY WEEK' : `PEAK ${display(analysis.perWeek.find(row => row.n === week.n)?.topPct || 0)}%` }}</span><b>OPEN →</b></span>
               </RouterLink>
             </section>
           </template>
           <template v-else>
             <div class="eyebrow">{{ weekMeta.blockId }} · {{ week.kind.toUpperCase() }} WEEK</div><p class="breadcrumb"><RouterLink to="/cycle">Cycle</RouterLink> / <RouterLink :to="`/cycle/block/${weekMeta.blockId}`">{{ weekMeta.blockId }}</RouterLink> / Week {{ currentWeek }}</p>
-            <CycleStrip :weeks="plan.weeks" :blocks="plan.blocks" :current="currentWeek" />
+            <BlockWeekNav :blocks="plan.blocks" :weeks="plan.weeks" :block-id="weekMeta.blockId" :current-week="currentWeek" />
             <div class="workspace"><div>
             <div class="week-header"><span class="week-number">{{ currentWeek }}</span><div><h2>{{ weekMeta.blockName }}</h2><small>{{ week.kind.toUpperCase() }} WEEK</small></div><div class="week-summary"><strong>{{ display(week.tonnageKg / 1000) }} t</strong><small>{{ week.sessions }} SESSIONS</small></div></div>
             <p v-if="weekMeta.kind === 'deload'" class="notice">{{ DELOAD_NOTE }}</p>
             <AttemptBoard v-if="weekMeta.kind === 'test'" :cycle-id="plan.meta.planId" :bar-kg="plan.meta.profile.bar_kg || 20" :collar-pair="plan.meta.profile.collars ? 5 : 0" />
             <div class="top-intensity"><span>TOP %1RM <b>{{ display(week.topPct) }}%</b></span><span>S {{ display(week.topPctByLift.S) }} · B {{ display(week.topPctByLift.B) }} · D {{ display(week.topPctByLift.D) }}</span></div>
-            <div v-for="day in days" :id="day.id ? `day-${currentWeek}-${day.id}` : undefined" :key="day.date" :tabindex="route.params.day === day.id ? -1 : undefined" class="plan-day">
+            <div class="day-stack">
+            <div v-for="day in days" :id="day.id ? `day-${currentWeek}-${day.id}` : undefined" :key="day.date" :tabindex="route.params.day && route.params.day === day.id ? -1 : undefined" class="day-card" :class="{ open: route.params.day && route.params.day === day.id, rest: !day.rows.length }">
               <template v-if="day.rows.length">
-                <RouterLink class="day-row" :to="route.params.day === day.id ? `/cycle/week/${currentWeek}` : `/cycle/week/${currentWeek}/day/${day.id}`" :aria-expanded="route.params.day === day.id"><span class="day-date"><strong>{{ day.label }}</strong>{{ day.weekday }}</span><span class="day-letter">{{ day.id }}</span><span class="day-info"><span v-if="topLifts(day.rows).length" class="top-load"><small>TOP</small><b v-for="lift in topLifts(day.rows)" :key="lift.code">{{ lift.code }} {{ display(lift.load) }}</b></span><span class="day-title">{{ titleCase(plan.days.find(item => item.id === day.id).titleEn) }}</span><span class="day-status">{{ (calendar.sessionStates[`${currentWeek}|${day.id}`] || 'scheduled').toUpperCase() }}</span></span><span class="day-open">{{ route.params.day === day.id ? '−' : '›' }}</span></RouterLink>
-                <DailyRecord v-if="route.params.day === day.id" :cycle-id="plan.meta.planId" :date="day.date" :session-id="`${currentWeek}|${day.id}`" @saved="refreshPrescription" />
-                <details v-if="route.params.day === day.id" class="gear"><summary>GEAR <span class="chip">{{ needsMicroPlates(day.rows) ? 'MICRO PLATES' : 'SESSION SETUP' }}</span><span v-if="plan.meta.profile.bar_kg" class="chip">{{ display(plan.meta.profile.bar_kg) }} KG BAR</span></summary><p>{{ needsMicroPlates(day.rows) ? 'Prepare micro plates for the prescribed loads.' : 'Standard plates cover these prescribed loads.' }} All loads stay as prescribed; bodyweight movements use dated total system weight when shown.</p></details>
-                <WarmupSuggestions v-if="route.params.day === day.id" :entries="plan.warmups?.[day.date] || []" />
-                <ExerciseRows v-if="route.params.day === day.id" :rows="day.rows" :cycle-id="plan.meta.planId" :logs="logs" :system-loads="prescriptionInfo?.systemLoads || {}" @saved="savedLog" />
-                <ShareButton v-if="route.params.day === day.id" :plan="plan" :logs="logs" :default-date="day.date" />
+                <RouterLink class="day-head" :to="route.params.day === day.id ? `/cycle/week/${currentWeek}` : `/cycle/week/${currentWeek}/day/${day.id}`" :aria-expanded="route.params.day === day.id">
+                  <span class="day-tile"><b>{{ day.label }}</b><small>{{ day.weekday }}</small></span>
+                  <span class="day-letter">{{ day.id }}</span>
+                  <span class="day-main">
+                    <span class="day-kicker">SESSION {{ day.id }} · {{ titleCase(plan.days.find(item => item.id === day.id)?.titleEn || '') }}</span>
+                    <span v-if="topLifts(day.rows).length" class="top-load"><small>TOP</small><b v-for="lift in topLifts(day.rows)" :key="lift.code">{{ lift.code }} {{ display(lift.load) }}</b></span>
+                    <span v-else class="day-kicker">ACCESSORY / CONDITIONING</span>
+                  </span>
+                  <span class="day-side"><span class="day-status" :class="(calendar.sessionStates[`${currentWeek}|${day.id}`] || 'scheduled').toLowerCase()">{{ (calendar.sessionStates[`${currentWeek}|${day.id}`] || 'scheduled').toUpperCase() }}</span><span class="day-chevron">{{ route.params.day === day.id ? '−' : '+' }}</span></span>
+                </RouterLink>
+                <section v-if="route.params.day === day.id" class="day-detail">
+                  <div class="day-detail-head"><span>SESSION PLAN</span><span>{{ day.rows.length }} PRESCRIBED ROWS</span></div>
+                  <DailyRecord :cycle-id="plan.meta.planId" :date="day.date" :session-id="`${currentWeek}|${day.id}`" @saved="refreshPrescription" />
+                  <WarmupSuggestions :entries="plan.warmups?.[day.date] || []" />
+                  <ExerciseRows :rows="day.rows" :cycle-id="plan.meta.planId" :logs="logs" :system-loads="prescriptionInfo?.systemLoads || {}" @saved="savedLog" />
+                  <details class="gear"><summary>GEAR <span class="chip">{{ needsMicroPlates(day.rows) ? 'MICRO PLATES' : 'SESSION SETUP' }}</span><span v-if="plan.meta.profile.bar_kg" class="chip">{{ display(plan.meta.profile.bar_kg) }} KG BAR</span></summary><p>{{ needsMicroPlates(day.rows) ? 'Prepare micro plates for the prescribed loads.' : 'Standard plates cover these prescribed loads.' }} All loads stay as prescribed; bodyweight movements use dated total system weight when shown.</p></details>
+                  <ShareButton :plan="plan" :logs="logs" :default-date="day.date" />
+                </section>
               </template>
               <div v-else class="rest-row"><span>{{ day.label }} · {{ day.weekday }}</span><span>REST</span></div>
+            </div>
             </div>
             <WeekCapacity :week="week" :ranges="analysis.ranges" />
             <figure class="cond-card" aria-label="Conditioning equivalent minutes"><div class="cond-head"><div><div class="eyebrow">CONDITIONING</div><h3>Equivalent minutes <em>ESTIMATE</em></h3></div><strong>{{ conditioningWeek }}<small> min/wk</small></strong></div><div class="cond-band"><div class="cond-zone"></div><div class="cond-bars"><i v-for="bar in conditioningBars" :key="bar.n" :class="[bar.kind, { on: bar.n === currentWeek }]" :style="{ height: `${Math.min(100, bar.minutes / 60 * 100)}%` }" :title="`Week ${bar.n}: ${bar.minutes} min`"></i></div></div><div class="cond-scale"><span>0</span><span>20</span><span>60</span></div><p class="cond-note">Moderate-intensity equivalent from planned cardio. It is an estimate, not a measured load.</p></figure>
@@ -327,16 +343,15 @@ watch([() => route.fullPath, loading], async () => {
         </template>
 <AnalysisView v-else-if="page === 'analysis'" :plan="plan" :analysis="analysis" :geometry="geometry" :performance="performance" :current-week="currentWeek" :mode="mode" @week="selectWeek" @mode="changeMode" />
         <template v-else-if="page === 'archive'">
+          <section v-if="!route.params.cycleId" class="vault-strip" aria-label="Vault status">
+            <div class="vault-cell"><span class="section-label">CLOUD LEDGER</span><strong>Server-backed</strong><small>SQLite · Asia/Shanghai · one record for phone and web</small></div>
+            <div class="vault-cell"><span class="section-label">BODY</span><strong>{{ display(plan.meta.profile.bw_kg) }} → {{ display(plan.meta.profile.target_bw_kg) }} kg</strong><small>starting bodyweight → target · dated readings only</small></div>
+            <div class="vault-cell"><span class="section-label">ACCOUNT</span><strong>{{ session?.authenticated ? 'Signed in' : 'Locked' }}</strong><small>Single-user release · no third-party sync</small></div>
+          </section>
           <ArchiveView :active-cycle-id="plan.meta.planId" />
           <section v-if="!route.params.cycleId" id="account" class="account-panel" aria-label="Account and data">
-            <div class="eyebrow">ACCOUNT / DATA / SYSTEM</div>
-            <h2>The essentials.</h2>
-            <div class="account-grid">
-              <div class="account-cell"><span class="section-label">SERVER</span><strong>SQLite · Asia/Shanghai</strong><small>Connected · one ledger for phone and web</small></div>
-              <div class="account-cell"><span class="section-label">CYCLE</span><strong>{{ plan.schemaVersion }} · {{ plan.meta.weeks }} weeks</strong><small>{{ plan.meta.sessions }} sessions · release {{ releaseVersion }}</small></div>
-              <div class="account-cell"><span class="section-label">SESSION</span><strong>{{ session?.authenticated ? 'Signed in' : 'Locked' }}</strong><small>Single-user release · records saved on the server</small></div>
-              <div class="account-cell"><span class="section-label">BODY</span><strong>{{ display(plan.meta.profile.bw_kg) }} → {{ display(plan.meta.profile.target_bw_kg) }} kg</strong><small>starting bodyweight → target · dated readings only</small></div>
-            </div>
+            <div class="eyebrow">VAULT · TOOLS</div>
+            <h2>Cycle tools.</h2>
             <details class="account-tools"><summary>Import a cycle</summary><PlanImport /></details>
             <details class="account-tools"><summary>Prescription settings</summary><PrescriptionSettings :cycle-id="plan.meta.planId" @changed="refresh" /></details>
             <div class="account-actions"><button type="button" class="quiet-button" @click="logout">Sign out on this device</button></div>
@@ -344,7 +359,7 @@ watch([() => route.fullPath, loading], async () => {
           </section>
         </template>
         <template v-else-if="page === 'questionnaire'">
-          <header class="outlook-hero"><div><div class="eyebrow">OUTLOOK · NEXT CYCLE</div><h1>What comes next.</h1><p class="analysis-deck">A questionnaire builds the brief. AI reads the cycle you ran and turns it into a proposal. Nothing reaches the ledger until you accept it.</p></div><div class="outlook-badge"><span>AI</span><strong>{{ outlookTab === 'questionnaire' ? '7 STEPS' : 'BRIEF' }}</strong></div></header>
+          <header class="outlook-hero"><div><div class="eyebrow">FORESIGHT · RESEARCH / AI / NEXT CYCLE</div><h1>Read the cycle.<br>Write the next one.</h1><p class="analysis-deck">Questionnaire, research and AI in one page. It reads the cycle you actually ran, compares lines side by side, and proposes the next block. Nothing reaches the ledger until you accept it.</p></div><div class="outlook-badge"><span>AI</span><strong>{{ outlookTab === 'questionnaire' ? '7 STEPS' : 'BRIEF' }}</strong></div></header>
           <nav class="analysis-tabs" aria-label="Outlook sections"><button type="button" :aria-pressed="outlookTab === 'questionnaire'" @click="outlookTab = 'questionnaire'">Questionnaire</button><button type="button" :aria-pressed="outlookTab === 'ai'" @click="outlookTab = 'ai'">AI brief</button><button type="button" :aria-pressed="outlookTab === 'both'" @click="outlookTab = 'both'">Both</button></nav>
           <div v-show="outlookTab !== 'ai'" class="outlook-panel"><div class="panel-label">01 / QUESTIONNAIRE</div><QuestionnaireView /></div>
           <div v-show="outlookTab !== 'questionnaire'" class="outlook-panel"><div class="panel-label">02 / AI BRIEF</div><AiOutlook :cycle-id="plan.meta.planId" /></div>
