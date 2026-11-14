@@ -200,7 +200,8 @@ onBeforeUnmount(() => cleanup());
         </div>
         <p class="wl-lede">A fixed-calendar powerlifting journal. Prescribed loads, actual sets, readiness and working-set capacity — kept separate, kept honest, readable at a glance.</p>
         <div class="wl-cta">
-          <RouterLink to="/today" class="wl-btn">Enter the journal <span class="ar">→</span></RouterLink>
+          <RouterLink to="/today" class="wl-btn">MyPlan <span class="ar">→</span></RouterLink>
+          <RouterLink to="/login" class="wl-btn ghost">Sign in</RouterLink>
           <RouterLink to="/plan" class="wl-btn ghost">Read the plan</RouterLink>
         </div>
         <p class="wl-fine">Single-user release {{ releaseVersion }} · Records live on your server · No offline cache, no sync service.</p>
@@ -254,7 +255,7 @@ onBeforeUnmount(() => cleanup());
         <span class="section-kicker">RELEASE {{ releaseVersion }}</span>
         <h2>Ready when you are.</h2>
         <p class="wl-deck">The plan is loaded, the calendar is fixed, the ledger is open.</p>
-        <div class="wl-cta"><RouterLink to="/today" class="wl-btn">Enter the journal <span class="ar">→</span></RouterLink></div>
+        <div class="wl-cta"><RouterLink to="/today" class="wl-btn">MyPlan <span class="ar">→</span></RouterLink><RouterLink to="/register" class="wl-btn ghost">Create account</RouterLink></div>
       </div>
     </section>
 

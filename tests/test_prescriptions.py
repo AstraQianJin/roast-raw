@@ -702,15 +702,16 @@ class PrescriptionMigrationTests(unittest.TestCase):
             expected['ai_calls'] = []
             expected['attempts'] = []
             expected['deletion_tokens'] = []
+            expected['accounts'] = []
             self.assertEqual(database_rows(path), expected)
             migrated_backups = backups(path) - stable_backups
-            self.assertEqual(len(migrated_backups), 2, 'v4 questionnaire and v5 AI migrations must each snapshot once')
+            self.assertEqual(len(migrated_backups), 3, 'v4 questionnaire, v5 AI and additive accounts migrations must each snapshot once')
             snapshot_versions = set()
             for backup in migrated_backups:
                 with open_db(backup) as db:
                     snapshot_versions.add(db.execute('PRAGMA user_version').fetchone()[0])
                     self.assertEqual(db.execute('PRAGMA integrity_check').fetchone()[0], 'ok')
-            self.assertEqual(snapshot_versions, {3, 4})
+            self.assertEqual(snapshot_versions, {3, 4, 5})
 
 
 if __name__ == '__main__':

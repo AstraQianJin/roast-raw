@@ -7,8 +7,10 @@ import sys
 import tempfile
 
 # Fixture servers are hermetic: deployment secrets in the developer environment
-# must not turn the gate on or make DeepSeek appear configured.
+# must not turn the gate on or make DeepSeek appear configured. --gate opts in
+# with an explicit fixture password and the Astra owner, never the real secret.
 os.environ.pop('RR_ACCESS_PASSWORD', None)
+os.environ.pop('RR_ACCESS_USERNAME', None)
 os.environ.pop('DEEPSEEK_API_KEY', None)
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,7 +26,11 @@ parser.add_argument('--port', required=True, type=int)
 parser.add_argument('--weeks', type=int)
 parser.add_argument('--date')
 parser.add_argument('--archive', action='store_true')
+parser.add_argument('--gate')
 args = parser.parse_args()
+if args.gate:
+    os.environ['RR_ACCESS_PASSWORD'] = args.gate
+    os.environ['RR_ACCESS_USERNAME'] = 'Astra'
 if args.date:
     instant = datetime.fromisoformat(args.date).replace(tzinfo=SHANGHAI)
     main.calendar_state = lambda plan, logs: calendar_state(plan, logs, now=instant)

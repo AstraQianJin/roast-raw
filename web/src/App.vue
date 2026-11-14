@@ -19,6 +19,8 @@ import QuestionnaireView from './components/QuestionnaireView.vue';
 import AiOutlook from './components/AiOutlook.vue';
 import AttemptBoard from './components/AttemptBoard.vue';
 import WelcomeView from './components/WelcomeView.vue';
+import LoginView from './components/LoginView.vue';
+import RegisterView from './components/RegisterView.vue';
 import CycleStrip from './components/CycleStrip.vue';
 import ShareCard from './components/ShareCard.vue';
 import CyclePrestart from './components/CyclePrestart.vue';
@@ -47,7 +49,9 @@ async function savedLog(saved) {
   } catch { error.value = 'Your log was saved, but the updated summary could not be loaded. Retry the connection.'; }
 }
 const error = ref('');
-const loading = ref(true);
+const loading = ref(false);
+const session = ref(null);
+const authReady = ref(false);
 const mode = ref('plan');
 const theme = ref(localStorage.getItem('roastraw-theme') === 'dark' ? 'dark' : 'light');
 watch(theme, value => {
@@ -55,7 +59,16 @@ watch(theme, value => {
   document.querySelector('meta[name="theme-color"]').content = value === 'dark' ? '#07090D' : '#F1F0EB';
   localStorage.setItem('roastraw-theme', value);
 }, { immediate: true });
-const page = computed(() => ['/', '/welcome'].includes(route.path) ? 'welcome' : route.path.startsWith('/plan') ? 'plan' : route.path === '/archive' || route.path.startsWith('/archive/') ? 'archive' : route.path === '/today' ? 'today' : route.path.slice(1));
+const page = computed(() => {
+  if (['/', '/welcome'].includes(route.path)) return 'welcome';
+  if (route.path === '/login') return 'login';
+  if (route.path === '/register') return 'register';
+  if (route.path.startsWith('/plan')) return 'plan';
+  if (route.path === '/archive' || route.path.startsWith('/archive/')) return 'archive';
+  if (route.path === '/today') return 'today';
+  return route.path.slice(1);
+});
+const isPublic = computed(() => ['welcome', 'login', 'register'].includes(page.value));
 const currentWeek = computed(() => {
   if (!plan.value) return 1;
   if (route.params.blockId) return plan.value.weeks.find(week => week.blockId === route.params.blockId)?.n || 0;
@@ -65,7 +78,7 @@ const currentWeek = computed(() => {
 const week = computed(() => analysis.value?.perWeek.find(week => week.n === currentWeek.value));
 const weekMeta = computed(() => plan.value?.weeks.find(week => week.n === currentWeek.value));
 const validRoute = computed(() => {
-  if (page.value === 'welcome') return true;
+  if (['welcome', 'login', 'register'].includes(page.value)) return true;
   if (!['today', 'plan', 'analysis', 'archive', 'questionnaire', 'settings'].includes(page.value)) return false;
   if (!week.value) return false;
   return !route.params.day || plan.value.workouts.some(row => row.week === currentWeek.value && row.day === route.params.day);
@@ -126,19 +139,55 @@ async function refresh() {
   finally { loading.value = false; }
 }
 async function changeMode(value) {
-  if (loading.value) return;
+  if (loading.value || isPublic.value) return;
   mode.value = value;
   await refresh();
 }
-onMounted(async () => {
+async function loadSession() {
+  try { session.value = await get('/api/session'); }
+  catch { session.value = { authenticated: false, gate: true }; }
+  finally { authReady.value = true; }
+}
+async function ensureData() {
+  if (plan.value || loading.value) return;
   await refresh();
   await nextTick();
   if (!matchMedia('(prefers-reduced-motion: reduce)').matches && document.querySelector('.main-loads')) {
     animate('.main-loads', { transform: ['translateY(6px)', 'translateY(0)'] }, { duration: .24, easing: 'ease-out' });
   }
-});
-watch(() => route.path, () => { document.title = page.value === 'welcome' ? 'Roast Raw — Powerlifting training journal' : `${page.value === 'today' ? 'Today' : page.value.charAt(0).toUpperCase() + page.value.slice(1)} — Roast Raw`; }, { immediate: true });
-watch(page, value => { if (value !== 'analysis' && mode.value !== 'plan') changeMode('plan'); });
+}
+async function onAuthed(account) {
+  await loadSession();
+  const next = typeof account.next === 'string' && account.next.startsWith('/') ? account.next : '/today';
+  router.replace(next);
+}
+async function logout() {
+  try { await fetch('/api/logout', { method: 'POST' }); } catch { /* session cleared client-side regardless */ }
+  plan.value = null;
+  error.value = '';
+  router.replace('/');
+  await loadSession();
+}
+onMounted(loadSession);
+watch([page, authReady, () => session.value?.authenticated], async () => {
+  if (!authReady.value) return;
+  const authed = !!session.value?.authenticated;
+  if (!isPublic.value && !authed) {
+    router.replace({ path: '/login', query: { next: route.fullPath } });
+    return;
+  }
+  if ((page.value === 'login' || page.value === 'register') && authed && session.value?.gate) {
+    const next = typeof route.query.next === 'string' && route.query.next.startsWith('/') ? route.query.next : '/today';
+    router.replace(next);
+    return;
+  }
+  if (!isPublic.value && authed) await ensureData();
+}, { immediate: true });
+watch(() => route.path, () => {
+  const titles = { welcome: 'Roast Raw — Powerlifting training journal', login: 'Sign in — Roast Raw', register: 'Create account — Roast Raw', today: 'Today — Roast Raw' };
+  document.title = titles[page.value] || `${page.value.charAt(0).toUpperCase() + page.value.slice(1)} — Roast Raw`;
+}, { immediate: true });
+watch(page, value => { if (!isPublic.value && value !== 'analysis' && mode.value !== 'plan') changeMode('plan'); });
 watch([() => route.fullPath, loading], async () => {
   if (loading.value || error.value || !validRoute.value || !route.params.day) return;
   await nextTick();
@@ -151,10 +200,12 @@ watch([() => route.fullPath, loading], async () => {
 
 <template>
   <div class="shell">
-    <header class="masthead"><RouterLink to="/today" class="brand" aria-label="Roast Raw, Today">Roast Raw</RouterLink><span class="edition">TRAINING JOURNAL / {{ releaseVersion }}</span><div class="theme-segment" role="group" aria-label="Color theme"><button :aria-pressed="theme === 'light'" aria-label="Light theme" @click="theme = 'light'">L</button><button :aria-pressed="theme === 'dark'" aria-label="Dark theme" @click="theme = 'dark'">D</button></div><RouterLink to="/settings" class="settings-link" aria-label="Settings"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M18.5 5.5l-1.8 1.8M7.3 16.7l-1.8 1.8"/></svg></RouterLink></header>
-    <nav class="primary-nav" aria-label="Primary"><RouterLink to="/plan">PLAN</RouterLink><RouterLink to="/analysis">ANALYSIS</RouterLink><RouterLink to="/archive">ARCHIVE</RouterLink><RouterLink to="/questionnaire">OUTLOOK</RouterLink></nav>
+    <header class="masthead"><RouterLink :to="isPublic ? '/' : '/today'" class="brand" aria-label="Roast Raw home">Roast Raw</RouterLink><span class="edition">TRAINING JOURNAL / {{ releaseVersion }}</span><div class="theme-segment" role="group" aria-label="Color theme"><button :aria-pressed="theme === 'light'" aria-label="Light theme" @click="theme = 'light'">L</button><button :aria-pressed="theme === 'dark'" aria-label="Dark theme" @click="theme = 'dark'">D</button></div><template v-if="!isPublic"><RouterLink to="/settings" class="settings-link" aria-label="Settings"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M18.5 5.5l-1.8 1.8M7.3 16.7l-1.8 1.8"/></svg></RouterLink><button type="button" class="settings-link" aria-label="Sign out" @click="logout"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v8"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0"/></svg></button></template><RouterLink v-else-if="page === 'welcome'" :to="session?.authenticated ? '/today' : '/login'" class="masthead-cta">{{ session?.authenticated ? 'MyPlan' : 'Sign in' }}</RouterLink></header>
+    <nav v-if="!isPublic" class="primary-nav" aria-label="Primary"><RouterLink to="/plan">PLAN</RouterLink><RouterLink to="/analysis">ANALYSIS</RouterLink><RouterLink to="/archive">ARCHIVE</RouterLink><RouterLink to="/questionnaire">OUTLOOK</RouterLink></nav>
     <main :aria-busy="loading">
       <WelcomeView v-if="page === 'welcome'" />
+      <LoginView v-else-if="page === 'login'" :next="typeof route.query.next === 'string' ? route.query.next : ''" @authed="onAuthed" />
+      <RegisterView v-else-if="page === 'register'" @authed="onAuthed" />
       <div v-else-if="loading" class="empty-state" role="status"><h1>Reading the plan.</h1><p>Loading your training data from the server.</p></div>
       <div v-else-if="error" class="error-panel" role="alert"><h2>Connection interrupted.</h2><p>{{ error }}</p><p>No offline copy is used for statistics.</p><button @click="refresh">Retry connection</button></div>
       <div v-else-if="!validRoute" class="empty-state"><h1>Not in this plan.</h1><p>This page, block, week or day does not exist.</p><RouterLink to="/plan" class="inline-link">Return to the plan</RouterLink></div>

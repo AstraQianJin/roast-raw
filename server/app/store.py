@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 import json
 import secrets
 import sqlite3
@@ -172,6 +174,60 @@ class Store:
                 token TEXT PRIMARY KEY, cycle_id TEXT NOT NULL REFERENCES cycles(id),
                 created_at TEXT NOT NULL)''')
             db.execute('PRAGMA user_version=5')
+
+    def upgrade_accounts(self):
+        with self.connect() as db:
+            exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='accounts'").fetchone()
+        if exists:
+            return
+        self.snapshot()
+        with self.connect() as db:
+            db.execute('''CREATE TABLE IF NOT EXISTS accounts (
+                id INTEGER PRIMARY KEY, username TEXT NOT NULL,
+                username_lower TEXT NOT NULL UNIQUE,
+                password_hash TEXT NOT NULL, salt TEXT NOT NULL,
+                created_at TEXT NOT NULL)''')
+
+    @staticmethod
+    def _hash_password(password, salt):
+        return hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), bytes.fromhex(salt), 200000).hex()
+
+    def account_count(self):
+        with self.connect() as db:
+            return db.execute('SELECT COUNT(*) FROM accounts').fetchone()[0]
+
+    def seed_owner(self, username, password):
+        if not password or self.account_count():
+            return
+        self.create_account(username or 'Astra', password)
+
+    def create_account(self, username, password):
+        username = username.strip()
+        salt = secrets.token_hex(16)
+        password_hash = self._hash_password(password, salt)
+        with self.connect() as db:
+            if db.execute('SELECT 1 FROM accounts WHERE username_lower=?', (username.lower(),)).fetchone():
+                raise ValueError('That username is already taken.')
+            try:
+                db.execute('INSERT INTO accounts(username, username_lower, password_hash, salt, created_at) VALUES(?,?,?,?,?)',
+                           (username, username.lower(), password_hash, salt, timestamp()))
+            except sqlite3.IntegrityError:
+                raise ValueError('That username is already taken.')
+        return self.account_by_username(username)
+
+    def account_by_username(self, username):
+        with self.connect() as db:
+            row = db.execute('SELECT username, created_at FROM accounts WHERE username_lower=?', (username.strip().lower(),)).fetchone()
+        return dict(row) if row else None
+
+    def verify_account(self, username, password):
+        with self.connect() as db:
+            row = db.execute('SELECT username, password_hash, salt FROM accounts WHERE username_lower=?', (username.strip().lower(),)).fetchone()
+        if row is None:
+            return None
+        if hmac.compare_digest(self._hash_password(password, row['salt']), row['password_hash']):
+            return {'username': row['username']}
+        return None
 
     AI_DAILY_LIMIT = 20
 

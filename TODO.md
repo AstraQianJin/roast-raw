@@ -17,7 +17,7 @@
 | 0.13 | 停即部署+AI | 已完成：Basic口令门（环境变量启用，401整站）、DeepSeek展望/聊天/北京日20次事务配额/失败导出、v5迁移ai_calls、deploy.py备份管线；verify+browser全绿+1次真实调用 | 停即部署预览协议已入AGENTS/Skill | 已完成 |
 | 0.14 | 测试周+删除 | 已完成：测试周/比赛三把（92.5/100/102.5%向下2.5kg、逐把确认、miss重复/good不降）；归档删除三件套（强制导出token+精确ID二次确认+删前快照+删全部子表）；v5扩展attempts/deletion_tokens；13+4单测、browser全绿（1902断言） | 迁移仍走未发布v5扩展 | 已完成 |
 | 0.15–0.19 | 综合审查打磨 | 已完成：0.15老App视觉语言全页复用+主项杠铃UI（去除TOP/WORK/BACKOFF、重量前置、LOG内联）；0.16不对称单行清理+真实横向溢出修复（CycleStrip周范围标签、容量值列宽）+noOverflow改用clientWidth并新增ink溢出断言（移动端innerWidth会随溢出膨胀使旧断言恒真）；0.17日分享卡TopSet骨架+赛扣杠铃；0.18复刻老App开训前屏（倒计时环+事实卡+LOAD PROFILE相位柱/顶组%1RM线，固定日历口径改写note与Adjust入口）；0.19自审+回归加固+README/Skill指针同步。verify 6290 checks、browser 2235断言/174截图全绿 | 审查结论点名位置 | 已完成 |
-| 0.20 | 部署、推送 | 已完成：正式部署新服务器（覆盖前时间戳tar备份、systemd重启、Caddy备份reload、health 0.20、无口令401、带口令读回活周期）；老站首页Friends区与Jhin footer友链（均先时间戳备份）；访问提速：Caddy开zstd/gzip（实测JS 321→111KB、CSS 100→20KB）+哈希资源immutable缓存+部署解包前清旧dist（重部署后dist仅1个JS）。口令门升级为用户名+密码：用户名astra、密码用户指定经环境变量RR_ACCESS_USERNAME/RR_ACCESS_PASSWORD注入（值不入仓/文档/bundle），main.py加用户名校验+deploy.py注入+test_access_gate 4用例全过；公网实测正确200/错用户名401/错密码401/旧密码401/无凭据401。私有远程AstraQianJin/roast-raw首推完成并持续同步（远端master==本地、默认分支master、私有）：首推曾因本机git credential.helper=helper-selector的GUI弹窗劫持认证报"User cancelled dialog"失败，已禁用弹窗+GIT_ASKPASS注入GH_TOKEN根治 | 用户已放通腾讯云轻量防火墙TCP 80，公网实测ttfb 3.7ms可达；3M带宽为硬上限提速已最大化利用；待用户真环境验收 | 已完成（公网已通，待用户真环境验收） |
+| 0.20 | 部署、推送 | 访问口径已按用户裁定改为「公开落地页 + 账户登录」，本地已实现：SPA 外壳与 /welcome /login /register 公开、仅 journal API 需会话、accounts 表附加迁移（不动 user_version）、PBKDF2 口令与 HttpOnly SameSite=Lax 会话 cookie、用户名不区分大小写、SPA 外壳 no-store 防止手机留旧页；deploy.py 部署后从公网核验完整访问契约而非只探 health。**未完成：新口径尚未部署，线上仍是旧整站 Basic 门（连 / 都 401），因此用户看不到欢迎页也登录不进**；owner 口令此前本机/服务器/用户口述三处不一致，已统一为本机用户环境变量 RR_ACCESS_USERNAME/RR_ACCESS_PASSWORD（值不入仓/文档/bundle） | 依赖顺序：本地全回归绿 → 本地提交 → 预览部署（时间戳备份管线）→ 公网实测 / 200 且无 Basic 挑战、/api/plan 401、Astra 任意大小写登录 200、注册可用、登出复锁 → 用户真环境验收。私有远程 AstraQianJin/roast-raw 推送仍按 0.20 口径 | 进行中（线上旧门未换，待部署） |
 
 ## 审美回炉八项清单（用户2026-11-14主观反馈）
 
@@ -38,8 +38,8 @@
 
 ## 已批准交付边界（完成后移除）
 
-- GitHub：AstraQianJin/roast-raw，私有；同名存在先检查、不覆盖。每0.10整倍数推送，其间本地新提交。允许必要的合规开发工具（MIT/Apache/BSD、报告体积），不允许新运行时UI框架或MPL例外。
-- 新服务器82.157.146.30，SSH ubuntu（roast-raw alias）、sudo；旧49.233.196.202用户2026-11-14授权完全自由（覆盖前带时间戳备份）；0.20后保留老站+首页友链指向新站。仅本地0.20验证后部署；先公网HTTP，域名/TLS后续。访问口径2026-11-14更新：部署前加共享简单口令（值用户指定、经环境变量注入、不入仓/不入前端 bundle），挡全站含落地页；其余操作仍开放。风险含日志篡改和个人数据公开；不暗加登录或宣称HTTP加密。
+- GitHub：AstraQianJin/roast-raw，私有；同名存在先检查、不覆盖。每0.10整倍数推送，其间本地新提交。推送坑：本机 git credential.helper=helper-selector 会弹 GUI 劫持认证并报 "User cancelled dialog"，需禁用弹窗 + GIT_ASKPASS 注入 GH_TOKEN。允许必要的合规开发工具（MIT/Apache/BSD、报告体积），不允许新运行时UI框架或MPL例外。
+- 新服务器82.157.146.30，SSH ubuntu（roast-raw alias）、sudo；旧49.233.196.202用户2026-11-14授权完全自由（覆盖前带时间戳备份）；0.20后保留老站+首页友链指向新站。仅本地0.20验证后部署；先公网HTTP，域名/TLS后续。访问口径2026-11-14再更新（用户裁定，效仿老站）：落地/发布页公开无登录，新增注册/登录页与 MyPlan 入口；仅 journal API（/api/* 除 health/login/register/logout/session）需账户会话。owner 由环境变量 RR_ACCESS_USERNAME（默认 Astra）/RR_ACCESS_PASSWORD 注入播种（值不入仓/文档/bundle）；用户名不区分大小写、密码区分大小写（PBKDF2-SHA256），HttpOnly SameSite=Lax 会话 cookie 30 天，改密码即全员登出；注册开放额外账户共用同一本训记。这是访问控制非传输加密，不宣称 HTTPS。
 - AI/GitHub仅进程环境 DEEPSEEK_API_KEY/GH_TOKEN；部署AI放 /etc/roastraw.env，经systemd EnvironmentFile读取，不进源码或前端。凭据存在与用户报告不替代实际验证；不重复ACL修复。
 - 部署前整库一致快照、每日备份保留30份、恢复演练；不覆盖未知服务。Agent.skill只含Skill源和脚本，不含Ref/凭据/数据/截图。
 
@@ -53,7 +53,7 @@
 | 需求 | 来源与口径 | 归属 |
 |---|---|---|
 | 归档删除三件套：二次确认+强制导出+删logs/readiness | 交接§12.1/§14.3已确认；当前未实现，README措辞为「未实现」 | 0.13–0.14 |
-| 部署前共享简单口令 | 用户2026-11-14批准；非登录、不加密 | 0.20随部署 |
+| 公开落地页 + 账户登录/注册（取代原「整站共享简单口令」） | 用户2026-11-14裁定，效仿老站首页；仅 journal API 需会话，非传输加密 | 0.20随部署 |
 | 审美打磨 | 用户2026-11-14反馈；已升为主线 | 0.09–0.12与0.15–0.19 |
 
 ## 维护纪律

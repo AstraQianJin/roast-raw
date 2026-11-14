@@ -1,7 +1,9 @@
 import base64
+import hashlib
 import hmac
 import json
 import os
+import re
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Literal
@@ -24,6 +26,32 @@ from .store import AiQuotaError, ReadOnlyError, Store, timestamp
 from .validation import Reject, validate_plan
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def _session_token(username, secret):
+    name = username.strip().lower()
+    signature = hmac.new(secret.encode('utf-8'), name.encode('utf-8'), hashlib.sha256).hexdigest()
+    return f'{name}.{signature}'
+
+
+def _session_username(token, secret):
+    if not token or '.' not in token:
+        return None
+    name, _, signature = token.partition('.')
+    expected = hmac.new(secret.encode('utf-8'), name.encode('utf-8'), hashlib.sha256).hexdigest()
+    return name if hmac.compare_digest(signature, expected) else None
+
+
+class LoginInput(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    username: str = Field(min_length=1, max_length=64)
+    password: str = Field(min_length=1, max_length=200)
+
+
+class RegisterInput(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    username: str = Field(min_length=2, max_length=64)
+    password: str = Field(min_length=6, max_length=200)
 
 
 class LogInput(BaseModel):
@@ -137,6 +165,8 @@ class QuestionnaireInput(BaseModel):
 
 def create_app(db_path=None, plan_path=None):
     store = Store(db_path or os.environ.get('RR_DB_PATH', ROOT / 'data' / 'roastraw.sqlite3'))
+    access_password = os.environ.get('RR_ACCESS_PASSWORD', '')
+    access_username = os.environ.get('RR_ACCESS_USERNAME', '')
 
     @asynccontextmanager
     async def lifespan(app):
@@ -147,6 +177,8 @@ def create_app(db_path=None, plan_path=None):
         store.upgrade_prescriptions()
         store.upgrade_questionnaire()
         store.upgrade_ai()
+        store.upgrade_accounts()
+        store.seed_owner(access_username, access_password)
         yield
 
     package_version = json.loads((ROOT / 'web/package.json').read_text(encoding='utf-8'))['version']
@@ -158,11 +190,15 @@ def create_app(db_path=None, plan_path=None):
     allowed_hosts += [host.strip() for host in os.environ.get('RR_ALLOWED_HOSTS', '').split(',') if host.strip()]
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
 
-    access_password = os.environ.get('RR_ACCESS_PASSWORD', '')
-    access_username = os.environ.get('RR_ACCESS_USERNAME', '')
+    public_api = {'/api/health', '/api/login', '/api/register', '/api/logout', '/api/session'}
     if access_password:
         @app.middleware('http')
-        async def password_gate(request, call_next):
+        async def access_gate(request, call_next):
+            path = request.url.path
+            if not path.startswith('/api/') or path in public_api:
+                return await call_next(request)
+            if _session_username(request.cookies.get('rr_session'), access_password):
+                return await call_next(request)
             header = request.headers.get('authorization', '')
             if header.lower().startswith('basic '):
                 try:
@@ -170,10 +206,9 @@ def create_app(db_path=None, plan_path=None):
                 except (ValueError, UnicodeDecodeError):
                     decoded = ''
                 user, _, pwd = decoded.partition(':')
-                if hmac.compare_digest(pwd, access_password) and (
-                        not access_username or hmac.compare_digest(user, access_username)):
+                if store.verify_account(user, pwd):
                     return await call_next(request)
-            return JSONResponse(status_code=401, content={'error': 'Password required'},
+            return JSONResponse(status_code=401, content={'error': 'Authentication required.'},
                                 headers={'WWW-Authenticate': 'Basic realm="Roast Raw"'})
 
     @app.exception_handler(Reject)
@@ -199,6 +234,47 @@ def create_app(db_path=None, plan_path=None):
     @app.get('/api/health')
     def health():
         return {'status': 'ok', 'version': release_version, 'timezone': 'Asia/Shanghai', 'storage': 'SQLite'}
+
+    @app.get('/api/session')
+    def session_status(request: Request):
+        if not access_password:
+            return {'authenticated': True, 'username': None, 'gate': False}
+        name = _session_username(request.cookies.get('rr_session'), access_password)
+        if name:
+            account = store.account_by_username(name)
+            return {'authenticated': True, 'username': account['username'] if account else name, 'gate': True}
+        return {'authenticated': False, 'username': None, 'gate': True}
+
+    def _session_response(username):
+        response = JSONResponse(content={'ok': True, 'username': username})
+        if access_password:
+            response.set_cookie('rr_session', _session_token(username, access_password),
+                                max_age=2592000, httponly=True, samesite='lax', path='/')
+        return response
+
+    @app.post('/api/login')
+    def login(payload: LoginInput):
+        account = store.verify_account(payload.username, payload.password)
+        if account is None:
+            return JSONResponse(status_code=401, content={'error': 'Invalid username or password.'})
+        return _session_response(account['username'])
+
+    @app.post('/api/register')
+    def register(payload: RegisterInput):
+        username = payload.username.strip()
+        if not re.fullmatch(r'[A-Za-z][A-Za-z0-9_-]{1,63}', username):
+            return JSONResponse(status_code=422, content={'error': 'Username must start with a letter and use only letters, numbers, underscores or hyphens (2–64 characters).'})
+        try:
+            account = store.create_account(username, payload.password)
+        except ValueError as exc:
+            return JSONResponse(status_code=409, content={'error': str(exc)})
+        return _session_response(account['username'])
+
+    @app.post('/api/logout')
+    def logout():
+        response = JSONResponse(content={'ok': True})
+        response.delete_cookie('rr_session', path='/')
+        return response
 
     @app.get('/api/cycle')
     def cycles():
@@ -621,7 +697,8 @@ def create_app(db_path=None, plan_path=None):
         def frontend(path: str):
             if path == 'api' or path.startswith('api/'):
                 raise HTTPException(404, 'API route not found')
-            return FileResponse(web / 'index.html')
+            # The shell must always match the deployed hashed assets; only /assets/* is immutable.
+            return FileResponse(web / 'index.html', headers={'Cache-Control': 'no-store'})
 
     return app
 

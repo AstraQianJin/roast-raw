@@ -80,7 +80,7 @@ Remote pushes occur only at tenth-version milestones and only to the explicitly 
 
 Stop-and-deploy preview (user ruling 2026-11-14): at every stop — batch close, blocker, or waiting on a ruling — commit locally first, then deploy the current build to the new server as an HTML preview for phone-browser inspection, using server/tools/deploy.py with the password gate injected from process environment. The formal acceptance deployment and git push remain 0.20-only. A stop without a preview deploy is an incomplete stop unless the deploy itself is the blocker; report that explicitly.
 
-Keep progress concise. A completion receipt states outcome, measured evidence, changed scope, unverified boundaries and next owner. Separate completed facts from future plans. Never substitute tool-call counts for billing/token usage. Use status emoji only when explicitly requested.
+Keep progress concise. Talk to the owner in Simplified Chinese, written short: conclusion first, then evidence, no preamble and no restating the request. Receipts follow the contract in AGENTS.md — a completion carries result, measured evidence, changed scope, unverified boundaries and next owner in a single block of five labelled lines (English or Chinese labels, Chinese content), and plans stay in a separate block after a lone `---`. Product UI copy stays English even though the conversation is Chinese. Never substitute tool-call counts for billing/token usage. Use status emoji only when explicitly requested.
 
 ## Adapted experience and package
 

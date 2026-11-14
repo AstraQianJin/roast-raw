@@ -12,14 +12,13 @@ Requires: node/npm on PATH, ssh alias `roast-raw` (key-based), sudo on remote.
 import json
 import os
 from pathlib import Path
+import shlex
 import shutil
 import subprocess
 import sys
 import tarfile
 import tempfile
 import time
-import urllib.error
-import urllib.request
 
 ROOT = Path(__file__).resolve().parents[2]
 REMOTE_HOST = 'roast-raw'
@@ -144,48 +143,119 @@ def write_env(password, deepseek_key, username=''):
         input=content.encode('utf-8'), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
 
+ACCESS_CHECK = r'''
+import json, os, re, sys, urllib.error, urllib.request
+
+base, expected = sys.argv[1], sys.argv[2]
+if "--from-env-file" in sys.argv[3:]:
+    for line in open("/etc/roast-raw.env", encoding="utf-8"):
+        key, _, value = line.rstrip("\n").partition("=")
+        if key in ("RR_ACCESS_USERNAME", "RR_ACCESS_PASSWORD"):
+            os.environ[key] = value
+username = os.environ.get("RR_ACCESS_USERNAME") or "Astra"
+password = os.environ.get("RR_ACCESS_PASSWORD", "")
+if not password:
+    print("FAIL checker has no owner password"); sys.exit(1)
+
+# http.cookiejar drops host-only cookies for IP literals, and both the fixture and
+# the deployed host are IPs, so the session cookie is carried explicitly.
+def fetch(path, payload=None, cookie=None):
+    data = None if payload is None else json.dumps(payload).encode("utf-8")
+    headers = {"Content-Type": "application/json"}
+    if cookie:
+        headers["Cookie"] = cookie
+    request = urllib.request.Request(base + path, data=data, headers=headers)
+    try:
+        response = urllib.request.urlopen(request, timeout=15)
+    except urllib.error.HTTPError as exc:
+        return exc.code, exc.read(), {k.lower(): v for k, v in exc.headers.items()}
+    except (urllib.error.URLError, OSError) as exc:
+        print("UNREACHABLE " + base + path + ": " + str(exc)); sys.exit(2)
+    with response:
+        return response.status, response.read(), {k.lower(): v for k, v in response.headers.items()}
+
+def check(label, ok, detail=""):
+    if not ok:
+        print(("FAIL " + label + " " + str(detail)).rstrip()); sys.exit(1)
+    print("PASS " + label)
+
+code, body, headers = fetch("/")
+check("landing / is public 200", code == 200, code)
+check("landing / serves the SPA shell", b"id=\"app\"" in body)
+check("landing / sends no Basic challenge", "www-authenticate" not in headers, headers.get("www-authenticate"))
+check("landing shell is not cached", "no-store" in headers.get("cache-control", ""), headers.get("cache-control"))
+assets = re.findall(rb'(?:src|href)="(/assets/[^"]+)"', body)
+check("landing references built assets", len(assets) >= 2, assets)
+for asset in assets:
+    code, _, _ = fetch(asset.decode())
+    check("asset is public " + asset.decode(), code == 200, code)
+for path in ("/welcome", "/login", "/register"):
+    code, _, headers = fetch(path)
+    check(path + " is public 200", code == 200 and "www-authenticate" not in headers, code)
+
+code, body, _ = fetch("/api/health")
+health = json.loads(body) if code == 200 else {}
+check("health is public and ok", code == 200 and health.get("status") == "ok", code)
+check("health reports version " + expected, health.get("version") == expected, health.get("version"))
+
+code, body, _ = fetch("/api/session")
+session = json.loads(body) if code == 200 else {}
+check("anonymous session reports gate on", code == 200 and session == {"authenticated": False, "username": None, "gate": True}, session)
+for path in ("/api/cycle", "/api/plan", "/api/analysis?mode=plan"):
+    code, _, _ = fetch(path)
+    check("anonymous " + path + " is 401", code == 401, code)
+
+code, _, _ = fetch("/api/login", {"username": username, "password": password + "-wrong"})
+check("wrong password is 401", code == 401, code)
+code, body, headers = fetch("/api/login", {"username": username.swapcase(), "password": password})
+check("owner signs in with any username casing", code == 200 and json.loads(body).get("ok") is True, code)
+issued = headers.get("set-cookie", "")
+token = re.search(r"rr_session=([^;]+)", issued)
+check("sign-in issues rr_session cookie", bool(token), issued[:40])
+check("cookie is HttpOnly and SameSite=Lax", "httponly" in issued.lower() and "samesite=lax" in issued.lower(), issued[:80])
+cookie = "rr_session=" + token.group(1)
+for path in ("/api/cycle", "/api/plan"):
+    code, _, _ = fetch(path, cookie=cookie)
+    check("signed-in " + path + " is 200", code == 200, code)
+code, body, _ = fetch("/api/session", cookie=cookie)
+check("signed-in session reports the owner", code == 200 and json.loads(body).get("authenticated") is True, body[:120])
+code, _, headers = fetch("/api/logout", {}, cookie=cookie)
+cleared = headers.get("set-cookie", "")
+check("logout is 200", code == 200, code)
+check("logout tells the browser to drop the cookie",
+      "rr_session=" in cleared and ("max-age=0" in cleared.lower() or "expires=" in cleared.lower()), cleared[:80])
+code, _, _ = fetch("/api/cycle")
+check("journal is locked again without the cookie", code == 401, code)
+print("ACCESS-CONTRACT-OK")
+'''
+
+
 def health_check(password, expected_version, username=''):
-    import base64
-    auth = base64.b64encode(f'{username or "user"}:{password}'.encode()).decode()
-    deadline = time.time() + 60
+    """Prove the public-landing / account-gate contract, not just that health answers."""
+    base = f'http://{PUBLIC_HOST}'
+    environment = {**os.environ, 'RR_ACCESS_USERNAME': username or 'Astra', 'RR_ACCESS_PASSWORD': password}
+    deadline = time.time() + 90
     last = ''
     while time.time() < deadline:
-        try:
-            request = urllib.request.Request(f'http://{PUBLIC_HOST}/api/health',
-                                             headers={'Authorization': 'Basic ' + auth})
-            with urllib.request.urlopen(request, timeout=10) as response:
-                body = json.loads(response.read())
-            if body.get('status') == 'ok':
-                if body.get('version') != expected_version:
-                    fail(f'deployed version {body.get("version")} != expected {expected_version}')
-                unauth = urllib.request.Request(f'http://{PUBLIC_HOST}/api/health')
-                try:
-                    urllib.request.urlopen(unauth, timeout=10)
-                    fail('gate not active: unauthenticated health check succeeded')
-                except urllib.error.HTTPError as exc:
-                    if exc.code != 401:
-                        fail(f'unauthenticated health returned {exc.code}, expected 401')
-                print(f'PASS deploy: health ok, version {body.get("version")}, gate 401 without password')
-                print(f'Preview: http://{PUBLIC_HOST}/ (password prompt in browser)')
-                return
-        except Exception as exc:
-            last = str(exc)
+        result = subprocess.run([sys.executable, '-c', ACCESS_CHECK, base, expected_version],
+                                cwd=ROOT, env=environment, capture_output=True, text=True, errors='replace')
+        if result.returncode == 0:
+            print(result.stdout.strip())
+            print(f'PASS deploy: public landing + account gate verified from {base}, version {expected_version}')
+            print(f'Preview: {base}/ (public landing; sign in for the journal)')
+            return
+        if result.returncode != 2:
+            print(result.stdout.strip())
+            fail(f'access contract violated: {result.stderr.strip()[-400:]}')
+        last = result.stdout.strip()[-200:]
         time.sleep(3)
-    print(f'Public http://{PUBLIC_HOST}/ unreachable from here ({last}); verifying on the server itself.')
-    check = remote(
-        'set -euo pipefail\n'
-        f'code=$(curl -s -m 10 -o /tmp/rr-health.json -w "%{{http_code}}" -u "{username or "user"}:{password}" http://127.0.0.1/api/health)\n'
-        '[ "$code" = 200 ] || { echo "authenticated health returned $code"; exit 1; }\n'
-        'cat /tmp/rr-health.json; rm /tmp/rr-health.json\n'
-        'unauth=$(curl -s -m 10 -o /dev/null -w "%{http_code}" http://127.0.0.1/api/health)\n'
-        '[ "$unauth" = 401 ] || { echo "gate not active: unauthenticated returned $unauth"; exit 1; }\n'
-        'echo GATE-401-OK\n')
-    if f'"version": "{expected_version}"' not in check and f'"version":"{expected_version}"' not in check:
-        fail(f'on-server health check missing expected version {expected_version}: {check[-400:]}')
-    if 'GATE-401-OK' not in check:
-        fail(f'on-server health check failed: {check[-400:]}')
-    print(f'PASS deploy (on-server): health ok, version {expected_version}, gate 401 without password')
-    print(f'BLOCKED public access: open TCP 80 for 0.0.0.0/0 in the Tencent Lighthouse console firewall, then http://{PUBLIC_HOST}/ works.')
+    print(f'Public {base}/ unreachable from here ({last}); verifying on the server itself.')
+    # The remote checker reads the root-owned env file, so the secret never travels in argv.
+    output = remote('set -euo pipefail\nsudo python3 -c ' + shlex.quote(ACCESS_CHECK)
+                    + f' http://127.0.0.1 {expected_version} --from-env-file\n')
+    print(output.strip())
+    print(f'PASS deploy (on-server): public landing + account gate verified, version {expected_version}')
+    print(f'BLOCKED public access: open TCP 80 for 0.0.0.0/0 in the Tencent Lighthouse console firewall, then {base}/ works.')
 
 
 def main():
