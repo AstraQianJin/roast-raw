@@ -32,6 +32,18 @@ No completed zero exit code means no all-green claim. UI changes also require bu
 - Do not overwrite shared services/repositories, delete source data or perform destructive git operations. Git push to the private remote and the formal acceptance deployment happen only at 0.20 (destination scoped in TODO.md). Stop-and-deploy preview below is the standing exception for preview builds.
 - Stop-and-deploy preview (user ruling 2026-11-14): whenever work stops for any reason (batch close, blocker, waiting on a ruling), first create the local commit, then deploy the current build to the new server as an HTML preview so the owner can inspect it in a phone browser. The preview keeps the release landing public and gates the journal API behind account sign-in (owner seeded from the environment-injected username/password at deploy time, never written to repo, docs or bundle). Preview deploys reuse the same timestamped-backup pipeline as the formal deployment.
 
+## Permissions and environment (read before touching the live service)
+
+These facts are easy to forget and expensive to rediscover. They are pointers and rules, never secret values.
+
+- **Production host**: SSH alias `roast-raw` (identity `ubuntu`), service directory `/opt/roast-raw`, systemd unit `roast-raw`, environment file `/etc/roast-raw.env` (root-owned, mode 600), public URL `http://82.157.146.30/`. The landing is public; every `/api/*` journal route is account-gated.
+- **Deploy rewrites the environment file.** `server/tools/deploy.py` writes `/etc/roast-raw.env` from the *local process environment* on every run; it does not merge. `RR_ACCESS_USERNAME`, `RR_ACCESS_PASSWORD` are required. `DEEPSEEK_API_KEY` is only written when present locally, so a deploy without it silently deletes the AI key. Before any deploy, source the existing key from the server and pass it through the process environment; after deploy, call `/api/ai/status?cycle_id=…` and require `configured: true`. Never echo the key.
+- **Key locations**: owner credentials and DeepSeek live in user-level environment variables on this Windows host and in the server env file; GitHub uses `GH_TOKEN` (user environment) because `gh` is not installed — call the GitHub REST API with `Invoke-RestMethod`. `C:\Users\Astra\Desktop\RPLRef\_credentials` and `Ref/07_Permissions` are read-only pointers; never print, copy or commit their contents.
+- **Local preview is not production.** `tests/serve_fixture.py` runs without the access gate and without the DeepSeek key, so “DeepSeek is not configured” there is expected, not a defect. AI behaviour is only evidenced against the deployed host.
+- **Remote state is volatile.** The GitHub repository may be public while the remote branch lags local commits. Never infer push or deployment from a local build, and never push without an explicit owner ruling.
+- **Version and stop rules** live in the Skill and TODO; the version is read from `web/package.json`, never from this file.
+- **Never** print, paste into chat, commit, bundle or screenshot secrets, cookies, session tokens, database files or env files. If a command would print one, redirect or measure its length instead.
+
 ## Work and handoff
 
 Delegate by exclusive file ownership; only main runs generation, gates and commits. Verify actual diffs. Ask about unresolved product/statistical/scope decisions; choose small reversible implementation details within confirmed goals. Update TODO every hundredth-version step; remove only verified work. Create local new commits between tenth-version remote milestones. Version comes only from web/package.json and matching lockfile.

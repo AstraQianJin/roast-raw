@@ -12,6 +12,7 @@ const props = defineProps({
   performance: { type: Object, default: null },
   currentWeek: { type: Number, default: 1 },
   mode: { type: String, default: 'plan' },
+  logs: { type: Object, default: () => ({}) },
 });
 const emit = defineEmits(['week', 'mode']);
 const tab = ref('overview');
@@ -86,18 +87,33 @@ const exerciseGroups = computed(() => {
       item = {
         key, name: row.nameEn || row.movement || key, lift: row.lift || '',
         bucket: row.bucket || (row.role === 'variation' ? 'sbdVar' : row.role),
-        sets: 0, tonnage: 0, sessions: new Set(), weeks: new Set(), topLoad: 0, topPct: 0,
+        sets: 0, planned: 0, actual: 0, tonnage: 0, sessions: new Set(), weeks: new Set(), topLoad: 0, topPct: 0, e1rm: 0,
       };
       map.set(key, item);
     }
+    const log = props.logs[`${row.week}|${row.day}|${row.seq}`];
     item.sets += Number(row.sets) || 0;
+    item.planned += Number(row.sets) || 0;
+    if (log && Number(log.sets) > 0) {
+      item.actual += Number(log.sets);
+      const load = Number(log.load) || 0;
+      const reps = Number(log.reps) || 0;
+      if (load > 0 && reps > 0) item.e1rm = Math.max(item.e1rm, load * (1 + reps / 30));
+    }
     item.tonnage += Number(row.tonnageKg) || 0;
     item.sessions.add(`${row.week}|${row.day}`);
     item.weeks.add(row.week);
     item.topLoad = Math.max(item.topLoad, Number(row.loadKg) || 0);
     item.topPct = Math.max(item.topPct, Number(row.pct) || 0);
   }
-  const all = [...map.values()].map(item => ({ ...item, weekCount: item.weeks.size, sessionCount: item.sessions.size, topPct: item.topPct * 100 }));
+  const all = [...map.values()].map(item => ({
+    ...item,
+    weekCount: item.weeks.size,
+    sessionCount: item.sessions.size,
+    completion: item.planned ? item.actual / item.planned * 100 : 0,
+    topPct: item.topPct * 100,
+    e1rm: item.e1rm || 0,
+  }));
   const liftOrder = { S: 0, B: 1, D: 2 };
   const byLift = (a, b) => (liftOrder[a.lift] ?? 9) - (liftOrder[b.lift] ?? 9) || b.sets - a.sets;
   return [
@@ -122,7 +138,7 @@ const blocks = computed(() => props.plan.blocks.map(block => {
   <section class="analysis-view" data-testid="analysis-view">
     <header class="analysis-hero">
       <div>
-        <div class="eyebrow">ANALYSIS · {{ plan.meta.weeks }} WEEKS · {{ plan.meta.sessions }} SESSIONS</div>
+        <div class="eyebrow">RR / 02 · ASSAY — LOCAL DATA / {{ plan.meta.weeks }} WEEKS · {{ plan.meta.sessions }} SESSIONS</div>
         <h1>What the cycle built.</h1>
         <p class="analysis-deck">From the cycle goal down to each lift: prescribed volume, top intensity and the muscle it landed on. Planned and logged are kept apart.</p>
       </div>
@@ -202,7 +218,7 @@ const blocks = computed(() => props.plan.blocks.map(block => {
           <div class="ex-list">
             <div v-for="item in group.rows" :key="item.key" class="ex-row" :class="item.lift ? `ex-lift-${item.lift}` : ''">
               <span class="ex-code">{{ item.lift || '·' }}</span>
-              <div class="ex-name"><strong>{{ item.name }}</strong><small>{{ item.weekCount }} weeks · {{ item.sessionCount }} sessions · {{ display(item.tonnage / 1000) }} t</small></div>
+              <div class="ex-name"><strong>{{ item.name }}</strong><small>{{ item.weekCount }}w · {{ item.sessionCount }}s · {{ display(item.completion) }}% done<template v-if="item.e1rm"> · e1RM {{ display(item.e1rm) }}</template></small></div>
               <div class="ex-cell"><b>{{ display(item.sets) }}</b><small>SETS</small></div>
               <div class="ex-cell"><b>{{ display(item.topLoad) }}</b><small>KG TOP</small></div>
               <div class="ex-cell ex-pct"><b>{{ item.topPct ? display(item.topPct) : "—" }}</b><small>%1RM</small></div>

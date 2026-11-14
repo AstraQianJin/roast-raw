@@ -372,7 +372,7 @@ onBeforeUnmount(() => {
 <template>
   <section class="archive-view" data-testid="archive-view" :aria-busy="loading">
     <header v-if="!selectedCycleId" class="archive-heading">
-      <p class="eyebrow">THE VAULT · CLOUD RECORD</p>
+      <p class="eyebrow">RR / 04 · VAULT — CLOUD LEDGER</p>
       <h1>Every cycle.<br><em>Nothing overwritten.</em></h1>
       <p class="reading-note">Plan, execution and bodyweight stay together on the server. Reviews are read-only; exporting is not a vault command.</p>
     </header>
@@ -591,7 +591,7 @@ code { color: var(--ink); font-family: var(--mono); white-space: normal; overflo
 .review-error { margin: 24px 0; padding: 20px 16px; border: 1px solid var(--accent); background: var(--panel); }
 .review-error h2 { font-size: 28px; }
 .review-error > p { margin-top: 12px; }
-.active-review { margin-top: 28px; padding: 20px 16px; border: 1px solid var(--accent); background: var(--panel); }
+.active-review { margin-top: 28px; padding: 20px 16px; border: 1px solid var(--line2); border-left: 3px solid var(--accent); border-radius: var(--radius); background: var(--panel); }
 .active-review h2 { font-size: clamp(27px, 5vw, 34px); }
 .archive-list-section { margin-top: 32px; }
 .archive-list, .workout-list, .log-list { list-style: none; padding: 0; margin: 0; }

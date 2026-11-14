@@ -1,7 +1,6 @@
 <script setup>
 import { ref, watch } from 'vue';
 import LogEditor from './LogEditor.vue';
-import BarbellStrip from './BarbellStrip.vue';
 
 const props = defineProps({
   rows: { type: Array, default: () => [] },
@@ -23,12 +22,16 @@ const toggleEditor = row => {
 watch(() => props.readonly, value => { if (value) openEditor.value = null; });
 const roleNames = { main: 'MAIN LIFTS', sbdVar: 'SBD VARIATIONS', nonSbdVar: 'OTHER VARIATIONS', accessory: 'ACCESSORIES' };
 const display = value => value === null || value === undefined ? '—' : Number(value).toLocaleString('en-US', { maximumFractionDigits: 1 });
-const topLoad = row => row.segments.reduce((max, segment) => segment.load !== null && segment.load > max ? segment.load : max, 0);
+const setTag = segment => {
+  const label = (segment.label || 'WORK').toUpperCase();
+  const tag = label === 'BACK-OFF' ? 'BACK-OFF' : label === 'TOP' ? 'TOP SET' : label;
+  return segment.amrap ? `${tag} · AMRAP` : tag;
+};
 const logSummary = row => {
   const log = props.logs[logKey(row)];
-  if (!log) return null;
+  if (!log) return '';
   if (log.sets === 0) return 'SKIPPED';
-  return `${display(log.load)} × ${log.reps} × ${log.sets}${log.rpe !== null && log.rpe !== undefined ? ` @ ${display(log.rpe)}` : ''}`;
+  return `${display(log.load)}×${log.reps}×${log.sets}${log.rpe !== null && log.rpe !== undefined ? ` @${display(log.rpe)}` : ''}`;
 };
 </script>
 
@@ -38,22 +41,25 @@ const logSummary = row => {
       <template v-if="rows.some(row => row.bucket === role)">
         <div class="section-heading"><span class="section-label">{{ label }}</span><span class="mono">{{ String(rows.filter(row => row.bucket === role).length).padStart(2, '0') }}</span></div>
         <article v-for="row in rows.filter(row => row.bucket === role)" :key="`${row.week}-${row.day}-${row.seq}`" :class="['exercise', row.bucket]">
-          <div class="exercise-heading"><span class="exercise-index">{{ String(row.seq).padStart(2, '0') }}</span><span class="exercise-name">{{ row.nameEn }}</span><span class="rpe">RPE {{ display(row.targetRpe) }}</span></div>
-          <BarbellStrip v-if="role === 'main' && topLoad(row) > 0" class="exercise-barbell" :load="topLoad(row)" :collar-pair="0" />
-          <div class="exercise-foot">
-            <div v-for="(segment, index) in row.segments" :key="index" class="prescription">
-              <span class="lbox"><small>{{ role === 'accessory' ? 'LOAD' : 'LOAD KG' }}</small><b class="weight">{{ role === 'accessory' ? '—' : display(segment.load) }}</b></span>
-              <span class="rbox"><small>SETS × REPS</small><b class="reps">{{ segment.sets }} × {{ segment.reps }}<template v-if="segment.unit"> {{ segment.unit }}</template></b></span>
-              <span v-if="segment.pct !== null && role !== 'accessory'" class="pct-chip">{{ display(segment.pct) }}%</span>
-            </div>
+          <header class="ex-head">
+            <span class="ex-index">{{ String(row.seq).padStart(2, '0') }}</span>
+            <div class="ex-title"><h3 class="ex-name">{{ row.nameEn }}</h3><span class="ex-rpe">RPE {{ display(row.targetRpe) }}</span></div>
             <button
               v-if="!readonly"
               type="button"
-              class="log-toggle"
+              class="log-inline"
               :class="{ done: !!logs[logKey(row)] }"
               :aria-expanded="openEditor === editorKey(row)"
               @click="toggleEditor(row)"
-            ><small>{{ openEditor === editorKey(row) ? 'CLOSE' : 'LOG' }}</small><b v-if="logSummary(row)">{{ logSummary(row) }}</b><b v-else>—</b></button>
+            ><small>{{ openEditor === editorKey(row) ? 'CLOSE' : logs[logKey(row)] ? 'EDIT' : 'LOG' }}</small><b>{{ logSummary(row) || '—' }}</b></button>
+          </header>
+          <div class="ex-sets">
+            <div v-for="(segment, index) in row.segments" :key="index" class="ex-set" :class="segment.kind">
+              <span class="set-tag">{{ setTag(segment) }}</span>
+              <span class="set-scheme"><b>{{ segment.sets }}</b><i>×</i><b>{{ segment.reps }}</b><i v-if="segment.unit">{{ segment.unit }}</i></span>
+              <span class="set-load"><b>{{ role === 'accessory' && segment.load === null ? '—' : display(segment.load) }}</b><small v-if="segment.load !== null && role !== 'accessory'"> kg</small></span>
+              <span v-if="segment.pct !== null && role !== 'accessory'" class="set-pct">{{ display(segment.pct) }}<small>%</small></span>
+            </div>
           </div>
           <p v-if="systemLoads[logKey(row)]" class="system-load" data-testid="system-load">
             Total system weight ·
@@ -80,35 +86,38 @@ const logSummary = row => {
 </template>
 
 <style scoped>
-.exercise-barbell { margin: 10px 0 2px; }
-.exercise-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; margin-top: 10px; }
-.prescription { display: flex; gap: 6px; align-items: stretch; flex: 0 1 auto; min-width: 0; }
-.lbox, .rbox, .log-toggle {
-  display: flex; flex-direction: column; justify-content: center; gap: 2px;
-  min-height: 48px; padding: 6px 8px; border-radius: 9px;
-  background: var(--inset); border: 1px solid var(--line-soft);
-}
-.lbox { flex: 0 1 auto; }
-.rbox { flex: 0 1 auto; min-width: 70px; }
-.lbox small, .rbox small, .log-toggle small { font: 800 8px var(--mono); letter-spacing: .1em; color: var(--muted); }
-.lbox b { font: 800 19px var(--mono); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
-.rbox b { font: 700 15px var(--mono); font-variant-numeric: tabular-nums; }
-.pct-chip { align-self: center; font: 800 9px var(--mono); color: var(--gold); border: 1px solid var(--gold-line); background: var(--gold-soft); border-radius: 6px; padding: 3px 6px; white-space: nowrap; }
-.log-toggle {
-  flex: 1 1 110px; flex-direction: row; align-items: center; justify-content: flex-start; gap: 8px;
-  min-width: 44px; max-width: 100%; cursor: pointer; text-align: left;
-  color: var(--ink); font: inherit; white-space: normal; overflow-wrap: anywhere;
-}
-.log-toggle b { font: 700 13px var(--mono); font-variant-numeric: tabular-nums; }
-.log-toggle.done { border-color: var(--gold-line); }
-.log-toggle.done small { color: var(--gold); }
-.log-toggle.done small::before { content: '✓ '; }
-.log-toggle[aria-expanded='true'] { border-color: var(--accent); }
-.log-toggle[aria-expanded='true'] small { color: var(--accent); }
-.log-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.system-load { font-size: 12px; color: var(--muted); line-height: 1.6; overflow-wrap: anywhere; margin-top: 8px; }
+.exercise { padding: 10px 0 8px; border: 0; border-top: 1px solid var(--line-soft); border-radius: 0; background: none; box-shadow: none; margin: 0; }
+.exercise:first-of-type { border-top: 1px solid var(--line2); }
+.ex-head { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: baseline; gap: 8px; }
+.ex-title { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.ex-index { font: 700 8px var(--mono); color: var(--muted); }
+.ex-name { margin: 0; font: 600 13px/1.35 var(--sans); letter-spacing: -.01em; }
+.ex-rpe { font: 600 8px var(--mono); letter-spacing: .06em; color: var(--muted); white-space: nowrap; }
+.log-inline { display: inline-flex; align-items: baseline; justify-content: flex-end; gap: 6px; min-width: 58px; min-height: 30px; padding: 2px 0 2px 10px; border: 0; border-left: 1px solid var(--line-soft); border-radius: 0; background: none; color: var(--muted); cursor: pointer; white-space: nowrap; }
+.log-inline small { flex: 0 0 auto; font: 700 8px var(--mono); letter-spacing: .1em; white-space: nowrap; }
+.log-inline b { font: 600 9px var(--mono); font-variant-numeric: tabular-nums; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+.log-inline.done { color: var(--ct-deload); }
+.log-inline.done small::before { content: '✓ '; }
+.log-inline[aria-expanded='true'] { color: var(--accent); }
+.log-inline:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ex-sets { margin-top: 3px; padding-left: 30px; }
+.ex-set { display: grid; grid-template-columns: 58px 70px minmax(0, 1fr) 46px; align-items: baseline; gap: 8px; padding: 3px 0; }
+.set-tag { font: 700 7.5px var(--mono); letter-spacing: .1em; color: var(--muted); text-transform: uppercase; white-space: nowrap; }
+.ex-set.top .set-tag { color: var(--accent); }
+.ex-set.backoff .set-tag { color: var(--ct-strength); }
+.set-scheme { display: inline-flex; align-items: baseline; gap: 2px; font: 700 13px var(--mono); font-variant-numeric: tabular-nums; }
+.set-scheme i { font-style: normal; font-size: 9px; color: var(--muted); margin: 0 1px; }
+.set-load { text-align: right; font: 700 17px/1 var(--mono); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.set-load b { font-weight: 700; }
+.set-load small { font: 8px var(--mono); color: var(--muted); margin-left: 2px; }
+.set-pct { text-align: right; font: 600 9px var(--mono); color: var(--gold); }
+.set-pct small { font-size: 7px; margin-left: 1px; }
+.system-load { font-size: 11px; color: var(--muted); line-height: 1.6; overflow-wrap: anywhere; margin-top: 6px; padding-left: 30px; }
 .logged-system { display: block; }
-@media (min-width: 560px) {
-  .log-toggle { flex: 1 1 180px; }
+@media (max-width: 420px) {
+  .ex-set { grid-template-columns: 52px 62px minmax(0, 1fr) 40px; gap: 6px; }
+  .set-load { font-size: 15px; }
+  .ex-name { font-size: 12.5px; }
+  .log-inline b { display: none; }
 }
 </style>

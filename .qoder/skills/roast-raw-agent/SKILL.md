@@ -53,6 +53,15 @@ Report a red baseline before changing it. Do not say all green unless the comman
 | Share card and pre-start port | web/src/share.js; web/src/components/ShareCard.vue, CyclePrestart.vue, LoadProfile.vue |
 | Automated evidence | tests/verify.js, tests/browser.mjs, tests/cdp.mjs |
 | Credential steps only | Ref/07_Permissions/ACCESS.md; latest deployment decisions in TODO.md |
+| Production host and env-file trap | AGENTS.md Permissions and environment |
+
+## Environment facts that must not be rediscovered
+
+- SSH alias `roast-raw` (identity `ubuntu`), service `/opt/roast-raw`, unit `roast-raw`, env file `/etc/roast-raw.env` (root 600), public `http://82.157.146.30/`. Landing public, journal API gated.
+- `server/tools/deploy.py` rewrites the server env file from the local process environment instead of merging. Always inject the owner credentials and `DEEPSEEK_API_KEY`; a deploy without the key deletes AI access. Verify `/api/ai/status` afterwards and never print the value.
+- `DEEPSEEK_API_KEY` / `GH_TOKEN` come from user-level environment variables; `gh` is absent, so GitHub work uses REST with `GH_TOKEN`. Read-only credential pointers live in `RPLRef/_credentials` and `Ref/07_Permissions`.
+- The local fixture server has no gate and no AI key; “not configured” in local preview is expected. Only the deployed host proves AI.
+
 
 For broad discovery use workspace search when it resolves the correct workspace; a routing failure is not evidence that files are absent. Read known absolute paths directly. Verify a symbol or path before recommending it.
 

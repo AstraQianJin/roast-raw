@@ -39,6 +39,7 @@ const calendar = ref(null);
 const cycles = ref(null);
 const logs = ref({});
 const prescriptionInfo = ref(null);
+const bodyMetrics = ref(null);
 async function refreshPrescription() {
   try { prescriptionInfo.value = await get(`/api/prescription?${new URLSearchParams({ cycle_id: plan.value.meta.planId })}`); }
   catch { error.value = 'Updated prescription details could not be loaded. Your saved data has not been changed.'; }
@@ -102,6 +103,15 @@ const topLifts = rows => ['S', 'B', 'D'].flatMap(code => {
   return row ? [{ code, label: { S: 'SQUAT', B: 'BENCH', D: 'DEADLIFT' }[code], load: row.loadKg, pct: (row.pct || 0) * 100 }] : [];
 });
 const todayLifts = computed(() => topLifts(todayRows.value));
+const bodyTrend = computed(() => {
+  const rows = (bodyMetrics.value?.records || []).filter(row => row.bodyweight !== null && row.bodyweight !== undefined);
+  if (!rows.length) return null;
+  const values = rows.map(row => Number(row.bodyweight));
+  const min = Math.min(...values);
+  const span = Math.max(0.6, Math.max(...values) - min);
+  const points = values.map((value, index) => `${values.length === 1 ? 50 : index / (values.length - 1) * 100},${24 - (value - min) / span * 20}`).join(' ');
+  return { points, count: values.length, latest: values.at(-1), date: rows.at(-1).date };
+});
 const todayTotals = computed(() => Object.fromEntries(['main', 'sbdVar', 'nonSbdVar', 'accessory'].map(role => [role, todayRows.value.filter(row => row.bucket === role).reduce((sum, row) => sum + row.sets, 0)])));
 const todaySetCount = computed(() => Object.values(todayTotals.value).reduce((a, b) => a + b, 0));
 const leaves = computed(() => analysis.value.leafOrder.map(id => {
@@ -166,6 +176,8 @@ async function refresh() {
     logs.value = result[5].logs;
     performance.value = result[6];
     prescriptionInfo.value = await get(`/api/prescription?${new URLSearchParams({ cycle_id: plan.value.meta.planId })}`);
+    try { bodyMetrics.value = await get(`/api/body-metrics?${new URLSearchParams({ cycle_id: plan.value.meta.planId })}`); }
+    catch { bodyMetrics.value = null; }
   } catch (failure) { error.value = failure.message || 'The server is unavailable. Reconnect and try again.'; }
   finally { loading.value = false; }
 }
@@ -232,7 +244,7 @@ watch([() => route.fullPath, loading], async () => {
 <template>
   <div class="shell">
     <header class="masthead"><RouterLink :to="isPublic ? '/' : '/cycle'" class="brand" aria-label="Roast Raw home"><BeanMark class="brand-mark" />Roast Raw</RouterLink><span class="edition">TRAINING JOURNAL / {{ releaseVersion }}</span><RouterLink v-if="!isPublic" :to="todayLink" class="today-cta"><span class="today-dot"></span><span class="today-word">{{ todayCtaLabel }}</span><small>{{ todayCtaDate }}</small></RouterLink><RouterLink v-else-if="page === 'welcome'" :to="session?.authenticated ? '/cycle' : { path: '/login', query: { next: '/cycle' } }" class="masthead-cta">MY CYCLE</RouterLink></header>
-    <nav v-if="!isPublic" class="primary-nav" aria-label="Primary"><RouterLink to="/cycle" :class="{ 'router-link-active': page === 'cycle' }">CYCLE</RouterLink><RouterLink to="/analysis">ANALYSIS</RouterLink><RouterLink to="/questionnaire">FORESIGHT</RouterLink><RouterLink to="/archive">VAULT</RouterLink></nav>
+    <nav v-if="!isPublic" class="primary-nav" aria-label="Primary"><RouterLink to="/cycle" :class="{ 'router-link-active': page === 'cycle' }">CYCLE</RouterLink><RouterLink to="/analysis">ASSAY</RouterLink><RouterLink to="/questionnaire">ORACLE</RouterLink><RouterLink to="/archive">VAULT</RouterLink></nav>
     <main :aria-busy="loading">
       <WelcomeView v-if="page === 'welcome'" />
       <LoginView v-else-if="page === 'login'" :next="typeof route.query.next === 'string' ? route.query.next : ''" @authed="onAuthed" />
@@ -269,7 +281,7 @@ watch([() => route.fullPath, loading], async () => {
         </div>
                 <template v-else-if="page === 'cycle'">
           <template v-if="planView === 'cycle'">
-            <div class="eyebrow">THE CYCLE · {{ plan.meta.weeks }} WEEKS · {{ plan.meta.sessions }} SESSIONS</div><h1 class="plan-title">The cycle.</h1><p class="hero-subtitle">{{ dateLabel(plan.meta.startDate) }} — {{ dateLabel(plan.meta.endDate) }}</p>
+            <div class="eyebrow">RR / 01 · CYCLE — {{ plan.meta.weeks }} WEEKS · {{ plan.meta.sessions }} SESSIONS</div><h1 class="plan-title">The cycle.</h1><p class="hero-subtitle">{{ dateLabel(plan.meta.startDate) }} — {{ dateLabel(plan.meta.endDate) }}</p>
             <BlockWeekNav :blocks="plan.blocks" :weeks="plan.weeks" :current-week="Number(calendar?.week || 1)" />
             <div class="plan-metrics"><div class="metric"><span class="section-label">START</span><strong>{{ dateLabel(plan.meta.startDate) }}</strong><small>{{ plan.meta.startDate.slice(0, 4) }} · {{ plan.meta.weeks }} WEEKS</small></div><div class="metric"><span class="section-label">TEST DAY</span><strong>{{ plan.testPlan?.dates?.sbd ? dateLabel(plan.testPlan.dates.sbd) : 'Not set' }}</strong><small>{{ plan.testPlan?.dates?.sbd ? `W${String(plan.weeks.find(w => w.kind === 'test')?.n || 0).padStart(2, '0')} · SBD` : 'Add a date in outlook' }}</small></div><div class="metric"><span class="section-label">CYCLE TONNAGE</span><strong>{{ display(analysis.cycle.tonnageKg / 1000) }} t</strong><small>{{ analysis.cycle.auxSets }} AUX SETS</small></div></div>
             <LoadProfile :weeks="plan.weeks" :blocks="plan.blocks" :per-week="analysis.perWeek" :test-date="plan.testPlan?.dates?.sbd" />
@@ -341,16 +353,16 @@ watch([() => route.fullPath, loading], async () => {
             </div><aside class="week-aside"><MuscleMap compact :geometry="geometry" :leaves="leaves" :heat-scale="analysis.heatScale" :week-number="currentWeek" :week-count="plan.weeks.length" @week="selectWeek" /></aside></div>
           </template>
         </template>
-<AnalysisView v-else-if="page === 'analysis'" :plan="plan" :analysis="analysis" :geometry="geometry" :performance="performance" :current-week="currentWeek" :mode="mode" @week="selectWeek" @mode="changeMode" />
+<AnalysisView v-else-if="page === 'analysis'" :plan="plan" :analysis="analysis" :geometry="geometry" :performance="performance" :current-week="currentWeek" :mode="mode" :logs="logs" @week="selectWeek" @mode="changeMode" />
         <template v-else-if="page === 'archive'">
           <section v-if="!route.params.cycleId" class="vault-strip" aria-label="Vault status">
             <div class="vault-cell"><span class="section-label">CLOUD LEDGER</span><strong>Server-backed</strong><small>SQLite · Asia/Shanghai · one record for phone and web</small></div>
-            <div class="vault-cell"><span class="section-label">BODY</span><strong>{{ display(plan.meta.profile.bw_kg) }} → {{ display(plan.meta.profile.target_bw_kg) }} kg</strong><small>starting bodyweight → target · dated readings only</small></div>
+            <div class="vault-cell body-cell"><span class="section-label">BODY</span><strong>{{ display(plan.meta.profile.bw_kg) }} → {{ display(plan.meta.profile.target_bw_kg) }} kg</strong><svg v-if="bodyTrend" class="body-spark" viewBox="0 0 100 26" preserveAspectRatio="none" aria-hidden="true"><polyline :points="bodyTrend.points" /></svg><small v-if="bodyTrend">{{ bodyTrend.count }} dated readings · latest {{ display(bodyTrend.latest) }} kg ({{ bodyTrend.date }})</small><small v-else>No dated readings yet · the plan value is the starting anchor</small></div>
             <div class="vault-cell"><span class="section-label">ACCOUNT</span><strong>{{ session?.authenticated ? 'Signed in' : 'Locked' }}</strong><small>Single-user release · no third-party sync</small></div>
           </section>
           <ArchiveView :active-cycle-id="plan.meta.planId" />
           <section v-if="!route.params.cycleId" id="account" class="account-panel" aria-label="Account and data">
-            <div class="eyebrow">VAULT · TOOLS</div>
+            <div class="eyebrow">RR / 04 · VAULT — TOOLS</div>
             <h2>Cycle tools.</h2>
             <details class="account-tools"><summary>Import a cycle</summary><PlanImport /></details>
             <details class="account-tools"><summary>Prescription settings</summary><PrescriptionSettings :cycle-id="plan.meta.planId" @changed="refresh" /></details>
@@ -359,7 +371,7 @@ watch([() => route.fullPath, loading], async () => {
           </section>
         </template>
         <template v-else-if="page === 'questionnaire'">
-          <header class="outlook-hero"><div><div class="eyebrow">FORESIGHT · RESEARCH / AI / NEXT CYCLE</div><h1>Read the cycle.<br>Write the next one.</h1><p class="analysis-deck">Questionnaire, research and AI in one page. It reads the cycle you actually ran, compares lines side by side, and proposes the next block. Nothing reaches the ledger until you accept it.</p></div><div class="outlook-badge"><span>AI</span><strong>{{ outlookTab === 'questionnaire' ? '7 STEPS' : 'BRIEF' }}</strong></div></header>
+          <header class="outlook-hero"><div><div class="eyebrow">RR / 03 · ORACLE — AI COMPUTE / NEXT CYCLE</div><h1>Read the cycle.<br>Write the next one.</h1><p class="analysis-deck">Questionnaire, research and AI in one page. It reads the cycle you actually ran, compares lines side by side, and proposes the next block. Nothing reaches the ledger until you accept it.</p></div><div class="outlook-badge"><span>AI</span><strong>{{ outlookTab === 'questionnaire' ? '7 STEPS' : 'BRIEF' }}</strong></div></header>
           <nav class="analysis-tabs" aria-label="Outlook sections"><button type="button" :aria-pressed="outlookTab === 'questionnaire'" @click="outlookTab = 'questionnaire'">Questionnaire</button><button type="button" :aria-pressed="outlookTab === 'ai'" @click="outlookTab = 'ai'">AI brief</button><button type="button" :aria-pressed="outlookTab === 'both'" @click="outlookTab = 'both'">Both</button></nav>
           <div v-show="outlookTab !== 'ai'" class="outlook-panel"><div class="panel-label">01 / QUESTIONNAIRE</div><QuestionnaireView /></div>
           <div v-show="outlookTab !== 'questionnaire'" class="outlook-panel"><div class="panel-label">02 / AI BRIEF</div><AiOutlook :cycle-id="plan.meta.planId" /></div>
