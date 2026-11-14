@@ -127,7 +127,7 @@ main { padding: 30px 0 48px; }
 .rest-row { min-height: 44px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line-soft); color: var(--muted); font-size: 10px; }
 .week-capacity { margin-top: 24px; }
 .volume-row { padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
-.volume-row header { display: grid; grid-template-columns: minmax(0,1fr) auto 27px; gap: 8px; align-items: baseline; font-size: 10px; }
+.volume-row header { display: grid; grid-template-columns: minmax(0,1fr) auto auto; gap: 8px; align-items: baseline; font-size: 10px; }
 .volume-row header small { color: var(--muted); font: 9px var(--mono); }
 .volume-row header strong { font-size: 17px; text-align: right; }
 .volume-row .capacity-track { margin-top: 7px; height: 4px; }

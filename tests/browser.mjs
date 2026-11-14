@@ -60,9 +60,11 @@ async function input(selector, value) {
   await browser.evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
 }
 async function noOverflow(label) {
-  const dimensions = await browser.evaluate('({ width: innerWidth, scroll: document.documentElement.scrollWidth, bad: [...document.querySelectorAll("main *")].filter(e => { const r=e.getBoundingClientRect(); return r.width>0 && (r.right>innerWidth+1 || r.left < -1) && !e.closest(".week-rail"); }).map(e => e.className?.baseVal ?? e.className).slice(0,8) })');
+  // clientWidth, not innerWidth: mobile emulation grows innerWidth to the overflowed scroll width, which would make this check vacuous.
+  const dimensions = await browser.evaluate('({ width: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth, bad: [...document.querySelectorAll("main *")].filter(e => { const r=e.getBoundingClientRect(); return r.width>0 && (r.right>document.documentElement.clientWidth+1 || r.left < -1) && !e.closest(".week-rail"); }).map(e => e.className?.baseVal ?? e.className).slice(0,8), ink: [...document.querySelectorAll("main *")].filter(e => { const cs=getComputedStyle(e); return e.scrollWidth>e.clientWidth+1 && cs.overflowX==="visible" && !e.classList.contains("sr-only") && !e.closest(".week-rail"); }).map(e => e.className?.baseVal ?? e.className).slice(0,8) })');
   equal(dimensions.scroll, dimensions.width, `${label}: page overflow ${JSON.stringify(dimensions)}`);
   equal(dimensions.bad, [], `${label}: child overflow`);
+  equal(dimensions.ink, [], `${label}: ink overflow`);
 }
 async function screenshot(name, selector) {
   let clip;

@@ -50,8 +50,11 @@ const summary = computed(() => segments.value.map(segment => `${segment.name}: $
 .strip-label { flex-basis: 0; min-width: 0; border-top: 2px solid var(--seg); padding-top: 5px; }
 .strip-label b { font: 700 9px var(--mono); color: var(--seg-text); }
 .strip-label span { display: block; font-size: 8.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink); line-height: 1.35; overflow-wrap: anywhere; }
-.strip-label small { display: block; font: 8px var(--mono); color: var(--muted); margin-top: 2px; white-space: nowrap; }
+.strip-label small { display: block; font: 8px var(--mono); color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 420px) {
   .strip-label span { display: none; }
+}
+@media (max-width: 560px) {
+  .strip-label small { display: none; }
 }
 </style>

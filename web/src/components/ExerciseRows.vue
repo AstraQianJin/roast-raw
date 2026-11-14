@@ -82,20 +82,20 @@ const logSummary = row => {
 <style scoped>
 .exercise-barbell { margin: 10px 0 2px; }
 .exercise-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; margin-top: 10px; }
-.prescription { display: flex; gap: 8px; align-items: stretch; flex: 1 1 auto; min-width: 0; }
+.prescription { display: flex; gap: 6px; align-items: stretch; flex: 0 1 auto; min-width: 0; }
 .lbox, .rbox, .log-toggle {
   display: flex; flex-direction: column; justify-content: center; gap: 2px;
-  min-height: 48px; padding: 6px 10px; border-radius: 9px;
+  min-height: 48px; padding: 6px 8px; border-radius: 9px;
   background: var(--inset); border: 1px solid var(--line-soft);
 }
 .lbox { flex: 0 1 auto; }
-.rbox { flex: 1 1 auto; min-width: 84px; }
+.rbox { flex: 0 1 auto; min-width: 70px; }
 .lbox small, .rbox small, .log-toggle small { font: 800 8px var(--mono); letter-spacing: .1em; color: var(--muted); }
 .lbox b { font: 800 19px var(--mono); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
 .rbox b { font: 700 15px var(--mono); font-variant-numeric: tabular-nums; }
 .pct-chip { align-self: center; font: 800 9px var(--mono); color: var(--gold); border: 1px solid var(--gold-line); background: var(--gold-soft); border-radius: 6px; padding: 3px 6px; white-space: nowrap; }
 .log-toggle {
-  flex: 1 1 100%; flex-direction: row; align-items: center; justify-content: flex-start; gap: 8px;
+  flex: 1 1 110px; flex-direction: row; align-items: center; justify-content: flex-start; gap: 8px;
   min-width: 44px; max-width: 100%; cursor: pointer; text-align: left;
   color: var(--ink); font: inherit; white-space: normal; overflow-wrap: anywhere;
 }
