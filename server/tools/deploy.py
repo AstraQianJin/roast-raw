@@ -85,6 +85,7 @@ if [ -d /opt/roast-raw/server ]; then
   sudo mkdir -p /opt/roast-raw-backups
   sudo tar -czf /opt/roast-raw-backups/roast-raw-$stamp.tar.gz -C /opt/roast-raw server web data
 fi
+rm -rf /opt/roast-raw/web/dist
 tar -xzf /tmp/rr-payload.tar.gz -C /opt/roast-raw
 rm /tmp/rr-payload.tar.gz
 cd /opt/roast-raw
@@ -114,6 +115,9 @@ if command -v caddy >/dev/null; then
   sudo cp /etc/caddy/Caddyfile /etc/caddy/Caddyfile.bak-$stamp
   sudo tee /etc/caddy/Caddyfile >/dev/null <<'CADDY'
 :80 {
+	encode zstd gzip
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
 	reverse_proxy 127.0.0.1:8000
 }
 CADDY
