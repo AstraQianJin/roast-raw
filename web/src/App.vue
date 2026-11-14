@@ -21,6 +21,8 @@ import AttemptBoard from './components/AttemptBoard.vue';
 import WelcomeView from './components/WelcomeView.vue';
 import CycleStrip from './components/CycleStrip.vue';
 import ShareCard from './components/ShareCard.vue';
+import CyclePrestart from './components/CyclePrestart.vue';
+import LoadProfile from './components/LoadProfile.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -164,6 +166,7 @@ watch([() => route.fullPath, loading], async () => {
             <p class="hero-subtitle">{{ calendar.status === 'training' ? plan.weeks.find(week => week.n === calendar.week).blockName : calendar.status === 'upcoming' ? 'A stronger cycle starts here.' : 'The calendar stays. Recovery matters.' }}</p>
             <p v-if="calendar.status !== 'training'" class="notice">{{ calendar.status === 'upcoming' ? `Your plan starts ${dateLabel(plan.meta.startDate)}. There is no session today.` : calendar.status === 'ended' ? 'The scheduled cycle has ended. No training dates have been moved.' : 'No session scheduled today. Missed sessions do not move the calendar.' }}</p>
             <p v-if="calendar.status === 'training' && plan.weeks.find(item => item.n === calendar.week)?.kind === 'deload'" class="notice">{{ DELOAD_NOTE }}</p>
+            <CyclePrestart v-if="calendar.status === 'upcoming'" :plan="plan" :date="calendar.date" />
             <template v-if="todaySession">
               <div class="badges"><span class="badge">{{ calendar.day ? 'TODAY’S SESSION' : 'NEXT SESSION · PREVIEW' }}</span><span class="badge">W{{ String(todaySession.week).padStart(2, '0') }} · DAY {{ todaySession.day }} · {{ dateLabel(todaySession.date) }}</span></div>
               <section v-if="todayLifts.length" class="main-loads" :style="{ '--columns': todayLifts.length }" aria-label="Main lift loads">
@@ -185,6 +188,7 @@ watch([() => route.fullPath, loading], async () => {
         <template v-else-if="page === 'plan'">
           <div class="eyebrow">{{ plan.meta.weeks }} WEEKS · {{ plan.meta.sessions }} SESSIONS · FIXED CALENDAR</div><h1>The plan.</h1><p class="hero-subtitle">{{ dateLabel(plan.meta.startDate) }} — {{ dateLabel(plan.meta.endDate) }}</p>
           <div class="plan-metrics"><div class="metric"><span class="section-label">START</span><strong>{{ plan.meta.startDate }}</strong></div><div class="metric"><span class="section-label">TEST DAY</span><strong>{{ plan.testPlan?.dates?.sbd || 'Not scheduled' }}</strong></div><div class="metric"><span class="section-label">CYCLE TONNAGE</span><strong>{{ display(analysis.cycle.tonnageKg / 1000) }} t</strong><small>{{ analysis.cycle.auxSets }} AUX SETS</small></div></div>
+          <LoadProfile :weeks="plan.weeks" :blocks="plan.blocks" :per-week="analysis.perWeek" :test-date="plan.testPlan?.dates?.sbd" />
           <div class="workspace">
             <div>
               <nav class="block-nav" aria-label="Plan blocks"><RouterLink v-for="block in plan.blocks" :key="block.id" :to="`/plan/block/${block.id}`" :class="[`ct-${blockType(block.id)}`, { active: week.blockId === block.id }]"><span>{{ block.id }} · {{ block.nameEn }}</span><small>W{{ String(plan.weeks.find(w => w.blockId === block.id)?.n).padStart(2, '0') }} — W{{ String(plan.weeks.filter(w => w.blockId === block.id).at(-1)?.n).padStart(2, '0') }}</small></RouterLink></nav>

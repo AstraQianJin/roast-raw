@@ -718,6 +718,102 @@ try {
   await browser.viewport(390);
   console.log('PASS share card: 1080x1440 TopSet-style render, logged volume and final-main plates, date switch empty state, PNG magic and dated blob download, dark redraw, four-width overflow');
 
+  const prePlan = await trainingApi('/api/plan');
+  const preAnalysis = await trainingApi('/api/analysis?mode=plan');
+  const shiftIso = (iso, offset) => { const [y, m, d] = iso.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + offset)).toISOString().slice(0, 10); };
+  const preDate = shiftIso(prePlan.meta.startDate, -2);
+  const longForm = iso => new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Shanghai' }).format(new Date(`${iso}T00:00:00+08:00`));
+  const shortForm = iso => new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'Asia/Shanghai' }).format(new Date(`${iso}T00:00:00+08:00`));
+  const weekdayForm = iso => new Intl.DateTimeFormat('en-US', { weekday: 'short', timeZone: 'Asia/Shanghai' }).format(new Date(`${iso}T00:00:00+08:00`)).toUpperCase();
+  const preTestDate = prePlan.testPlan?.dates?.sbd;
+  const preFirstDay = prePlan.workouts.find(row => row.week === 1).day;
+  const preRows = preAnalysis.perWeek.map(week => ({
+    n: week.n, sets: week.total, top: week.topPct || 0,
+    kind: week.kind === 'deload' ? 'deload' : week.kind === 'test' ? 'test' : (prePlan.blocks.find(block => block.id === week.blockId)?.cycleType || 'custom').toLowerCase(),
+  }));
+  const preMaxSets = Math.max(75, ...preRows.map(row => row.sets));
+  const prePeak = Math.max(...preRows.map(row => row.sets));
+  const prePeakWeeks = preRows.filter(row => row.sets === prePeak).map(row => row.n);
+  const preDeloads = preRows.filter(row => row.kind === 'deload').map(row => row.n);
+  const preServer = await startServer(['--date', `${preDate}T10:00:00`]);
+  try {
+    const preBase = preServer.base;
+    const preCalendar = await (await fetch(`${preBase}/api/today`)).json();
+    equal(preCalendar.status, 'upcoming', 'pre-start fixture calendar reports upcoming');
+    equal(preCalendar.date, preDate, 'pre-start fixture pins the requested Beijing date');
+    await browser.viewport(390);
+    await load(preBase, '/today');
+    await browser.waitFor('Boolean(document.querySelector("[data-testid=cycle-prestart]"))');
+    equal(await browser.evaluate('document.querySelector("[data-testid=cycle-prestart] .ring").getAttribute("aria-label")'), 'DAYS TO START 2', 'pre-start ring announces two days to start');
+    equal(await browser.evaluate('document.querySelector("[data-testid=cycle-prestart] .num").textContent'), '2', 'pre-start ring number counts down days');
+    equal(await browser.evaluate('document.querySelector("[data-testid=cycle-prestart] .lbl").textContent'), 'DAYS TO START', 'pre-start ring label matches the countdown');
+    await browser.waitFor('document.querySelector("[data-testid=cycle-prestart] .arc").style.strokeDashoffset === "320.2px"');
+    checks++;
+    equal(await browser.evaluate('document.querySelector("[data-testid=cycle-prestart] .hero-date").textContent'), longForm(prePlan.meta.startDate), 'pre-start hero shows the long start date');
+    equal(await browser.evaluate('document.querySelector("[data-testid=cycle-prestart] .hero-meta").textContent'), `Week 1 of ${prePlan.meta.weeks} · ${prePlan.weeks[0].sessions} sessions`, 'pre-start meta lists cycle weeks and opening sessions');
+    assert.match(await browser.evaluate('document.querySelector("[data-testid=cycle-prestart] .hero-note").textContent'), /fixed/, 'pre-start note keeps the fixed-calendar promise'); checks++;
+    equal(await browser.evaluate('[...document.querySelectorAll("[data-testid=cycle-prestart] .fact .v")].map(e => e.textContent)'), [String(prePlan.meta.weeks), String(prePlan.meta.sessions), shortForm(preTestDate)], 'facts card carries weeks, sessions and test day');
+    equal(await browser.evaluate('document.querySelector("[data-testid=cycle-prestart] .fact .s").textContent'), `${weekdayForm(preTestDate)} · ${preTestDate.slice(0, 4)}`, 'facts card subline carries test weekday and year');
+    equal(await browser.evaluate('[...document.querySelectorAll("[data-testid=cycle-prestart] .actions a")].map(a => a.getAttribute("href"))'), [`/plan/week/1/day/${preFirstDay}`, '/questionnaire'], 'pre-start actions open the first session and the questionnaire');
+    await load(preBase, '/plan');
+    await browser.waitFor('Boolean(document.querySelector("[data-testid=load-profile]"))');
+    const chart = await browser.evaluate(`(() => {
+      const root = document.querySelector('[data-testid=load-profile]');
+      return {
+        count: root.querySelectorAll('.bar').length,
+        heights: [...root.querySelectorAll('.bar')].map(b => b.style.getPropertyValue('--h')),
+        kinds: [...root.querySelectorAll('.bar')].map(b => b.className.replace('bar ', '')),
+        points: root.querySelector('polyline').getAttribute('points').trim(),
+        dots: root.querySelectorAll('.idot').length,
+        ptag: root.querySelector('.ptag').textContent,
+        legend: [...root.querySelectorAll('.lg')].map(e => e.textContent),
+        notes: [...root.querySelectorAll('.note span')].map(e => e.textContent),
+        labels: [...root.querySelectorAll('.wlabels span')].map(e => e.textContent),
+        title: root.querySelector('.load-title').textContent,
+      };
+    })()`);
+    equal(chart.count, prePlan.weeks.length, 'load profile draws one bar per plan week');
+    equal(chart.heights, preRows.map(row => Math.max(4, row.sets / preMaxSets * 100).toFixed(2)), 'bar heights follow sets over the 75-set ceiling');
+    equal(chart.kinds, preRows.map(row => row.kind), 'bars carry block phase, deload and test kinds');
+    equal(chart.points, preRows.map((row, i) => `${((i + .5) / preRows.length * 100).toFixed(2)},${(100 - Math.max(0, Math.min(100, (row.top - 50) / 60 * 100))).toFixed(2)}`).join(' '), 'top-set line follows the (top-50)/60 axis mapping');
+    equal(chart.dots, prePlan.weeks.length, 'every week carries a line dot');
+    equal(chart.ptag, `${Math.round(preRows.at(-1).top)}%`, 'line tag reports the final top set percent');
+    equal(chart.legend, ['Hypertrophy', 'Strength', 'Transmute', 'Deload', 'Test', 'Top set %1RM'], 'legend lists phases and the intensity line');
+    equal(chart.notes, [`Peak weeks ${prePeakWeeks.join(', ')} — ${prePeak} sets`, preDeloads.length ? `Deloads ${preDeloads.join(', ')}` : 'No deloads in this cycle', `Test day ${longForm(preTestDate)}`], 'notes recompute peak, deload and test day from the analysis');
+    equal(chart.labels, preRows.map(row => String(row.n)), 'week labels run across the whole cycle');
+    equal(chart.title, `How the ${prePlan.weeks.length} weeks load`, 'load title names the cycle length');
+    await load(trainingBase, '/today');
+    equal(await browser.evaluate('Boolean(document.querySelector("[data-testid=cycle-prestart]"))'), false, 'training date hides the pre-start screen');
+    await load(trainingBase, '/plan');
+    equal(await browser.evaluate('Boolean(document.querySelector("[data-testid=load-profile]"))'), true, 'load profile stays on the plan mid-cycle');
+    await load(preBase, '/today');
+    await browser.waitFor('Boolean(document.querySelector("[data-testid=cycle-prestart]"))');
+    await click('[data-testid=cycle-prestart] .btn.primary');
+    await browser.waitFor(`location.pathname === "/plan/week/1/day/${preFirstDay}"`);
+    checks++;
+    for (const width of [320, 360, 390, 412]) {
+      for (const theme of ['light', 'dark']) {
+        await browser.viewport(width);
+        await browser.evaluate(`localStorage.setItem('roastraw-theme', '${theme}')`);
+        await load(preBase, '/today');
+        await browser.waitFor('Boolean(document.querySelector("[data-testid=cycle-prestart]"))');
+        await noOverflow(`pre-start ${width} ${theme}`);
+        const smallPre = await browser.evaluate(`[...document.querySelectorAll('[data-testid=cycle-prestart] a, [data-testid=cycle-prestart] button')].filter(e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && (r.width < 44 || r.height < 44); }).map(e => e.className)`);
+        equal(smallPre, [], `pre-start ${width} ${theme}: actions meet 44px touch targets`);
+        await screenshot(`prestart-${width}-${theme}`, '[data-testid=cycle-prestart]');
+        await load(preBase, '/plan');
+        await browser.waitFor('Boolean(document.querySelector("[data-testid=load-profile]"))');
+        await noOverflow(`load profile ${width} ${theme}`);
+        if (width === 390) await screenshot(`load-profile-${width}-${theme}`, '[data-testid=load-profile]');
+      }
+    }
+    await browser.evaluate(`localStorage.setItem('roastraw-theme', 'light')`);
+    await browser.viewport(390);
+  } finally {
+    await preServer.stop();
+  }
+  console.log('PASS pre-start & load profile: countdown ring and facts from the pinned calendar, fixed-calendar actions, phase bars and %1RM line recomputed from analysis, four-width/two-theme overflow and 44px actions');
+
   const prescriptionUrl = `/api/prescription?${new URLSearchParams({ cycle_id: cycleId })}`;
   const originalInfo = await trainingApi(prescriptionUrl);
   const variationLifts = { 'Low-bar Squat': 'S', 'Wide-grip Bench': 'B', 'Sumo Deadlift': 'D', 'Power Clean': 'D', OHP: 'B', 'Pull-Up': 'D', Dip: 'B', 'Bent-Over Barbell Row': 'D' };
