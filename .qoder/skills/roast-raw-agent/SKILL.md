@@ -50,6 +50,7 @@ Report a red baseline before changing it. Do not say all green unless the comman
 | Legacy fixture and arithmetic | Ref/02_Stats/capData.json, mmData.json; Ref/04_Legacy_Code/day_model.py |
 | Movement coefficients and geometry | data/movements.json, muscle_geo.json, ranges.json |
 | UI and anatomy | web/src/App.vue; web/src/components/MuscleMap.vue |
+| Share card and pre-start port | web/src/share.js; web/src/components/ShareCard.vue, CyclePrestart.vue, LoadProfile.vue |
 | Automated evidence | tests/verify.js, tests/browser.mjs, tests/cdp.mjs |
 | Credential steps only | Ref/07_Permissions/ACCESS.md; latest deployment decisions in TODO.md |
 
