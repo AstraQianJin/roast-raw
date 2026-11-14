@@ -244,7 +244,10 @@ def health_check(password, expected_version, username=''):
             print(f'PASS deploy: public landing + account gate verified from {base}, version {expected_version}')
             print(f'Preview: {base}/ (public landing; sign in for the journal)')
             return
-        if result.returncode != 2:
+        # A restart in flight answers 502/503/504 through Caddy for a few seconds; that is
+        # a transient, not a contract violation. Only a real mismatch fails immediately.
+        transient = any(code in result.stdout for code in (' 502', ' 503', ' 504'))
+        if result.returncode != 2 and not transient:
             print(result.stdout.strip())
             fail(f'access contract violated: {result.stderr.strip()[-400:]}')
         last = result.stdout.strip()[-200:]
