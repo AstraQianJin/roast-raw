@@ -181,7 +181,7 @@ onBeforeUnmount(() => {
 <template>
   <section class="plan-import" data-testid="plan-import" :aria-busy="!!pending" :aria-labelledby="`${prefix}-heading`">
     <header>
-      <p class="kicker">PLAN IMPORT</p>
+      <p class="kicker">CYCLE IMPORT</p>
       <h2 :id="`${prefix}-heading`">A new cycle.<br><em>A preserved history.</em></h2>
       <p class="reading-note">Upload a complete JSON plan for strict validation. Previewing does not activate it. Confirming archives the current cycle and activates the reviewed new plan without overwriting historical records.</p>
     </header>
@@ -213,7 +213,7 @@ onBeforeUnmount(() => {
         </li>
       </ol>
       <p v-if="error.uncertain" class="reading-note">The outcome is uncertain, including after a lost connection: the server may already have committed the change. Verify the active cycle and preview this file again before confirming. Your selected file is retained; nothing is retried automatically.</p>
-      <a v-if="error.uncertain" href="/plan">Open plan to verify the active cycle</a>
+      <a v-if="error.uncertain" href="/cycle">Open the cycle to verify the active cycle</a>
     </section>
 
     <section v-if="validPreview" class="comparison" data-testid="import-comparison" aria-label="Current and new plan comparison">
@@ -264,7 +264,7 @@ onBeforeUnmount(() => {
         <div><dt>Active cycle</dt><dd><code>{{ success.active_cycle_id }}</code></dd></div>
         <div><dt>Archived cycle · read-only</dt><dd><code>{{ success.archived_cycle_id }}</code></dd></div>
       </dl>
-      <a href="/plan" data-testid="import-open-plan">Open the new active plan</a>
+      <a href="/cycle" data-testid="import-open-plan">Open the new active cycle</a>
       <p class="reading-note">This link reloads the active plan from the server.</p>
     </section>
   </section>

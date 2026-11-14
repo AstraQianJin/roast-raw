@@ -1,0 +1,276 @@
+<script setup>
+import { computed, ref } from 'vue';
+import MuscleMap from './MuscleMap.vue';
+import WeekCapacity from './WeekCapacity.vue';
+import CapacityBoard from './CapacityBoard.vue';
+import TrendView from './TrendView.vue';
+
+const props = defineProps({
+  plan: { type: Object, required: true },
+  analysis: { type: Object, required: true },
+  geometry: { type: Object, required: true },
+  performance: { type: Object, default: null },
+  currentWeek: { type: Number, default: 1 },
+  mode: { type: String, default: 'plan' },
+});
+const emit = defineEmits(['week', 'mode']);
+const tab = ref('overview');
+const tabs = [
+  { k: 'overview', l: 'Overview' },
+  { k: 'lifts', l: 'By lift' },
+  { k: 'muscle', l: 'Muscle' },
+  { k: 'trend', l: 'Trend' },
+];
+const liftLabels = { S: 'Squat', B: 'Bench', D: 'Deadlift' };
+const liftKeys = { S: 'sq', B: 'bp', D: 'dl' };
+const display = value => value === null || value === undefined ? '—' : Number(value).toLocaleString('en-US', { maximumFractionDigits: 1 });
+const lifts = computed(() => ['S', 'B', 'D'].map(code => {
+  const key = liftKeys[code];
+  const profile = props.plan.meta.profile;
+  const start = profile[`init_${key}`] ?? profile[`${key}_1rm`] ?? 0;
+  const now = profile[`${key}_1rm`] ?? start;
+  const target = profile[`target_${key}`] ?? null;
+  const rows = props.analysis.perWeek.map(week => ({
+    n: week.n,
+    kind: week.kind,
+    sets: (week.lifts?.[code]?.main || 0) + (week.lifts?.[code]?.var || 0),
+    top: week.topPctByLift?.[code] ?? null,
+  }));
+  const maxSets = Math.max(1, ...rows.map(row => row.sets));
+  const total = rows.reduce((sum, row) => sum + row.sets, 0);
+  const top = Math.max(0, ...rows.map(row => row.top || 0));
+  const gain = target === null ? null : target - now;
+  const progress = target && target > start ? Math.min(100, Math.max(0, (now - start) / (target - start) * 100)) : now >= (target || now) ? 100 : 0;
+  return { code, name: liftLabels[code], start, now, target, gain, progress, rows, maxSets, total, top };
+}));
+const cycle = computed(() => props.analysis.cycle);
+const completion = computed(() => props.analysis.completion);
+const topIntensity = computed(() => Math.max(0, ...props.analysis.perWeek.map(week => week.topPct || 0)));
+const mix = computed(() => [
+  { k: 'MAIN', v: cycle.value.roles.main, c: 'var(--t1)' },
+  { k: 'SBD VAR', v: cycle.value.roles.sbdVar, c: 'var(--t2)' },
+  { k: 'OTHER VAR', v: cycle.value.roles.nonSbdVar, c: 'var(--ct-peak)' },
+  { k: 'ACCESSORY', v: cycle.value.roles.accessory, c: 'var(--t3)' },
+]);
+const mixTotal = computed(() => mix.value.reduce((sum, item) => sum + item.v, 0) || 1);
+const weekNow = computed(() => props.analysis.perWeek.find(week => week.n === props.currentWeek) || props.analysis.perWeek[0]);
+const muscleLeaves = computed(() => props.analysis.leafOrder.map(id => {
+  const values = weekNow.value?.leaves?.[id] || {};
+  const range = props.analysis.ranges.leaf[id];
+  return {
+    id,
+    name: props.geometry.leaves[id].en,
+    weighted: values.w || 0,
+    raw: values.raw || 0,
+    heat: values.heat || { Both: { band: 0 } },
+    direct: values.d || 0,
+    primaryWeighted: values.primaryWeighted || 0,
+    secondaryWeighted: values.secondaryWeighted || 0,
+    mev: range?.mev ?? null,
+    mrv: range?.mrv ?? null,
+    scope: range?.scope || 'leaf',
+    verdict: '',
+  };
+}));
+function blockTone(id) {
+  const type = (props.plan.blocks.find(block => block.id === id)?.cycleType || '').toLowerCase();
+  return { hyper: 'var(--ct-hyper)', strength: 'var(--ct-strength)', transmute: 'var(--ct-transmute)', peak: 'var(--ct-peak)' }[type] || 'var(--ct-custom)';
+}
+const blocks = computed(() => props.plan.blocks.map(block => {
+  const weeks = props.analysis.perWeek.filter(week => week.blockId === block.id);
+  return {
+    id: block.id, name: block.nameEn, tone: blockTone(block.id),
+    weeks: weeks.length,
+    sets: weeks.reduce((sum, week) => sum + week.total, 0),
+    tonnage: weeks.reduce((sum, week) => sum + week.tonnageKg, 0),
+    sessions: weeks.reduce((sum, week) => sum + week.sessions, 0),
+  };
+}));
+</script>
+
+<template>
+  <section class="analysis-view" data-testid="analysis-view">
+    <header class="analysis-hero">
+      <div>
+        <div class="eyebrow">ANALYSIS · {{ plan.meta.weeks }} WEEKS · {{ plan.meta.sessions }} SESSIONS</div>
+        <h1>What the cycle built.</h1>
+        <p class="analysis-deck">From the cycle goal down to each lift: prescribed volume, top intensity and the muscle it landed on. Planned and logged are kept apart.</p>
+      </div>
+      <aside class="analysis-stamp">
+        <span>TOP %1RM</span>
+        <strong>{{ display(topIntensity) }}<small>%</small></strong>
+        <span>{{ analysis.mode === 'plan' ? 'PRESCRIBED' : 'LOGGED + PLANNED' }}</span>
+      </aside>
+    </header>
+
+    <nav class="analysis-tabs" aria-label="Analysis sections">
+      <button v-for="item in tabs" :key="item.k" type="button" :aria-pressed="tab === item.k" @click="tab = item.k">{{ item.l }}</button>
+    </nav>
+
+    <template v-if="tab === 'overview'">
+      <section class="kpi-grid" aria-label="Cycle totals">
+        <div class="kpi"><span>CYCLE TONNAGE</span><strong>{{ display(cycle.tonnageKg / 1000) }}<small> t</small></strong><em>prescribed segment loads</em></div>
+        <div class="kpi"><span>WORKING SETS</span><strong>{{ display(cycle.total) }}</strong><em>{{ cycle.sessions }} sessions across {{ plan.meta.weeks }} weeks</em></div>
+        <div class="kpi"><span>COMPLETION</span><strong>{{ display(completion.main) }}<small>%</small></strong><em>main · var {{ display(completion.var) }}% · acc {{ display(completion.acc) }}%</em></div>
+        <div class="kpi"><span>TOP INTENSITY</span><strong>{{ display(topIntensity) }}<small>%</small></strong><em>highest planned top set</em></div>
+      </section>
+
+      <section class="goal-panel" aria-label="Cycle goals">
+        <div class="panel-head"><div><div class="eyebrow">CYCLE GOAL</div><h2>Start, now, target.</h2></div><p class="panel-note">Anchors are tested 1RM. Targets are the numbers this cycle is built around; they are not forecasts.</p></div>
+        <div class="goal-rows">
+          <div v-for="lift in lifts" :key="lift.code" class="goal-row">
+            <div class="goal-id"><b>{{ lift.code }}</b><span>{{ lift.name }}</span></div>
+            <div class="goal-track">
+              <i class="goal-fill" :style="{ width: `${lift.progress}%` }"></i>
+              <i class="goal-start" :style="{ left: '0%' }"></i>
+              <i class="goal-now" :style="{ left: `${lift.progress}%` }"></i>
+            </div>
+            <div class="goal-numbers"><small>{{ display(lift.now) }}</small><strong>{{ display(lift.target) }}<small> kg</small></strong><em>{{ lift.gain === null ? '—' : `${lift.gain > 0 ? '+' : ''}${display(lift.gain)} kg` }}</em></div>
+          </div>
+        </div>
+        <div class="goal-scale"><span>{{ display(lifts[0].start) }} kg anchor</span><span>target</span></div>
+      </section>
+
+      <section class="block-strip" aria-label="Block contribution">
+        <div class="panel-head"><div><div class="eyebrow">BLOCKS</div><h2>Where the work sits.</h2></div><p class="panel-note">Same weeks as the Cycle page. Colour is the phase, not a verdict.</p></div>
+        <div class="block-strip-rows">
+          <div v-for="block in blocks" :key="block.id" class="block-strip-row">
+            <span class="strip-id">{{ block.id }}</span>
+            <span class="strip-name">{{ block.name }}</span>
+            <div class="strip-bar"><i :style="{ width: `${block.sets / cycle.total * 100}%`, background: block.tone }"></i></div>
+            <span class="strip-meta">{{ display(block.tonnage / 1000) }} t · {{ block.sessions }} ses</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="mix-panel" aria-label="Set mix">
+        <div class="eyebrow">SET MIX</div>
+        <div class="mix-bar"><i v-for="item in mix" :key="item.k" :style="{ width: `${item.v / mixTotal * 100}%`, background: item.c }"></i></div>
+        <div class="mix-key"><span v-for="item in mix" :key="item.k"><i :style="{ background: item.c }"></i>{{ item.k }} {{ display(item.v) }}</span></div>
+        <p class="panel-note">SBD variations count separately from main work. Accessory work is not converted into SBD capacity.</p>
+      </section>
+    </template>
+
+    <template v-else-if="tab === 'lifts'">
+      <section class="lift-grid" aria-label="Per-lift analysis">
+        <article v-for="lift in lifts" :key="lift.code" class="lift-card" :class="`lift-${lift.code}`">
+          <header><span class="lift-code">{{ lift.code }}</span><div><h2>{{ lift.name }}</h2><p>{{ display(lift.total) }} sets · top {{ display(lift.top) }}% 1RM</p></div><div class="lift-now"><strong>{{ display(lift.now) }}</strong><small>kg</small></div></header>
+          <div class="lift-week-bars">
+            <div v-for="row in lift.rows" :key="row.n" class="lift-week" :class="row.kind" :title="`W${row.n}: ${row.sets} sets · top ${display(row.top)}%`">
+              <i :style="{ height: `${Math.max(3, row.sets / lift.maxSets * 100)}%` }"></i>
+              <span>{{ String(row.n).padStart(2, '0') }}</span>
+            </div>
+          </div>
+          <div class="lift-foot"><span>ANCHOR {{ display(lift.start) }} kg</span><span>TARGET {{ display(lift.target) }} kg<template v-if="lift.gain !== null"> · {{ lift.gain > 0 ? '+' : '' }}{{ display(lift.gain) }} kg</template></span></div>
+        </article>
+      </section>
+      <section class="lift-table-wrap" aria-label="Lift volume by week">
+        <table class="lift-table">
+          <thead><tr><th>WEEK</th><th>S</th><th>B</th><th>D</th><th>TOP S</th><th>TOP B</th><th>TOP D</th><th>KIND</th></tr></thead>
+          <tbody>
+            <tr v-for="week in analysis.perWeek" :key="week.n">
+              <th scope="row">W{{ String(week.n).padStart(2, '0') }}</th>
+              <td>{{ week.lifts.S?.main + week.lifts.S?.var || 0 }}</td>
+              <td>{{ week.lifts.B?.main + week.lifts.B?.var || 0 }}</td>
+              <td>{{ week.lifts.D?.main + week.lifts.D?.var || 0 }}</td>
+              <td>{{ display(week.topPctByLift?.S) }}%</td>
+              <td>{{ display(week.topPctByLift?.B) }}%</td>
+              <td>{{ display(week.topPctByLift?.D) }}%</td>
+              <td>{{ week.kind }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </template>
+
+    <template v-else-if="tab === 'muscle'">
+      <div class="analysis-filter"><span class="eyebrow">MUSCLE VOLUME</span><div class="map-filters"><button :aria-pressed="mode === 'plan'" @click="emit('mode', 'plan')">Planned</button><button :aria-pressed="mode === 'log'" @click="emit('mode', 'log')">Logged + planned</button></div></div>
+      <div class="workspace analysis-workspace">
+        <MuscleMap :geometry="geometry" :leaves="muscleLeaves" :heat-scale="analysis.heatScale" :week-number="currentWeek" :week-count="plan.weeks.length" @week="emit('week', $event)" />
+        <aside><WeekCapacity :week="weekNow" :ranges="analysis.ranges" /><CapacityBoard :analysis="analysis" :week="weekNow" /></aside>
+      </div>
+    </template>
+
+    <template v-else>
+      <TrendView :analysis="analysis" :performance="performance" />
+    </template>
+  </section>
+</template>
+
+<style scoped>
+.analysis-hero { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; }
+.analysis-hero h1 { font-family: var(--serif); font-weight: 400; text-transform: none; letter-spacing: -.035em; font-size: clamp(32px, 6vw, 48px); line-height: 1.04; }
+.analysis-deck { max-width: 52ch; margin-top: 12px; font-size: 13px; line-height: 1.7; color: var(--muted); }
+.analysis-stamp { flex: none; min-width: 96px; padding: 12px 14px; border: 1px solid var(--line-soft); border-radius: 16px; background: linear-gradient(160deg, #FFFFFF, #F7F5EF); box-shadow: 0 10px 24px rgba(17,17,17,.06); text-align: right; }
+.analysis-stamp span { display: block; font: 600 8px var(--mono); letter-spacing: .12em; color: var(--muted); }
+.analysis-stamp strong { display: block; font: 700 30px var(--mono); letter-spacing: -.04em; }
+.analysis-stamp strong small { font-size: 13px; }
+.analysis-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; margin: 22px 0 6px; padding: 5px; border: 1px solid var(--line-soft); border-radius: 14px; background: linear-gradient(180deg, #FFFFFF, #F6F5EF); }
+.analysis-tabs button { min-height: 40px; border: 0; border-radius: 9px; background: none; font: 800 10px var(--display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.analysis-tabs button[aria-pressed='true'] { background: var(--ink); color: #FFFFFF; }
+.kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 20px; }
+.kpi { min-width: 0; padding: 14px 12px; border: 1px solid var(--line-soft); border-radius: 14px; background: #FFFFFF; box-shadow: 0 8px 20px rgba(17,17,17,.05); }
+.kpi span { font: 600 8px var(--mono); letter-spacing: .1em; color: var(--muted); }
+.kpi strong { display: block; margin-top: 6px; font: 700 clamp(21px, 4vw, 28px) var(--mono); letter-spacing: -.04em; }
+.kpi strong small { font-size: 10px; color: var(--muted); }
+.kpi em { display: block; margin-top: 4px; font-style: normal; font-size: 9px; line-height: 1.5; color: var(--muted); }
+.panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.panel-head h2 { font-family: var(--serif); font-weight: 400; text-transform: none; letter-spacing: -.02em; font-size: 24px; }
+.panel-note { max-width: 46ch; font-size: 10px; line-height: 1.6; color: var(--muted); text-align: right; }
+.goal-panel, .block-strip, .mix-panel { margin-top: 22px; padding: 16px; border: 1px solid var(--line-soft); border-radius: 18px; background: linear-gradient(180deg, #FFFFFF, #F9F8F3); box-shadow: 0 10px 26px rgba(17,17,17,.06); }
+.goal-rows { margin-top: 14px; display: grid; gap: 12px; }
+.goal-row { display: grid; grid-template-columns: 78px minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+.goal-id b { font: 700 13px var(--mono); }
+.goal-id span { display: block; font-size: 9px; color: var(--muted); }
+.goal-track { position: relative; height: 7px; border-radius: 4px; background: var(--line-soft); }
+.goal-fill { position: absolute; inset: 0 auto 0 0; border-radius: 4px; background: linear-gradient(90deg, var(--accent), #E0503F); }
+.goal-now { position: absolute; top: -3px; width: 13px; height: 13px; border-radius: 50%; background: #FFFFFF; border: 3px solid var(--accent); transform: translateX(-50%); }
+.goal-numbers { display: flex; align-items: baseline; gap: 8px; white-space: nowrap; }
+.goal-numbers small { font: 700 12px var(--mono); color: var(--muted); }
+.goal-numbers strong { font: 700 18px var(--mono); }
+.goal-numbers em { font-style: normal; font-size: 9px; color: var(--muted); }
+.goal-scale { display: flex; justify-content: space-between; margin-top: 6px; padding-left: 88px; font: 8px var(--mono); color: var(--muted); }
+.block-strip-rows { display: grid; gap: 9px; margin-top: 14px; }
+.block-strip-row { display: grid; grid-template-columns: 22px minmax(0, 1.2fr) minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+.strip-id { font: 700 10px var(--mono); }
+.strip-name { font-size: 10px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.strip-bar { height: 7px; border-radius: 4px; background: var(--line-soft); overflow: hidden; }
+.strip-bar i { display: block; height: 100%; border-radius: 4px; }
+.strip-meta { font: 9px var(--mono); color: var(--muted); white-space: nowrap; }
+.mix-bar { display: flex; gap: 2px; height: 12px; margin-top: 8px; border-radius: 6px; overflow: hidden; }
+.mix-bar i { height: 100%; }
+.mix-key { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; font-size: 9px; color: var(--muted); }
+.mix-key span { display: inline-flex; align-items: center; gap: 5px; }
+.mix-key i { width: 7px; height: 7px; border-radius: 2px; }
+.lift-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 20px; }
+.lift-card { min-width: 0; padding: 15px 13px; border: 1px solid var(--line-soft); border-radius: 16px; background: #FFFFFF; box-shadow: 0 10px 24px rgba(17,17,17,.06); }
+.lift-S { --lift: var(--t1); }
+.lift-B { --lift: var(--t2); }
+.lift-D { --lift: var(--t3); }
+.lift-card header { display: flex; align-items: flex-start; gap: 8px; }
+.lift-card .lift-code { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; background: var(--lift, var(--accent)); color: #FFFFFF; font: 700 12px var(--mono); }
+.lift-card h2 { font-family: var(--serif); font-weight: 400; text-transform: none; font-size: 19px; }
+.lift-card header p { font: 9px var(--mono); color: var(--muted); }
+.lift-now { margin-left: auto; text-align: right; }
+.lift-now strong { font: 700 20px var(--mono); letter-spacing: -.03em; }
+.lift-now small { font: 8px var(--mono); color: var(--muted); }
+.lift-week-bars { display: flex; align-items: flex-end; gap: 2px; height: 74px; margin-top: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--line-soft); }
+.lift-week { position: relative; flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; }
+.lift-week i { display: block; width: 100%; min-height: 3px; border-radius: 2px 2px 0 0; background: var(--lift, var(--ct-hyper)); opacity: .78; }
+.lift-week.deload i { background: repeating-linear-gradient(135deg, var(--ct-deload) 0 3px, transparent 3px 5px); }
+.lift-week.test i { background: var(--ink); }
+.lift-week span { position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%); font: 6px var(--mono); color: var(--muted); }
+.lift-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px; margin-top: 10px; font: 8px var(--mono); letter-spacing: .04em; color: var(--muted); }
+.lift-table-wrap { margin-top: 18px; overflow-x: auto; border: 1px solid var(--line-soft); border-radius: 14px; background: #FFFFFF; }
+.lift-table { width: 100%; min-width: 520px; border-collapse: collapse; font: 10px var(--mono); }
+.lift-table th, .lift-table td { padding: 8px 6px; border-bottom: 1px solid var(--line-soft); text-align: right; }
+.lift-table thead th { font: 600 8px var(--mono); letter-spacing: .08em; color: var(--muted); }
+.lift-table th:first-child, .lift-table td:first-child { text-align: left; }
+.analysis-filter { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-top: 22px; }
+@media (max-width: 880px) {
+  .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lift-grid { grid-template-columns: 1fr; }
+  .goal-row { grid-template-columns: 64px minmax(0, 1fr) auto; }
+  .analysis-stamp { display: none; }
+}
+</style>

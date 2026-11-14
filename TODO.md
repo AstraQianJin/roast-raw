@@ -21,6 +21,8 @@
 
 | 0.22 | L2 + 首页截图交互 | 已完成：`/plan` 周期总览、`/plan/block/:id` 块概览、`/plan/week/:n` 当周三天视图分离；删 4 张 Block 卡与 week rail，周方块直接跳周；指标区三等列等高；无主项日去掉 ACCESSORY WORK；主项重量放大、日标题句式大小写；LoadProfile 文献式图注/轴说明/去卡片阴影；首页去左右箭头改 pointer 跟手拖拽+吸附、细轨滑块指示器、图注名与简介居中、截图扩到 4 张（390×844 实拍）。证据：RR/shots-0.22。 | 未做：L3 全部；browser.mjs 旧契约待 L3 后重写；公网部署待用户验收 | 本地完成 |
 | 0.23 | L5 首页复刻与品牌 | 已完成：`WelcomeView.vue` 重写为九段（hero 四事实卡 SBD/16 叶周图/AI 展望/云端同账本、01 CAPACITY+CONDITIONING 20–60 等效分钟、02 纸质会话 MAIN LIFTS/TOTAL LOAD 4,041 kg、03 1080×1440 分享卡、04 AI 对比、05 云端同账本、06 截图 deck、07 三类用户、08 六环链条、09 下载 Coming Soon）；新建 `BeanMark.vue`（23px 咖啡豆，masthead 与 favicon 同款）；`App.vue` 周页加 conditioning 卡（13 周柱+20–60 带+ESTIMATE）；截图 4 张按当前构建重拍（390×844）。证据：`RR/shots-0.23`（m-top、v-*、d-*、zoom-mark、deck-dragged），build 0；拖拽实测 Figure 1→2。 | 未做：GitHub 转公开与推送、L3、browser.mjs 旧契约、公网视觉验收 | 本地完成 |
+| 0.24 | L6 四柱导航与层级 | 已完成：Plan 全面改名 Cycle（路由 `/cycle` + 旧 `/plan` 重定向、导航 CYCLE/ANALYSIS/OUTLOOK/ARCHIVE、面包屑与导入文案）；右上设置齿轮与注销删除，设置内容（导入/处方设置/登出/服务器与身体数据）并入 Archive `#account`；右上新增 TODAY/NEXT 渐变胶囊直达当日或下一场；Cycle 页 4 张阶段卡（区间/周数/场次/吨位/TOP%/相位条），Block 页 4 张周卡（吨位/场次/TOP%/强度条）；新建 `AnalysisView.vue`：Overview（KPI + SBD 目标阶梯 + Block 贡献 + Set mix）/ By lift（S/B/D 周容量与 TOP% + 周表）/ Muscle / Trend 四页签，页面由 4978px 收短；Outlook 改 Questionnaire / AI brief / Both 三页签；Archive 账户区加身体数据卡。证据：`RR/shots-0.24`，390/1280 七路由无横向溢出，build 0。 | 未做：Analysis 动作级明细（逐动作 e1RM 与完成率）、Outlook AI 流重做、Archive 云备份状态、Day 独立页、browser.mjs 旧契约、公网视觉验收 | 本地完成 |
+
 
 
 保留优点：Dark配色、肌群图点击切换、PLAN页面。待改：

@@ -19,7 +19,7 @@ const summary = computed(() => segments.value.map(segment => `${segment.name}: $
   <div class="cycle-strip" data-testid="cycle-strip">
     <div class="strip-rail" role="list" :aria-label="`Weeks in this cycle. ${summary}`">
       <div v-for="segment in segments" :key="segment.id" class="strip-segment" :class="`ct-${segment.type}`" :style="{ flexGrow: segment.weeks.length }" role="group" :aria-label="`${segment.name}, ${range(segment)}`">
-        <RouterLink v-for="week in segment.weeks" :key="week.n" :to="`/plan/week/${week.n}`" class="strip-week" :class="[week.kind, { on: week.n === current }]" role="listitem" :title="`${segment.name} · Week ${week.n}`" :aria-label="`Week ${week.n}, ${segment.name}`">
+        <RouterLink v-for="week in segment.weeks" :key="week.n" :to="`/cycle/week/${week.n}`" class="strip-week" :class="[week.kind, { on: week.n === current }]" role="listitem" :title="`${segment.name} · Week ${week.n}`" :aria-label="`Week ${week.n}, ${segment.name}`">
           <span>{{ week.n }}</span>
         </RouterLink>
       </div>

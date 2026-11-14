@@ -18,7 +18,7 @@ let axis = null;
 
 const shots = [
   { src: '/shots/today-390-light.png', k: 'TODAY', title: 'Prescribed loads, recorded sets and the working body on one page.' },
-  { src: '/shots/plan-390-light.png', k: 'PLAN', title: 'A fixed calendar: every week is a square, every block a colour.' },
+  { src: '/shots/plan-390-light.png', k: 'CYCLE', title: 'A fixed calendar: every week is a square, every block a colour.' },
   { src: '/shots/analysis-390-light.png', k: 'ANALYSIS', title: 'Weekly working sets, SBD equivalents and reference bands.' },
   { src: '/shots/archive-390-light.png', k: 'ARCHIVE', title: 'Past cycles stay readable, exportable and comparable.' },
 ];
@@ -222,7 +222,7 @@ onBeforeUnmount(() => cleanup());
     <section class="wl-sec" id="cloud">
       <div class="wl-sec-head rv"><span class="wl-num">05 /</span><h2>Finish on the phone, open the same ledger on the web.</h2><p class="wl-deck">The same cycle and the same set log render in a browser — no export, no re-entry. Turn cloud backup on and a new phone picks it up; turn it off and only that device is affected.</p></div>
       <div class="wl-browser rv">
-        <div class="wl-browser-bar"><i></i><i></i><i></i><span>82.157.146.30/plan</span></div>
+        <div class="wl-browser-bar"><i></i><i></i><i></i><span>82.157.146.30/cycle</span></div>
         <div class="wl-browser-body">
           <div class="wl-browser-side"><b>W05</b><span>STRENGTH BASE</span><span>S 80 · B 82.5 · D 85</span></div>
           <div class="wl-browser-rows"><div v-for="week in 5" :key="week"><span>W{{ String(week).padStart(2, '0') }}</span><i :style="{ width: `${30 + week * 9}%` }"></i><b>{{ 12 + week }}</b></div></div>
@@ -269,7 +269,7 @@ onBeforeUnmount(() => cleanup());
       <h2>Get it now.</h2>
       <p class="wl-deck">The web ledger is live. The phone apps are being signed and will appear here when they pass the store checks — no side-load links until then.</p>
       <div class="wl-enter-grid">
-        <a class="wl-cta" href="/login?next=/plan">Open the journal →</a>
+        <a class="wl-cta" href="/login?next=/cycle">Open the journal →</a>
         <span class="wl-cta ghost disabled">Android APK<br><small>COMING SOON</small></span>
         <span class="wl-cta ghost disabled">iOS<br><small>COMING SOON</small></span>
       </div>
@@ -278,7 +278,7 @@ onBeforeUnmount(() => cleanup());
 
     <footer class="wl-foot">
       <div class="wl-foot-brand"><BeanMark class="wl-bean" /> <b>Roast Raw</b><span>Training journal</span></div>
-      <div class="wl-foot-links"><RouterLink to="/plan">Plan</RouterLink><a href="https://github.com/AstraQianJin/roast-raw" rel="noopener">GitHub</a><a href="#download">Download</a><span>{{ releaseVersion }}</span></div>
+      <div class="wl-foot-links"><RouterLink to="/plan">Cycle</RouterLink><a href="https://github.com/AstraQianJin/roast-raw" rel="noopener">GitHub</a><a href="#download">Download</a><span>{{ releaseVersion }}</span></div>
     </footer>
   </div>
 </template>
@@ -326,8 +326,13 @@ onBeforeUnmount(() => cleanup());
 .hv-meta { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; font: 8.5px var(--mono); letter-spacing: .05em; color: var(--muted); }
 .hv-meta b { color: var(--ink); }
 .wl-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--soft); border: 1px solid var(--soft); border-radius: 14px; overflow: hidden; margin-top: clamp(28px, 5vh, 48px); }
-.wl-fact { background: var(--panel); padding: 16px 16px 18px; min-width: 0; }
-.wl-fact b { display: block; font: 700 15px var(--mono); letter-spacing: -.02em; color: var(--accent); }
+.wl-fact { position: relative; background: var(--panel); padding: 18px 16px 18px; min-width: 0; }
+.wl-fact::before { content: ''; position: absolute; inset: 0 0 auto; height: 3px; background: var(--f, var(--accent)); }
+.wl-fact:nth-child(1) { --f: var(--accent); }
+.wl-fact:nth-child(2) { --f: var(--ct-strength); }
+.wl-fact:nth-child(3) { --f: var(--ct-transmute); }
+.wl-fact:nth-child(4) { --f: var(--ct-deload); }
+.wl-fact b { display: block; font: 700 15px var(--mono); letter-spacing: -.02em; color: var(--f, var(--accent)); }
 .wl-fact span { display: block; margin-top: 5px; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink); }
 .wl-fact em { display: block; margin-top: 4px; font-style: normal; font-size: 11px; line-height: 1.55; color: var(--muted); }
 .wl-fine { margin-top: 14px; font-size: 11px; line-height: 1.75; color: var(--muted); }

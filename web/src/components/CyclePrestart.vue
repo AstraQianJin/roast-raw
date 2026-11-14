@@ -21,7 +21,7 @@ const weekday = iso => new Intl.DateTimeFormat('en-US', { weekday: 'short', time
 const testDate = computed(() => props.plan.testPlan?.dates?.sbd || null);
 const firstSession = computed(() => {
   const row = props.plan.workouts.find(item => item.week === 1);
-  return row ? `/plan/week/1/day/${row.day}` : '/plan/week/1';
+  return row ? `/cycle/week/1/day/${row.day}` : '/cycle/week/1';
 });
 const openingSessions = computed(() => props.plan.weeks[0]?.sessions ?? Math.round(props.plan.meta.sessions / props.plan.meta.weeks));
 </script>

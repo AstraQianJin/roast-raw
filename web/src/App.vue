@@ -26,6 +26,7 @@ import ShareButton from './components/ShareButton.vue';
 import BeanMark from './components/BeanMark.vue';
 import CyclePrestart from './components/CyclePrestart.vue';
 import LoadProfile from './components/LoadProfile.vue';
+import AnalysisView from './components/AnalysisView.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -54,11 +55,12 @@ const loading = ref(false);
 const session = ref(null);
 const authReady = ref(false);
 const mode = ref('plan');
+const outlookTab = ref('questionnaire');
 const page = computed(() => {
   if (['/', '/welcome'].includes(route.path)) return 'welcome';
   if (route.path === '/login') return 'login';
   if (route.path === '/register') return 'register';
-  if (route.path.startsWith('/plan')) return 'plan';
+  if (route.path.startsWith('/cycle')) return 'cycle';
   if (route.path === '/archive' || route.path.startsWith('/archive/')) return 'archive';
   if (route.path === '/today') return 'today';
   return route.path.slice(1);
@@ -67,14 +69,14 @@ const isPublic = computed(() => ['welcome', 'login', 'register'].includes(page.v
 const currentWeek = computed(() => {
   if (!plan.value) return 1;
   if (route.params.blockId) return plan.value.weeks.find(week => week.blockId === route.params.blockId)?.n || 0;
-  if (route.path === '/plan/test') return plan.value.weeks.find(week => week.kind === 'test')?.n || 0;
+  if (route.path === '/cycle/test') return plan.value.weeks.find(week => week.kind === 'test')?.n || 0;
   return Number(route.params.week || route.query.week || calendar.value?.week || 1);
 });
 const week = computed(() => analysis.value?.perWeek.find(week => week.n === currentWeek.value));
 const weekMeta = computed(() => plan.value?.weeks.find(week => week.n === currentWeek.value));
 const validRoute = computed(() => {
   if (['welcome', 'login', 'register'].includes(page.value)) return true;
-  if (!['today', 'plan', 'analysis', 'archive', 'questionnaire', 'settings'].includes(page.value)) return false;
+  if (!['today', 'cycle', 'analysis', 'archive', 'questionnaire'].includes(page.value)) return false;
   if (!week.value) return false;
   return !route.params.day || plan.value.workouts.some(row => row.week === currentWeek.value && row.day === route.params.day);
 });
@@ -89,6 +91,9 @@ const days = computed(() => {
   });
 });
 const todaySession = computed(() => calendar.value?.day ? { date: calendar.value.date, week: calendar.value.week, day: calendar.value.day } : calendar.value?.nextSession);
+const todayLink = computed(() => todaySession.value ? `/cycle/week/${todaySession.value.week}/day/${todaySession.value.day}` : '/cycle');
+const todayCtaDate = computed(() => calendar.value?.day ? dateLabel(calendar.value.date) : calendar.value?.nextSession ? dateLabel(calendar.value.nextSession.date) : 'NO SESSION');
+const todayCtaLabel = computed(() => calendar.value?.day ? 'TODAY' : 'NEXT');
 const todayRows = computed(() => todaySession.value ? plan.value.workouts.filter(row => row.week === todaySession.value.week && row.day === todaySession.value.day) : []);
 const topLifts = rows => ['S', 'B', 'D'].flatMap(code => {
   const candidates = rows.filter(row => row.bucket === 'main' && row.lift === code && row.loadKg !== null && !(row.sets === 1 && row.reps === 3 && row.mode === 'T1.3x3'));
@@ -108,6 +113,8 @@ const display = value => value === null || value === undefined ? '—' : Number(
 const DELOAD_NOTE = 'Deload week: lighter loads, same movements. Nothing is skipped and no date moves.';
 const needsMicroPlates = rows => rows.some(row => row.segments.some(segment => segment.load !== null && segment.load % 2.5 !== 0));
 const blockType = blockId => (plan.value?.blocks.find(block => block.id === blockId)?.cycleType || 'custom').toLowerCase();
+const BLOCK_COLOR = { hyper: 'var(--ct-hyper)', hypertrophy: 'var(--ct-hyper)', strength: 'var(--ct-strength)', transmute: 'var(--ct-transmute)', peak: 'var(--ct-peak)', deload: 'var(--ct-deload)', custom: 'var(--ct-custom)' };
+const blockColor = blockId => BLOCK_COLOR[blockType(blockId)] || 'var(--accent)';
 const planView = computed(() => route.params.day ? 'day' : route.params.week ? 'week' : route.params.blockId ? 'block' : 'cycle');
 const blockMeta = computed(() => plan.value?.blocks.find(block => block.id === route.params.blockId));
 const blockWeeks = computed(() => blockMeta.value ? plan.value.weeks.filter(item => item.blockId === blockMeta.value.id) : []);
@@ -115,6 +122,14 @@ const blockPerWeek = computed(() => analysis.value ? blockWeeks.value.map(item =
 const blockTonnage = computed(() => blockWeeks.value.reduce((sum, item) => sum + (item.tonnageKg || 0), 0));
 const blockTopPct = computed(() => Math.max(0, ...blockPerWeek.value.map(row => row.topPct || 0), 0));
 const weekGpp = computed(() => (plan.value?.gpp || []).filter(item => item.week === currentWeek.value));
+function blockInfo(blockId) {
+  const weeks = (plan.value?.weeks || []).filter(item => item.blockId === blockId);
+  const rows = weeks.map(item => analysis.value?.perWeek.find(row => row.n === item.n)).filter(Boolean);
+  const sessions = weeks.reduce((sum, item) => sum + (item.sessions || 0), 0);
+  const tonnage = weeks.reduce((sum, item) => sum + (item.tonnageKg || 0), 0);
+  const topPct = Math.max(0, ...rows.map(row => row.topPct || 0), 0);
+  return { weeks, sessions, tonnage, topPct, first: weeks[0]?.n, last: weeks.at(-1)?.n };
+}
 const weekCardio = computed(() => (plan.value?.runPlan || []).filter(item => item.week === currentWeek.value));
 const conditioningWeek = computed(() => weekCardio.value.reduce((sum, item) => sum + (item.duration_min || 0), 0));
 const conditioningBars = computed(() => plan.value ? plan.value.weeks.map(item => ({
@@ -133,7 +148,7 @@ function titleCase(text) {
 }
 function selectWeek(number) {
   if (number < 1 || number > plan.value.weeks.length) return;
-  if (page.value === 'plan') router.push(`/plan/week/${number}`);
+  if (page.value === 'cycle') router.push(`/cycle/week/${number}`);
   else router.replace({ path: route.path, query: { week: number } });
 }
 async function get(path) {
@@ -215,15 +230,15 @@ watch([() => route.fullPath, loading], async () => {
 
 <template>
   <div class="shell">
-    <header class="masthead"><RouterLink :to="isPublic ? '/' : '/plan'" class="brand" aria-label="Roast Raw home"><BeanMark class="brand-mark" />Roast Raw</RouterLink><span class="edition">TRAINING JOURNAL / {{ releaseVersion }}</span><template v-if="!isPublic"><RouterLink to="/settings" class="settings-link" aria-label="Settings"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M18.5 5.5l-1.8 1.8M7.3 16.7l-1.8 1.8"/></svg></RouterLink><button type="button" class="settings-link" aria-label="Sign out" @click="logout"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v8"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0"/></svg></button></template><RouterLink v-else-if="page === 'welcome'" :to="session?.authenticated ? '/plan' : { path: '/login', query: { next: '/plan' } }" class="masthead-cta">MyPlan</RouterLink></header>
-    <nav v-if="!isPublic" class="primary-nav" aria-label="Primary"><RouterLink to="/plan">PLAN</RouterLink><RouterLink to="/analysis">ANALYSIS</RouterLink><RouterLink to="/archive">ARCHIVE</RouterLink><RouterLink to="/questionnaire">OUTLOOK</RouterLink></nav>
+    <header class="masthead"><RouterLink :to="isPublic ? '/' : '/cycle'" class="brand" aria-label="Roast Raw home"><BeanMark class="brand-mark" />Roast Raw</RouterLink><span class="edition">TRAINING JOURNAL / {{ releaseVersion }}</span><RouterLink v-if="!isPublic" :to="todayLink" class="today-cta"><span class="today-dot"></span><span class="today-word">{{ todayCtaLabel }}</span><small>{{ todayCtaDate }}</small></RouterLink><RouterLink v-else-if="page === 'welcome'" :to="session?.authenticated ? '/cycle' : { path: '/login', query: { next: '/cycle' } }" class="masthead-cta">MY CYCLE</RouterLink></header>
+    <nav v-if="!isPublic" class="primary-nav" aria-label="Primary"><RouterLink to="/cycle" :class="{ 'router-link-active': page === 'cycle' }">CYCLE</RouterLink><RouterLink to="/analysis">ANALYSIS</RouterLink><RouterLink to="/questionnaire">OUTLOOK</RouterLink><RouterLink to="/archive">ARCHIVE</RouterLink></nav>
     <main :aria-busy="loading">
       <WelcomeView v-if="page === 'welcome'" />
       <LoginView v-else-if="page === 'login'" :next="typeof route.query.next === 'string' ? route.query.next : ''" @authed="onAuthed" />
       <RegisterView v-else-if="page === 'register'" @authed="onAuthed" />
       <div v-else-if="loading" class="empty-state" role="status"><h1>Reading the plan.</h1><p>Loading your training data from the server.</p></div>
       <div v-else-if="error" class="error-panel" role="alert"><h2>Connection interrupted.</h2><p>{{ error }}</p><p>No offline copy is used for statistics.</p><button @click="refresh">Retry connection</button></div>
-      <div v-else-if="!validRoute" class="empty-state"><h1>Not in this plan.</h1><p>This page, block, week or day does not exist.</p><RouterLink to="/plan" class="inline-link">Return to the plan</RouterLink></div>
+      <div v-else-if="!validRoute" class="empty-state"><h1>Not in this plan.</h1><p>This page, block, week or day does not exist.</p><RouterLink to="/cycle" class="inline-link">Return to the cycle</RouterLink></div>
       <template v-else>
         <div v-if="page === 'today'" class="workspace" data-testid="today">
           <div>
@@ -241,7 +256,7 @@ watch([() => route.fullPath, loading], async () => {
               </section>
               <section class="day-capacity" aria-label="Session capacity"><header><span class="section-label">SESSION CAPACITY · PLANNED</span><strong>{{ todaySetCount }} SETS</strong></header><div class="capacity-track"><i v-for="(sets, index) in [todayTotals.main, todayTotals.sbdVar + todayTotals.nonSbdVar, todayTotals.accessory]" :key="index" :style="{ width: `${sets / Math.max(todaySetCount, 1) * 100}%` }"></i></div><div class="capacity-key"><span>MAIN {{ todayTotals.main }}</span><span>VAR {{ todayTotals.sbdVar + todayTotals.nonSbdVar }}</span><span>ACCESSORY {{ todayTotals.accessory }}</span></div></section>
               <CycleStrip :weeks="plan.weeks" :blocks="plan.blocks" :current="todaySession.week" />
-              <RouterLink :to="`/plan/week/${todaySession.week}/day/${todaySession.day}`" class="inline-link">Open the scheduled day →</RouterLink>
+              <RouterLink :to="`/cycle/week/${todaySession.week}/day/${todaySession.day}`" class="inline-link">Open the scheduled day →</RouterLink>
               <DailyRecord :cycle-id="plan.meta.planId" :date="todaySession.date" :session-id="`${todaySession.week}|${todaySession.day}`" @saved="refreshPrescription" />
               <details class="gear"><summary>GEAR <span class="chip">{{ needsMicroPlates(todayRows) ? 'MICRO PLATES' : 'SESSION SETUP' }}</span><span v-if="plan.meta.profile.bar_kg" class="chip">{{ display(plan.meta.profile.bar_kg) }} KG BAR</span></summary><p>{{ needsMicroPlates(todayRows) ? 'Some prescribed loads need micro plates. Prepare equipment before the session; loads remain unchanged.' : 'Standard plates cover these prescribed loads. Prepare equipment before the session.' }}</p><p v-if="plan.meta.profile.bar_kg">Plan bar reference: {{ display(plan.meta.profile.bar_kg) }} kg. {{ plan.meta.profile.collars ? 'Collars included in the plan setup.' : 'Collars are not included in the plan load reference.' }}</p><p v-if="todayRows.some(row => prescriptionInfo?.systemLoads[row.week + '|' + row.day + '|' + row.seq])">Pull-up and dip loads include bodyweight. Check the dated bodyweight reading before choosing assistance or added weight.</p></details>
               <WarmupSuggestions :entries="plan.warmups?.[todaySession.date] || []" />
@@ -251,24 +266,42 @@ watch([() => route.fullPath, loading], async () => {
           </div>
           <aside><MuscleMap compact :geometry="geometry" :leaves="leaves" :heat-scale="analysis.heatScale" :week-number="currentWeek" :week-count="plan.weeks.length" @week="selectWeek" /><WeekCapacity :week="week" :ranges="analysis.ranges" /></aside>
         </div>
-                <template v-else-if="page === 'plan'">
+                <template v-else-if="page === 'cycle'">
           <template v-if="planView === 'cycle'">
-            <div class="eyebrow">{{ plan.meta.weeks }} WEEKS · {{ plan.meta.sessions }} SESSIONS · FIXED CALENDAR</div><h1 class="plan-title">The plan.</h1><p class="hero-subtitle">{{ dateLabel(plan.meta.startDate) }} — {{ dateLabel(plan.meta.endDate) }}</p>
+            <div class="eyebrow">THE CYCLE · {{ plan.meta.weeks }} WEEKS · {{ plan.meta.sessions }} SESSIONS</div><h1 class="plan-title">The cycle.</h1><p class="hero-subtitle">{{ dateLabel(plan.meta.startDate) }} — {{ dateLabel(plan.meta.endDate) }}</p>
             <div class="plan-metrics"><div class="metric"><span class="section-label">START</span><strong>{{ dateLabel(plan.meta.startDate) }}</strong><small>{{ plan.meta.startDate.slice(0, 4) }} · {{ plan.meta.weeks }} WEEKS</small></div><div class="metric"><span class="section-label">TEST DAY</span><strong>{{ plan.testPlan?.dates?.sbd ? dateLabel(plan.testPlan.dates.sbd) : 'Not set' }}</strong><small>{{ plan.testPlan?.dates?.sbd ? `W${String(plan.weeks.find(w => w.kind === 'test')?.n || 0).padStart(2, '0')} · SBD` : 'Add a date in outlook' }}</small></div><div class="metric"><span class="section-label">CYCLE TONNAGE</span><strong>{{ display(analysis.cycle.tonnageKg / 1000) }} t</strong><small>{{ analysis.cycle.auxSets }} AUX SETS</small></div></div>
             <LoadProfile :weeks="plan.weeks" :blocks="plan.blocks" :per-week="analysis.perWeek" :test-date="plan.testPlan?.dates?.sbd" />
             <div class="section-head"><div class="eyebrow">CYCLE MAP</div><p class="annotation">Each square is one week. Pick a square to open that week; colour is the block.</p></div>
             <CycleStrip :weeks="plan.weeks" :blocks="plan.blocks" :current="Number(calendar?.week || 1)" />
-            <p class="cycle-open"><RouterLink v-if="calendar?.week" :to="`/plan/week/${calendar.week}`" class="inline-link">Open week {{ String(calendar.week).padStart(2, '0') }}</RouterLink></p><nav class="block-index" aria-label="Blocks"><RouterLink v-for="block in plan.blocks" :key="block.id" :to="`/plan/block/${block.id}`"><b>{{ block.id }}</b><span>{{ block.nameEn }}</span></RouterLink></nav>
+            <div class="section-head"><div class="eyebrow">BLOCKS IN THIS CYCLE</div><p class="annotation">Each block is a phase with its own ceiling. Open a block to see the weeks inside it, then a week, then a day.</p></div>
+            <section class="block-deck" aria-label="Blocks">
+              <RouterLink v-for="block in plan.blocks" :key="block.id" :to="`/cycle/block/${block.id}`" class="block-card" :style="{ '--seg': blockColor(block.id) }">
+                <header class="block-card-head"><span class="block-tag">{{ block.id }}</span><span class="block-type">{{ block.cycleType }}</span></header>
+                <h2>{{ block.nameEn }}</h2>
+                <p class="block-range">W{{ String(blockInfo(block.id).first || 0).padStart(2, '0') }} — W{{ String(blockInfo(block.id).last || 0).padStart(2, '0') }} · {{ blockInfo(block.id).weeks.length }} WEEKS · {{ blockInfo(block.id).sessions }} SESSIONS</p>
+                <div class="block-bar"><i v-for="item in blockInfo(block.id).weeks" :key="item.n" :class="item.kind" :title="`Week ${item.n} · ${item.kind}`"></i></div>
+                <dl class="block-stats"><div><dt>TONNAGE</dt><dd>{{ display(blockInfo(block.id).tonnage / 1000) }}<small> t</small></dd></div><div><dt>TOP %1RM</dt><dd>{{ display(blockInfo(block.id).topPct) }}<small>%</small></dd></div></dl>
+                <span class="block-open">Open block <b>→</b></span>
+              </RouterLink>
+            </section>
           </template>
           <template v-else-if="planView === 'block'">
             <div class="eyebrow">BLOCK {{ blockMeta?.id }} · {{ (blockMeta?.cycleType || 'custom').toUpperCase() }}</div><h1 class="plan-title">{{ blockMeta?.nameEn }}</h1><p class="hero-subtitle">W{{ String(blockWeeks[0]?.n || 0).padStart(2, '0') }} — W{{ String(blockWeeks.at(-1)?.n || 0).padStart(2, '0') }} · {{ blockWeeks.length }} WEEKS</p>
             <div class="plan-metrics"><div class="metric"><span class="section-label">SESSIONS</span><strong>{{ blockWeeks.reduce((sum, item) => sum + (item.sessions || 0), 0) }}</strong><small>ACROSS THIS BLOCK</small></div><div class="metric"><span class="section-label">BLOCK TONNAGE</span><strong>{{ display(blockTonnage / 1000) }} t</strong><small>PLANNED WORK</small></div><div class="metric"><span class="section-label">TOP %1RM</span><strong>{{ display(blockTopPct) }}%</strong><small>{{ (blockMeta?.cycleType || 'custom').toUpperCase() }} CEILING</small></div></div>
             <LoadProfile :weeks="blockWeeks" :blocks="plan.blocks" :per-week="blockPerWeek" :test-date="plan.testPlan?.dates?.sbd" />
-            <div class="section-head"><div class="eyebrow">WEEKS IN THIS BLOCK</div><p class="annotation">Open any week to see its seven days.</p></div>
-            <ul class="block-weeks"><li v-for="week in blockWeeks" :key="week.n"><RouterLink :to="`/plan/week/${week.n}`" :class="week.kind"><b>W{{ String(week.n).padStart(2, '0') }}</b><span>{{ week.kind.toUpperCase() }}</span><small>{{ display(week.tonnageKg / 1000) }} t · {{ week.sessions }} SESSIONS</small></RouterLink></li></ul>
+            <div class="section-head"><div class="eyebrow">WEEKS IN THIS BLOCK</div><p class="annotation">A week is the unit you actually train. Each card carries its load, its sessions and its phase.</p></div>
+            <section class="week-deck" aria-label="Weeks in this block">
+              <RouterLink v-for="week in blockWeeks" :key="week.n" :to="`/cycle/week/${week.n}`" class="week-card" :class="week.kind">
+                <header><b>W{{ String(week.n).padStart(2, '0') }}</b><span class="week-kind">{{ week.kind }}</span></header>
+                <p class="week-dates">{{ dateLabel(week.dateStart) }} — {{ dateLabel(week.dateEnd) }}</p>
+                <dl><div><dt>TONNAGE</dt><dd>{{ display(week.tonnageKg / 1000) }}<small> t</small></dd></div><div><dt>SESSIONS</dt><dd>{{ week.sessions }}</dd></div></dl>
+                <div class="week-meter"><i :style="{ width: `${Math.min(100, (analysis.perWeek.find(row => row.n === week.n)?.topPct || 0))}%` }"></i></div>
+                <span class="week-open">TOP {{ display(analysis.perWeek.find(row => row.n === week.n)?.topPct || 0) }}% · OPEN <b>→</b></span>
+              </RouterLink>
+            </section>
           </template>
           <template v-else>
-            <div class="eyebrow">{{ weekMeta.blockId }} · {{ week.kind.toUpperCase() }} WEEK</div><p class="breadcrumb"><RouterLink to="/plan">Plan</RouterLink> / <RouterLink :to="`/plan/block/${weekMeta.blockId}`">{{ weekMeta.blockId }}</RouterLink> / Week {{ currentWeek }}</p>
+            <div class="eyebrow">{{ weekMeta.blockId }} · {{ week.kind.toUpperCase() }} WEEK</div><p class="breadcrumb"><RouterLink to="/cycle">Cycle</RouterLink> / <RouterLink :to="`/cycle/block/${weekMeta.blockId}`">{{ weekMeta.blockId }}</RouterLink> / Week {{ currentWeek }}</p>
             <CycleStrip :weeks="plan.weeks" :blocks="plan.blocks" :current="currentWeek" />
             <div class="workspace"><div>
             <div class="week-header"><span class="week-number">{{ currentWeek }}</span><div><h2>{{ weekMeta.blockName }}</h2><small>{{ week.kind.toUpperCase() }} WEEK</small></div><div class="week-summary"><strong>{{ display(week.tonnageKg / 1000) }} t</strong><small>{{ week.sessions }} SESSIONS</small></div></div>
@@ -277,7 +310,7 @@ watch([() => route.fullPath, loading], async () => {
             <div class="top-intensity"><span>TOP %1RM <b>{{ display(week.topPct) }}%</b></span><span>S {{ display(week.topPctByLift.S) }} · B {{ display(week.topPctByLift.B) }} · D {{ display(week.topPctByLift.D) }}</span></div>
             <div v-for="day in days" :id="day.id ? `day-${currentWeek}-${day.id}` : undefined" :key="day.date" :tabindex="route.params.day === day.id ? -1 : undefined" class="plan-day">
               <template v-if="day.rows.length">
-                <RouterLink class="day-row" :to="route.params.day === day.id ? `/plan/week/${currentWeek}` : `/plan/week/${currentWeek}/day/${day.id}`" :aria-expanded="route.params.day === day.id"><span class="day-date"><strong>{{ day.label }}</strong>{{ day.weekday }}</span><span class="day-letter">{{ day.id }}</span><span class="day-info"><span v-if="topLifts(day.rows).length" class="top-load"><small>TOP</small><b v-for="lift in topLifts(day.rows)" :key="lift.code">{{ lift.code }} {{ display(lift.load) }}</b></span><span class="day-title">{{ titleCase(plan.days.find(item => item.id === day.id).titleEn) }}</span><span class="day-status">{{ (calendar.sessionStates[`${currentWeek}|${day.id}`] || 'scheduled').toUpperCase() }}</span></span><span class="day-open">{{ route.params.day === day.id ? '−' : '›' }}</span></RouterLink>
+                <RouterLink class="day-row" :to="route.params.day === day.id ? `/cycle/week/${currentWeek}` : `/cycle/week/${currentWeek}/day/${day.id}`" :aria-expanded="route.params.day === day.id"><span class="day-date"><strong>{{ day.label }}</strong>{{ day.weekday }}</span><span class="day-letter">{{ day.id }}</span><span class="day-info"><span v-if="topLifts(day.rows).length" class="top-load"><small>TOP</small><b v-for="lift in topLifts(day.rows)" :key="lift.code">{{ lift.code }} {{ display(lift.load) }}</b></span><span class="day-title">{{ titleCase(plan.days.find(item => item.id === day.id).titleEn) }}</span><span class="day-status">{{ (calendar.sessionStates[`${currentWeek}|${day.id}`] || 'scheduled').toUpperCase() }}</span></span><span class="day-open">{{ route.params.day === day.id ? '−' : '›' }}</span></RouterLink>
                 <DailyRecord v-if="route.params.day === day.id" :cycle-id="plan.meta.planId" :date="day.date" :session-id="`${currentWeek}|${day.id}`" @saved="refreshPrescription" />
                 <details v-if="route.params.day === day.id" class="gear"><summary>GEAR <span class="chip">{{ needsMicroPlates(day.rows) ? 'MICRO PLATES' : 'SESSION SETUP' }}</span><span v-if="plan.meta.profile.bar_kg" class="chip">{{ display(plan.meta.profile.bar_kg) }} KG BAR</span></summary><p>{{ needsMicroPlates(day.rows) ? 'Prepare micro plates for the prescribed loads.' : 'Standard plates cover these prescribed loads.' }} All loads stay as prescribed; bodyweight movements use dated total system weight when shown.</p></details>
                 <WarmupSuggestions v-if="route.params.day === day.id" :entries="plan.warmups?.[day.date] || []" />
@@ -292,20 +325,31 @@ watch([() => route.fullPath, loading], async () => {
             </div><aside class="week-aside"><MuscleMap compact :geometry="geometry" :leaves="leaves" :heat-scale="analysis.heatScale" :week-number="currentWeek" :week-count="plan.weeks.length" @week="selectWeek" /></aside></div>
           </template>
         </template>
-<template v-else-if="page === 'analysis'">
-          <div class="eyebrow">CAPACITY / ANALYSIS · {{ plan.meta.weeks }} WEEKS</div><h1>Every set counts.</h1><p class="hero-subtitle">One plan. Every contribution.</p>
-          <div class="map-filters"><button :aria-pressed="mode === 'plan'" @click="changeMode('plan')">Planned</button><button :aria-pressed="mode === 'log'" @click="changeMode('log')">Logged + planned</button></div><p class="annotation">{{ mode === 'plan' ? 'Prescribed sets for the full cycle.' : 'Recorded sets replace their planned rows. Unrecorded rows still use the plan.' }}</p>
-          <div class="workspace analysis-workspace">
-            <MuscleMap :geometry="geometry" :leaves="leaves" :heat-scale="analysis.heatScale" :week-number="currentWeek" :week-count="plan.weeks.length" @week="selectWeek">
-              <template #summary><section class="analysis-summary" data-testid="analysis-summary" aria-label="Selected week summary"><span class="section-label">W{{ String(currentWeek).padStart(2, '0') }} · {{ mode === 'plan' ? 'PLANNED' : 'LOGGED + PLANNED' }}</span><p><strong>{{ week.total }}</strong> raw working sets · <strong>{{ display(week.tonnageKg) }}</strong> kg</p><small>{{ week.dateStart }} — {{ week.dateEnd }} · {{ week.sessions }} sessions</small></section></template>
-            </MuscleMap>
-            <aside><WeekCapacity :week="week" :ranges="analysis.ranges" /><CapacityBoard :analysis="analysis" :week="week" /></aside>
-          </div>
-          <TrendView :analysis="analysis" :performance="performance" />
+<AnalysisView v-else-if="page === 'analysis'" :plan="plan" :analysis="analysis" :geometry="geometry" :performance="performance" :current-week="currentWeek" :mode="mode" @week="selectWeek" @mode="changeMode" />
+        <template v-else-if="page === 'archive'">
+          <ArchiveView :active-cycle-id="plan.meta.planId" />
+          <section v-if="!route.params.cycleId" id="account" class="account-panel" aria-label="Account and data">
+            <div class="eyebrow">ACCOUNT / DATA / SYSTEM</div>
+            <h2>The essentials.</h2>
+            <div class="account-grid">
+              <div class="account-cell"><span class="section-label">SERVER</span><strong>SQLite · Asia/Shanghai</strong><small>Connected · one ledger for phone and web</small></div>
+              <div class="account-cell"><span class="section-label">CYCLE</span><strong>{{ plan.schemaVersion }} · {{ plan.meta.weeks }} weeks</strong><small>{{ plan.meta.sessions }} sessions · release {{ releaseVersion }}</small></div>
+              <div class="account-cell"><span class="section-label">SESSION</span><strong>{{ session?.authenticated ? 'Signed in' : 'Locked' }}</strong><small>Single-user release · records saved on the server</small></div>
+              <div class="account-cell"><span class="section-label">BODY</span><strong>{{ display(plan.meta.profile.bw_kg) }} → {{ display(plan.meta.profile.target_bw_kg) }} kg</strong><small>starting bodyweight → target · dated readings only</small></div>
+            </div>
+            <details class="account-tools"><summary>Import a cycle</summary><PlanImport /></details>
+            <details class="account-tools"><summary>Prescription settings</summary><PrescriptionSettings :cycle-id="plan.meta.planId" @changed="refresh" /></details>
+            <div class="account-actions"><button type="button" class="quiet-button" @click="logout">Sign out on this device</button></div>
+            <p class="annotation">Prescribed and actual sets stay separate. Exporting does not end a cycle.</p>
+          </section>
         </template>
-        <ArchiveView v-else-if="page === 'archive'" :active-cycle-id="plan.meta.planId" />
-        <template v-else-if="page === 'questionnaire'"><QuestionnaireView /><AiOutlook :cycle-id="plan.meta.planId" /></template>
-        <template v-else-if="page === 'settings'"><div class="eyebrow">PREFERENCES / SYSTEM</div><h1>The essentials.</h1><div class="empty-state"><h2>Server storage</h2><p>Connected · SQLite · Asia/Shanghai</p><p>{{ plan.schemaVersion }} · {{ plan.meta.weeks }} weeks · {{ plan.meta.sessions }} sessions</p><p>Single-user release {{ releaseVersion }}. Records are saved on the server; prescribed and actual sets stay separate.</p></div><PlanImport /><PrescriptionSettings :cycle-id="plan.meta.planId" @changed="refresh" /></template>
+        <template v-else-if="page === 'questionnaire'">
+          <header class="outlook-hero"><div><div class="eyebrow">OUTLOOK · NEXT CYCLE</div><h1>What comes next.</h1><p class="analysis-deck">A questionnaire builds the brief. AI reads the cycle you ran and turns it into a proposal. Nothing reaches the ledger until you accept it.</p></div><div class="outlook-badge"><span>AI</span><strong>{{ outlookTab === 'questionnaire' ? '7 STEPS' : 'BRIEF' }}</strong></div></header>
+          <nav class="analysis-tabs" aria-label="Outlook sections"><button type="button" :aria-pressed="outlookTab === 'questionnaire'" @click="outlookTab = 'questionnaire'">Questionnaire</button><button type="button" :aria-pressed="outlookTab === 'ai'" @click="outlookTab = 'ai'">AI brief</button><button type="button" :aria-pressed="outlookTab === 'both'" @click="outlookTab = 'both'">Both</button></nav>
+          <div v-show="outlookTab !== 'ai'" class="outlook-panel"><div class="panel-label">01 / QUESTIONNAIRE</div><QuestionnaireView /></div>
+          <div v-show="outlookTab !== 'questionnaire'" class="outlook-panel"><div class="panel-label">02 / AI BRIEF</div><AiOutlook :cycle-id="plan.meta.planId" /></div>
+        </template>
+
       </template>
     </main>
     <footer class="site-footer"><span>ROAST RAW / TRAIN WITH INTENT</span><RouterLink to="/welcome" class="footer-about">ABOUT</RouterLink><span>{{ releaseVersion }} · LOCAL PREVIEW</span></footer>
