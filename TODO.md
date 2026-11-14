@@ -20,8 +20,8 @@
 | 0.20 | 部署、推送 | 访问口径已按用户裁定改为「公开落地页 + 账户登录」，并已于 2026-11-14 20:40 部署上线：SPA 外壳与 /welcome /login /register 公开、仅 journal API 需会话、accounts 表附加迁移（不动 user_version）、PBKDF2 口令与 HttpOnly SameSite=Lax 会话 cookie、用户名不区分大小写、SPA 外壳 no-store 防止手机留旧页；deploy.py 部署后从公网核验完整访问契约而非只探 health。线上 `GET /` 200 且无 Basic 挑战、`/api/plan` 401、`Astra` 任意大小写登录 200、注册/登出复锁均 PASS（25/25 项，见 README 访问段）。owner 口令统一为本机用户环境变量 RR_ACCESS_USERNAME/RR_ACCESS_PASSWORD（值不入仓/文档/bundle） | 验收：公网实测 25/25 PASS（landing/资产/welcome/login/register 公开、匿名 journal 401、错口令 401、owner 登录 200、登出复锁）；待最末一步：私有远程 AstraQianJin/roast-raw 推送 | 已完成（部署）；推送待办 |
 
 | 0.22 | L2 + 首页截图交互 | 已完成：`/plan` 周期总览、`/plan/block/:id` 块概览、`/plan/week/:n` 当周三天视图分离；删 4 张 Block 卡与 week rail，周方块直接跳周；指标区三等列等高；无主项日去掉 ACCESSORY WORK；主项重量放大、日标题句式大小写；LoadProfile 文献式图注/轴说明/去卡片阴影；首页去左右箭头改 pointer 跟手拖拽+吸附、细轨滑块指示器、图注名与简介居中、截图扩到 4 张（390×844 实拍）。证据：RR/shots-0.22。 | 未做：L3 全部；browser.mjs 旧契约待 L3 后重写；公网部署待用户验收 | 本地完成 |
+| 0.23 | L5 首页复刻与品牌 | 已完成：`WelcomeView.vue` 重写为九段（hero 四事实卡 SBD/16 叶周图/AI 展望/云端同账本、01 CAPACITY+CONDITIONING 20–60 等效分钟、02 纸质会话 MAIN LIFTS/TOTAL LOAD 4,041 kg、03 1080×1440 分享卡、04 AI 对比、05 云端同账本、06 截图 deck、07 三类用户、08 六环链条、09 下载 Coming Soon）；新建 `BeanMark.vue`（23px 咖啡豆，masthead 与 favicon 同款）；`App.vue` 周页加 conditioning 卡（13 周柱+20–60 带+ESTIMATE）；截图 4 张按当前构建重拍（390×844）。证据：`RR/shots-0.23`（m-top、v-*、d-*、zoom-mark、deck-dragged），build 0；拖拽实测 Figure 1→2。 | 未做：GitHub 转公开与推送、L3、browser.mjs 旧契约、公网视觉验收 | 本地完成 |
 
-## 审美回炉八项清单（用户2026-11-14主观反馈）
 
 保留优点：Dark配色、肌群图点击切换、PLAN页面。待改：
 

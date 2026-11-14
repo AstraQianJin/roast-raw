@@ -23,6 +23,7 @@ import LoginView from './components/LoginView.vue';
 import RegisterView from './components/RegisterView.vue';
 import CycleStrip from './components/CycleStrip.vue';
 import ShareButton from './components/ShareButton.vue';
+import BeanMark from './components/BeanMark.vue';
 import CyclePrestart from './components/CyclePrestart.vue';
 import LoadProfile from './components/LoadProfile.vue';
 
@@ -115,6 +116,12 @@ const blockTonnage = computed(() => blockWeeks.value.reduce((sum, item) => sum +
 const blockTopPct = computed(() => Math.max(0, ...blockPerWeek.value.map(row => row.topPct || 0), 0));
 const weekGpp = computed(() => (plan.value?.gpp || []).filter(item => item.week === currentWeek.value));
 const weekCardio = computed(() => (plan.value?.runPlan || []).filter(item => item.week === currentWeek.value));
+const conditioningWeek = computed(() => weekCardio.value.reduce((sum, item) => sum + (item.duration_min || 0), 0));
+const conditioningBars = computed(() => plan.value ? plan.value.weeks.map(item => ({
+  n: item.n,
+  kind: item.kind,
+  minutes: (plan.value.runPlan || []).filter(row => row.week === item.n).reduce((sum, row) => sum + (row.duration_min || 0), 0),
+})) : []);
 function dateLabel(value) { return new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit', timeZone: 'Asia/Shanghai' }).format(new Date(`${value}T00:00:00+08:00`)).toUpperCase(); }
 const ACRONYMS = new Set(['SBD', 'AMRAP', 'RPE', 'GPP', 'SSB', 'RDL', 'EMOM', 'TOP', 'SET', 'W13', '5KM']);
 function titleCase(text) {
@@ -208,7 +215,7 @@ watch([() => route.fullPath, loading], async () => {
 
 <template>
   <div class="shell">
-    <header class="masthead"><RouterLink :to="isPublic ? '/' : '/plan'" class="brand" aria-label="Roast Raw home">Roast Raw</RouterLink><span class="edition">TRAINING JOURNAL / {{ releaseVersion }}</span><template v-if="!isPublic"><RouterLink to="/settings" class="settings-link" aria-label="Settings"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M18.5 5.5l-1.8 1.8M7.3 16.7l-1.8 1.8"/></svg></RouterLink><button type="button" class="settings-link" aria-label="Sign out" @click="logout"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v8"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0"/></svg></button></template><RouterLink v-else-if="page === 'welcome'" :to="session?.authenticated ? '/plan' : { path: '/login', query: { next: '/plan' } }" class="masthead-cta">MyPlan</RouterLink></header>
+    <header class="masthead"><RouterLink :to="isPublic ? '/' : '/plan'" class="brand" aria-label="Roast Raw home"><BeanMark class="brand-mark" />Roast Raw</RouterLink><span class="edition">TRAINING JOURNAL / {{ releaseVersion }}</span><template v-if="!isPublic"><RouterLink to="/settings" class="settings-link" aria-label="Settings"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M18.5 5.5l-1.8 1.8M7.3 16.7l-1.8 1.8"/></svg></RouterLink><button type="button" class="settings-link" aria-label="Sign out" @click="logout"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v8"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0"/></svg></button></template><RouterLink v-else-if="page === 'welcome'" :to="session?.authenticated ? '/plan' : { path: '/login', query: { next: '/plan' } }" class="masthead-cta">MyPlan</RouterLink></header>
     <nav v-if="!isPublic" class="primary-nav" aria-label="Primary"><RouterLink to="/plan">PLAN</RouterLink><RouterLink to="/analysis">ANALYSIS</RouterLink><RouterLink to="/archive">ARCHIVE</RouterLink><RouterLink to="/questionnaire">OUTLOOK</RouterLink></nav>
     <main :aria-busy="loading">
       <WelcomeView v-if="page === 'welcome'" />
@@ -280,6 +287,7 @@ watch([() => route.fullPath, loading], async () => {
               <div v-else class="rest-row"><span>{{ day.label }} · {{ day.weekday }}</span><span>REST</span></div>
             </div>
             <WeekCapacity :week="week" :ranges="analysis.ranges" />
+            <figure class="cond-card" aria-label="Conditioning equivalent minutes"><div class="cond-head"><div><div class="eyebrow">CONDITIONING</div><h3>Equivalent minutes <em>ESTIMATE</em></h3></div><strong>{{ conditioningWeek }}<small> min/wk</small></strong></div><div class="cond-band"><div class="cond-zone"></div><div class="cond-bars"><i v-for="bar in conditioningBars" :key="bar.n" :class="[bar.kind, { on: bar.n === currentWeek }]" :style="{ height: `${Math.min(100, bar.minutes / 60 * 100)}%` }" :title="`Week ${bar.n}: ${bar.minutes} min`"></i></div></div><div class="cond-scale"><span>0</span><span>20</span><span>60</span></div><p class="cond-note">Moderate-intensity equivalent from planned cardio. It is an estimate, not a measured load.</p></figure>
             <details class="gear gpp" data-testid="gpp"><summary>GPP <span class="chip">CARDIO / RECOVERY / WEAK POINT</span></summary><p class="micro-copy">Planned supporting work. These targets are not recorded completion and do not add SBD equivalent sets.</p><p v-if="!weekGpp.length && !weekCardio.length">No supporting work prescribed for this week.</p><article v-for="item in weekGpp" :key="item.item_idx"><h3>{{ item.item || item.domain || 'Supporting work' }}</h3><p>{{ item.rx_text || `${display(item.target_value)} ${item.target_unit || ''}` }}</p><small v-if="item.note">{{ item.note }}</small></article><article v-for="item in weekCardio" :key="item.day"><h3>Cardio · {{ dateLabel(item.date) }} <small v-if="item.optional">OPTIONAL</small></h3><p>{{ item.note }}</p><p v-if="item.duration_min">{{ display(item.duration_min) }} min · {{ item.zone || 'Prescribed effort' }}<template v-if="item.hr_low && item.hr_high"> · HR {{ item.hr_low }}–{{ item.hr_high }}</template></p></article></details>
             </div><aside class="week-aside"><MuscleMap compact :geometry="geometry" :leaves="leaves" :heat-scale="analysis.heatScale" :week-number="currentWeek" :week-count="plan.weeks.length" @week="selectWeek" /></aside></div>
           </template>
