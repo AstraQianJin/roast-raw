@@ -1,6 +1,7 @@
 <script setup>
 import { ref, watch } from 'vue';
 import LogEditor from './LogEditor.vue';
+import BarbellStrip from './BarbellStrip.vue';
 
 const props = defineProps({
   rows: { type: Array, default: () => [] },
@@ -22,6 +23,13 @@ const toggleEditor = row => {
 watch(() => props.readonly, value => { if (value) openEditor.value = null; });
 const roleNames = { main: 'MAIN LIFTS', sbdVar: 'SBD VARIATIONS', nonSbdVar: 'OTHER VARIATIONS', accessory: 'ACCESSORIES' };
 const display = value => value === null || value === undefined ? '—' : Number(value).toLocaleString('en-US', { maximumFractionDigits: 1 });
+const topLoad = row => row.segments.reduce((max, segment) => segment.load !== null && segment.load > max ? segment.load : max, 0);
+const logSummary = row => {
+  const log = props.logs[logKey(row)];
+  if (!log) return null;
+  if (log.sets === 0) return 'SKIPPED';
+  return `${display(log.load)} × ${log.reps} × ${log.sets}${log.rpe !== null && log.rpe !== undefined ? ` @ ${display(log.rpe)}` : ''}`;
+};
 </script>
 
 <template>
@@ -31,11 +39,21 @@ const display = value => value === null || value === undefined ? '—' : Number(
         <div class="section-heading"><span class="section-label">{{ label }}</span><span class="mono">{{ String(rows.filter(row => row.bucket === role).length).padStart(2, '0') }}</span></div>
         <article v-for="row in rows.filter(row => row.bucket === role)" :key="`${row.week}-${row.day}-${row.seq}`" :class="['exercise', row.bucket]">
           <div class="exercise-heading"><span class="exercise-index">{{ String(row.seq).padStart(2, '0') }}</span><span class="exercise-name">{{ row.nameEn }}</span><span class="rpe">RPE {{ display(row.targetRpe) }}</span></div>
-          <div v-for="(segment, index) in row.segments" :key="index" class="prescription">
-            <span class="segment-label">{{ segment.label }}</span>
-            <span class="reps">{{ segment.sets }} × {{ segment.reps }}<small v-if="segment.unit"> {{ segment.unit }}</small></span>
-            <span class="weight">{{ role === 'accessory' ? '—' : display(segment.load) }}<small v-if="role !== 'accessory' && segment.load !== null"> kg</small></span>
-            <small>{{ segment.pct === null || role === 'accessory' ? '' : `${display(segment.pct)}%` }}</small>
+          <BarbellStrip v-if="role === 'main' && topLoad(row) > 0" class="exercise-barbell" :load="topLoad(row)" :collar-pair="0" />
+          <div class="exercise-foot">
+            <div v-for="(segment, index) in row.segments" :key="index" class="prescription">
+              <span class="lbox"><small>{{ role === 'accessory' ? 'LOAD' : 'LOAD KG' }}</small><b class="weight">{{ role === 'accessory' ? '—' : display(segment.load) }}</b></span>
+              <span class="rbox"><small>SETS × REPS</small><b class="reps">{{ segment.sets }} × {{ segment.reps }}<template v-if="segment.unit"> {{ segment.unit }}</template></b></span>
+              <span v-if="segment.pct !== null && role !== 'accessory'" class="pct-chip">{{ display(segment.pct) }}%</span>
+            </div>
+            <button
+              v-if="!readonly"
+              type="button"
+              class="log-toggle"
+              :class="{ done: !!logs[logKey(row)] }"
+              :aria-expanded="openEditor === editorKey(row)"
+              @click="toggleEditor(row)"
+            ><small>{{ openEditor === editorKey(row) ? 'CLOSE' : 'LOG' }}</small><b v-if="logSummary(row)">{{ logSummary(row) }}</b><b v-else>—</b></button>
           </div>
           <p v-if="systemLoads[logKey(row)]" class="system-load" data-testid="system-load">
             Total system weight ·
@@ -46,13 +64,6 @@ const display = value => value === null || value === undefined ? '—' : Number(
             </template>
             <span v-if="systemLoads[logKey(row)].logged" class="logged-system">Logged total {{ display(systemLoads[logKey(row)].logged.total) }} kg · {{ systemLoads[logKey(row)].logged.adjustment === null ? 'external load unknown' : `${display(systemLoads[logKey(row)].logged.adjustment)} kg external adjustment` }}.</span>
           </p>
-          <button
-            v-if="!readonly"
-            type="button"
-            class="log-toggle"
-            :aria-expanded="openEditor === editorKey(row)"
-            @click="toggleEditor(row)"
-          >{{ openEditor === editorKey(row) ? 'Close' : 'Log sets' }}</button>
           <LogEditor
             v-if="visitedEditors.has(editorKey(row))"
             v-show="!readonly && openEditor === editorKey(row)"
@@ -69,28 +80,35 @@ const display = value => value === null || value === undefined ? '—' : Number(
 </template>
 
 <style scoped>
-.system-load { font-size: 12px; color: var(--muted); line-height: 1.6; overflow-wrap: anywhere; }
-.logged-system { display: block; }
-.log-toggle {
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  min-width: 44px;
-  max-width: 100%;
-  margin-top: 10px;
-  padding: 6px 14px;
-  font: 600 10px var(--mono);
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  white-space: normal;
-  overflow-wrap: anywhere;
+.exercise-barbell { margin: 10px 0 2px; }
+.exercise-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; margin-top: 10px; }
+.prescription { display: flex; gap: 8px; align-items: stretch; flex: 1 1 auto; min-width: 0; }
+.lbox, .rbox, .log-toggle {
+  display: flex; flex-direction: column; justify-content: center; gap: 2px;
+  min-height: 48px; padding: 6px 10px; border-radius: 9px;
+  background: var(--inset); border: 1px solid var(--line-soft);
 }
-.log-toggle::before { content: '+'; margin-right: 7px; font-size: 13px; }
-.log-toggle[aria-expanded='true'] { border-color: var(--accent); color: var(--accent); }
-.log-toggle[aria-expanded='true']::before { content: '−'; }
-.log-toggle:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+.lbox { flex: 0 1 auto; }
+.rbox { flex: 1 1 auto; min-width: 84px; }
+.lbox small, .rbox small, .log-toggle small { font: 800 8px var(--mono); letter-spacing: .1em; color: var(--muted); }
+.lbox b { font: 800 19px var(--mono); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.rbox b { font: 700 15px var(--mono); font-variant-numeric: tabular-nums; }
+.pct-chip { align-self: center; font: 800 9px var(--mono); color: var(--gold); border: 1px solid var(--gold-line); background: var(--gold-soft); border-radius: 6px; padding: 3px 6px; white-space: nowrap; }
+.log-toggle {
+  flex: 1 1 100%; flex-direction: row; align-items: center; justify-content: flex-start; gap: 8px;
+  min-width: 44px; max-width: 100%; cursor: pointer; text-align: left;
+  color: var(--ink); font: inherit; white-space: normal; overflow-wrap: anywhere;
+}
+.log-toggle b { font: 700 13px var(--mono); font-variant-numeric: tabular-nums; }
+.log-toggle.done { border-color: var(--gold-line); }
+.log-toggle.done small { color: var(--gold); }
+.log-toggle.done small::before { content: '✓ '; }
+.log-toggle[aria-expanded='true'] { border-color: var(--accent); }
+.log-toggle[aria-expanded='true'] small { color: var(--accent); }
+.log-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.system-load { font-size: 12px; color: var(--muted); line-height: 1.6; overflow-wrap: anywhere; margin-top: 8px; }
+.logged-system { display: block; }
+@media (min-width: 560px) {
+  .log-toggle { flex: 1 1 180px; }
 }
 </style>

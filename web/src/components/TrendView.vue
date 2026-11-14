@@ -271,13 +271,13 @@ const performanceDescription = computed(() =>
 <style scoped>
 .trend-view { min-width: 0; max-width: 100%; margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--accent); overflow-wrap: anywhere; }
 .trend-heading .section-kicker { color: var(--accent); flex-wrap: wrap; }
-.trend-heading h2 { font-family: var(--serif); font-size: clamp(30px, 5vw, 42px); }
+.trend-heading h2 { font-family: var(--display); font-weight: 800; text-transform: uppercase; font-size: clamp(30px, 5vw, 42px); }
 .trend-heading h2 em { color: var(--muted); }
 .reading-note, .chart-figure figcaption, .movement-context { font-size: 12px; line-height: 1.65; color: var(--muted); }
 .reading-note { margin-top: 10px; }
 .trend-section { min-width: 0; margin-top: 26px; padding: 20px 16px; background: var(--panel); border: 1px solid var(--line); }
 .chart-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 10px; }
-.chart-heading h3 { font-family: var(--serif); font-size: clamp(25px, 4vw, 32px); }
+.chart-heading h3 { font-family: var(--display); font-weight: 800; text-transform: uppercase; font-size: clamp(25px, 4vw, 32px); }
 .unit-label { color: var(--muted); font: 10px/1.6 var(--mono); letter-spacing: .04em; }
 .chart-legend { display: flex; flex-wrap: wrap; gap: 12px 20px; list-style: none; padding: 0; margin: 18px 0 12px; font-size: 12px; }
 .chart-legend li { display: flex; align-items: center; gap: 7px; min-width: 0; }

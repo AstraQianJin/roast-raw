@@ -437,7 +437,7 @@ details[open] > summary .disclosure { transform: rotate(180deg); }
 .record-form { min-width: 0; margin: 0; }
 .body-form { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line-soft); }
 .form-heading { margin-bottom: 14px; }
-h3 { margin: 0 0 5px; font-family: var(--serif); font-size: 22px; line-height: 1.2; font-weight: 500; }
+h3 { margin: 0 0 5px; font-family: var(--display); font-weight: 800; text-transform: uppercase; font-size: 22px; line-height: 1.2; font-weight: 500; }
 p { margin: 0 0 10px; overflow-wrap: anywhere; }
 .micro-copy, .field-hint, .baseline-line, .bodyweight-source { color: var(--muted); font-size: 12px; line-height: 1.5; }
 fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }

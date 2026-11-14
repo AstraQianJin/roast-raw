@@ -269,6 +269,9 @@ onBeforeUnmount(() => cleanup());
 
 <style scoped>
 .welcome { --ease: cubic-bezier(.22, 1, .36, 1); position: relative; }
+.welcome h1, .welcome h2, .welcome h3 { font-family: var(--serif); font-weight: 400; text-transform: none; letter-spacing: -.035em; line-height: 1.03; }
+.welcome h1 { font-size: clamp(42px, 8vw, 68px); }
+.welcome button, .welcome .wl-btn { font-family: var(--sans); font-weight: 600; text-transform: none; letter-spacing: 0; }
 .wl-progress { position: fixed; top: 0; left: 0; right: 0; height: 2px; background: var(--accent); transform-origin: 0 50%; transform: scaleX(var(--prog, 0)); z-index: 30; pointer-events: none; }
 .wl-hero { padding-top: clamp(20px, 4vh, 44px); }
 .wl-hero-grid { display: grid; grid-template-columns: minmax(0, 1.02fr) minmax(0, .98fr); grid-template-areas: 'copy visual' 'lede visual' 'cta visual' 'fine visual'; column-gap: clamp(24px, 4vw, 54px); align-items: center; }

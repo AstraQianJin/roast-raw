@@ -764,9 +764,9 @@ onBeforeUnmount(() => { disposed = true; sequence += 1; controller?.abort(); });
 .questionnaire { box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; margin: 24px 0; padding: 20px 16px; border: 1px solid var(--line); color: var(--ink); background: var(--panel); font: 14px/1.6 var(--sans); overflow-wrap: anywhere; }
 .questionnaire *, .questionnaire *::before, .questionnaire *::after { box-sizing: border-box; }
 p, h2, h3, h4, h5, dl, dd { margin: 0; }
-h2 { margin-top: 8px; font: 400 clamp(28px, 5vw, 36px)/1.15 var(--serif); }
+h2 { margin-top: 8px; font: 800 clamp(28px, 5vw, 36px)/1.15 var(--display); }
 h2 em { color: var(--muted); font-weight: 400; }
-h3 { font: 400 24px/1.25 var(--serif); }
+h3 { font: 800 24px/1.25 var(--display); }
 h4 { margin-top: 18px; font: 600 15px/1.4 var(--sans); }
 h5 { font: 600 13px/1.4 var(--sans); }
 .kicker { color: var(--accent); font: 11px/1.6 var(--mono); letter-spacing: .06em; text-transform: uppercase; }

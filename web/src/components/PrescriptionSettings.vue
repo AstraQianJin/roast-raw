@@ -439,7 +439,7 @@ onBeforeUnmount(() => {
 .current-tag { padding: 2px 6px; border: 1px solid var(--line); font-size: 11px; }
 .prescription-history .empty-message { padding: 12px; }
 .review-section { display: grid; gap: 14px; min-width: 0; border-top: 1px solid var(--line); padding-top: 18px; }
-.review-section h3 { margin: 0; font: 400 24px/1.2 var(--serif, Georgia, serif); }
+.review-section h3 { margin: 0; font: 800 24px/1.2 var(--display); }
 .change-row { display: grid; gap: 12px; padding: 14px; min-width: 0; border: 1px solid var(--line); }
 .change-row + .change-row { border-top: 0; }
 .change-row header { display: grid; gap: 4px; }
