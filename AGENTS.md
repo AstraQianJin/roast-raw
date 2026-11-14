@@ -16,13 +16,14 @@ No completed zero exit code means no all-green claim. UI changes also require bu
 
 ## Safety boundaries
 
-- Only Web: Vue/Vite/Motion One + FastAPI/SQLite. No Android/WebView/APK, offline training cache or sync service. English UI, handwritten CSS, anatomy default-visible, editorial report layout.
+- Only Web: Vue/Vite/Motion One + FastAPI/SQLite. No Android/WebView/APK, offline training cache or sync service. English UI, handwritten CSS, anatomy default-visible. App pages reuse the old App visual language and keep no original decorative inventions beyond the barbell load UI and the muscle map (user ruling 2026-11-14); the landing keeps the ported release-page style. Light = old ex warm paper, Dark = old dark.
 - Ref and the old project source are read-only. Old Skills may be inspected; never run old build/deploy workflows. The old server is fully usable per user ruling 2026-11-14 (timestamped backup before any overwrite); after 0.20 keep the old site plus a friend link to the new site. The only approved Ref edit changes SSH root to ubuntu in Ref/07_Permissions/ACCESS.md.
 - Never print, commit or package keys/environment secrets/databases. AI/GitHub use process environment, SSH uses key/config. Never alter permissions or evade a denied operation. Credential steps are in Ref/07_Permissions/ACCESS.md; current TODO decisions override stale timings there.
 - Keep fail-closed imports, fixed Asia/Shanghai calendar, arbitrary weeks, actual-only completion and explicit zero sets. Preserve historical records/prescription versions. Back up before migration; do not reinterpret old fatigue.
 - Do not hand-edit generated data/dist, loosen tolerances, delete assertions or neutralize sabotage. Statistics, calendar, schemas and tokens each retain one source.
 - Keep raw sets, SBD equivalent capacity and muscle coefficients distinct. Consult current decisions before policy changes; retain legacy fixture verification.
-- Do not deploy/push early, overwrite shared services/repositories, delete source data or perform destructive git operations. Current destination/timing approval is scoped in TODO.md; milestone policy is not blanket permission.
+- Do not overwrite shared services/repositories, delete source data or perform destructive git operations. Git push to the private remote and the formal acceptance deployment happen only at 0.20 (destination scoped in TODO.md). Stop-and-deploy preview below is the standing exception for preview builds.
+- Stop-and-deploy preview (user ruling 2026-11-14): whenever work stops for any reason (batch close, blocker, waiting on a ruling), first create the local commit, then deploy the current build to the new server as an HTML preview so the owner can inspect it in a phone browser. The preview carries the shared password gate (value injected from process environment at deploy time, never written to repo, docs or bundle). Preview deploys reuse the same timestamped-backup pipeline as the formal deployment.
 
 ## Work and handoff
 

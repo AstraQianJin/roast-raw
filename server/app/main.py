@@ -1,3 +1,5 @@
+import base64
+import hmac
 import json
 import os
 from contextlib import asynccontextmanager
@@ -18,7 +20,7 @@ from .calendar import calendar_state
 from .questionnaire import skeleton, validate_questionnaire
 from .stats.engine import analyze, library
 from .stats.performance import performance
-from .store import ReadOnlyError, Store, timestamp
+from .store import AiQuotaError, ReadOnlyError, Store, timestamp
 from .validation import Reject, validate_plan
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -144,6 +146,7 @@ def create_app(db_path=None, plan_path=None):
         store.upgrade()
         store.upgrade_prescriptions()
         store.upgrade_questionnaire()
+        store.upgrade_ai()
         yield
 
     package_version = json.loads((ROOT / 'web/package.json').read_text(encoding='utf-8'))['version']
@@ -151,7 +154,24 @@ def create_app(db_path=None, plan_path=None):
     release_version = f'{version_parts[0]}.{int(version_parts[2]):02d}'
     app = FastAPI(title='Roast Raw', version=package_version, lifespan=lifespan)
     app.state.store = store
-    app.add_middleware(TrustedHostMiddleware, allowed_hosts=['127.0.0.1', 'localhost', 'testserver'])
+    allowed_hosts = ['127.0.0.1', 'localhost', 'testserver']
+    allowed_hosts += [host.strip() for host in os.environ.get('RR_ALLOWED_HOSTS', '').split(',') if host.strip()]
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
+
+    access_password = os.environ.get('RR_ACCESS_PASSWORD', '')
+    if access_password:
+        @app.middleware('http')
+        async def password_gate(request, call_next):
+            header = request.headers.get('authorization', '')
+            if header.lower().startswith('basic '):
+                try:
+                    decoded = base64.b64decode(header[6:], validate=True).decode('utf-8')
+                except (ValueError, UnicodeDecodeError):
+                    decoded = ''
+                if hmac.compare_digest(decoded.split(':', 1)[-1], access_password):
+                    return await call_next(request)
+            return JSONResponse(status_code=401, content={'error': 'Password required'},
+                                headers={'WWW-Authenticate': 'Basic realm="Roast Raw"'})
 
     @app.exception_handler(Reject)
     async def rejected(request, error):
@@ -433,6 +453,87 @@ def create_app(db_path=None, plan_path=None):
             raise HTTPException(422, 'Expected valid JSON')
         validate_plan(doc, file='request.json')
         return {'valid': True, 'persisted': False, 'schemaVersion': doc['schemaVersion']}
+
+    @app.exception_handler(AiQuotaError)
+    async def ai_quota_exhausted(request, error):
+        return JSONResponse(status_code=429, content={'error': str(error)})
+
+    class AiChatMessage(BaseModel):
+        model_config = ConfigDict(extra='forbid', strict=True)
+        role: Literal['user', 'assistant']
+        content: str = Field(min_length=1, max_length=8000)
+
+    class AiOutlookInput(BaseModel):
+        model_config = ConfigDict(extra='forbid', strict=True)
+        cycle_id: str = Field(min_length=1)
+
+    class AiChatInput(AiOutlookInput):
+        message: str = Field(min_length=1, max_length=4000)
+        conversation: list[AiChatMessage] = Field(default_factory=list, max_length=40)
+
+    def ai_context(cycle_id):
+        review = cycle_review(cycle_id)
+        saved = store.questionnaire(cycle_id)
+        questionnaire = saved or {'status': 'empty', 'payload': skeleton()}
+        return review, questionnaire
+
+    @app.get('/api/ai/status')
+    def ai_status(cycle_id: str):
+        from . import ai
+        active_plan(cycle_id)
+        return {'configured': ai.configured(), 'quota': store.ai_quota(ai.beijing_day()),
+                'calls': store.ai_calls(cycle_id)}
+
+    @app.get('/api/ai/call/{call_id}')
+    def ai_call_record(call_id: int):
+        record = store.ai_call(call_id)
+        if record is None:
+            raise HTTPException(404, 'AI call not found')
+        return record
+
+    @app.get('/api/ai/export')
+    def ai_export(cycle_id: str):
+        from .ai import build_outlook_prompt
+        review, questionnaire = ai_context(cycle_id)
+        bundle = {'review': review, 'questionnaire': questionnaire,
+                  'prompt': build_outlook_prompt(review, questionnaire)}
+        return JSONResponse(bundle, headers={
+            'Content-Disposition': 'attachment; filename="RoastRaw-ai-export.json"', 'Cache-Control': 'no-store'})
+
+    def run_ai(cycle_id, kind, prompt, messages, parse=None):
+        from . import ai
+        if not ai.configured():
+            raise HTTPException(503, 'DeepSeek is not configured on this server. Export the review, questionnaire and prompt for an external AI instead.')
+        call_id = store.reserve_ai_call(cycle_id, ai.beijing_day(), kind, prompt, messages)
+        try:
+            content = ai.call_deepseek(messages)
+            result = parse(content) if parse else content
+        except Exception as exc:
+            message = f'{type(exc).__name__}: {exc}'[:500]
+            store.finish_ai_call(call_id, 'error', error=message)
+            raise HTTPException(502, f'AI call failed ({message}). It counted against today\'s quota; retry manually or export for an external AI.')
+        store.finish_ai_call(call_id, 'ok', response=content)
+        return {'id': call_id, 'result': result, 'quota': store.ai_quota(ai.beijing_day())}
+
+    @app.post('/api/ai/outlook')
+    def ai_outlook(payload: AiOutlookInput):
+        from .ai import build_outlook_prompt, parse_outlook
+        writable(payload.cycle_id)
+        review, questionnaire = ai_context(payload.cycle_id)
+        prompt = build_outlook_prompt(review, questionnaire)
+        return run_ai(payload.cycle_id, 'outlook', prompt,
+                      [{'role': 'user', 'content': prompt}], parse=parse_outlook)
+
+    @app.post('/api/ai/chat')
+    def ai_chat(payload: AiChatInput):
+        from .ai import CHAT_SYSTEM, build_outlook_prompt
+        writable(payload.cycle_id)
+        review, questionnaire = ai_context(payload.cycle_id)
+        prompt = build_outlook_prompt(review, questionnaire)
+        messages = ([{'role': 'system', 'content': CHAT_SYSTEM + '\n\nCONTEXT:\n' + prompt}]
+                    + [entry.model_dump() for entry in payload.conversation]
+                    + [{'role': 'user', 'content': payload.message}])
+        return run_ai(payload.cycle_id, 'chat', prompt, messages)
 
     web = ROOT / 'web' / 'dist'
     if (web / 'index.html').is_file():

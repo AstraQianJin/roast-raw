@@ -13,6 +13,10 @@ class ReadOnlyError(ValueError):
     pass
 
 
+class AiQuotaError(ValueError):
+    pass
+
+
 class Store:
     def __init__(self, path):
         self.path = Path(path)
@@ -32,7 +36,7 @@ class Store:
     def initialize(self, plan):
         with self.connect() as db:
             version = db.execute('PRAGMA user_version').fetchone()[0]
-            if version not in (0, 1, 2, 3, 4):
+            if version not in (0, 1, 2, 3, 4, 5):
                 raise RuntimeError('Unsupported database version; no data was changed')
             db.execute('PRAGMA journal_mode=WAL')
             db.executescript('''
@@ -88,7 +92,7 @@ class Store:
     def upgrade(self):
         with self.connect() as db:
             version = db.execute('PRAGMA user_version').fetchone()[0]
-        if version in (2, 3, 4):
+        if version in (2, 3, 4, 5):
             return
         if version != 1:
             raise RuntimeError('Unsupported database version; no data was changed')
@@ -108,7 +112,7 @@ class Store:
         from .stats.variations import digest
         with self.connect() as db:
             version = db.execute('PRAGMA user_version').fetchone()[0]
-        if version in (3, 4):
+        if version in (3, 4, 5):
             return
         if version != 2:
             raise RuntimeError('Unsupported database version; no data was changed')
@@ -127,7 +131,7 @@ class Store:
     def upgrade_questionnaire(self):
         with self.connect() as db:
             version = db.execute('PRAGMA user_version').fetchone()[0]
-        if version == 4:
+        if version in (4, 5):
             return
         if version != 3:
             raise RuntimeError('Unsupported database version; no data was changed')
@@ -139,6 +143,65 @@ class Store:
                 payload TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ('draft','complete')),
                 updated_at TEXT NOT NULL)''')
             db.execute('PRAGMA user_version=4')
+
+    def upgrade_ai(self):
+        with self.connect() as db:
+            version = db.execute('PRAGMA user_version').fetchone()[0]
+        if version == 5:
+            return
+        if version != 4:
+            raise RuntimeError('Unsupported database version; no data was changed')
+        self.snapshot()
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            db.execute('''CREATE TABLE ai_calls (
+                id INTEGER PRIMARY KEY, cycle_id TEXT NOT NULL REFERENCES cycles(id),
+                day TEXT NOT NULL, kind TEXT NOT NULL CHECK(kind IN ('outlook','chat')),
+                status TEXT NOT NULL CHECK(status IN ('reserved','ok','error')),
+                prompt TEXT NOT NULL, conversation TEXT NOT NULL DEFAULT '[]',
+                response TEXT, error TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)''')
+            db.execute('CREATE INDEX ai_calls_day ON ai_calls(day)')
+            db.execute('PRAGMA user_version=5')
+
+    AI_DAILY_LIMIT = 20
+
+    def ai_quota(self, day):
+        with self.connect() as db:
+            used = db.execute('SELECT COUNT(*) FROM ai_calls WHERE day=?', (day,)).fetchone()[0]
+        return {'date': day, 'used': used, 'limit': self.AI_DAILY_LIMIT,
+                'remaining': max(0, self.AI_DAILY_LIMIT - used)}
+
+    def reserve_ai_call(self, cycle_id, day, kind, prompt, conversation):
+        stamp = timestamp()
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            used = db.execute('SELECT COUNT(*) FROM ai_calls WHERE day=?', (day,)).fetchone()[0]
+            if used >= self.AI_DAILY_LIMIT:
+                raise AiQuotaError('Daily AI quota reached (20 calls, Beijing time). Try again tomorrow or export for an external AI.')
+            cursor = db.execute('''INSERT INTO ai_calls(cycle_id,day,kind,status,prompt,conversation,created_at,updated_at)
+                VALUES(?,?,?,'reserved',?,?,?,?)''',
+                (cycle_id, day, kind, prompt, json.dumps(conversation, ensure_ascii=False), stamp, stamp))
+            return cursor.lastrowid
+
+    def finish_ai_call(self, call_id, status, response=None, error=None):
+        with self.connect() as db:
+            db.execute('UPDATE ai_calls SET status=?,response=?,error=?,updated_at=? WHERE id=?',
+                       (status, response, error, timestamp(), call_id))
+
+    def ai_calls(self, cycle_id):
+        with self.connect() as db:
+            rows = db.execute('''SELECT id,day,kind,status,error,created_at,updated_at FROM ai_calls
+                WHERE cycle_id=? ORDER BY id DESC LIMIT 100''', (cycle_id,)).fetchall()
+        return [dict(row) for row in rows]
+
+    def ai_call(self, call_id):
+        with self.connect() as db:
+            row = db.execute('SELECT * FROM ai_calls WHERE id=?', (call_id,)).fetchone()
+        if row is None:
+            return None
+        record = dict(row)
+        record['conversation'] = json.loads(record['conversation'])
+        return record
 
     def questionnaire(self, cycle_id):
         with self.connect() as db:
@@ -300,12 +363,12 @@ class Store:
         from .validation import validate_plan
         validate_plan(plan, file='import.json')
         with self.connect() as db:
-            if db.execute('PRAGMA user_version').fetchone()[0] != 4:
+            if db.execute('PRAGMA user_version').fetchone()[0] != 5:
                 raise RuntimeError('Unsupported database version. No data was changed.')
         self.snapshot()
         with self.connect() as db:
             db.execute('BEGIN IMMEDIATE')
-            if db.execute('PRAGMA user_version').fetchone()[0] != 4:
+            if db.execute('PRAGMA user_version').fetchone()[0] != 5:
                 raise RuntimeError('Unsupported database version. No data was changed.')
             active = db.execute("SELECT id FROM cycles WHERE status='active'").fetchone()
             source = self._review_source(db, active['id']) if active else None

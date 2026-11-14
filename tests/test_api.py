@@ -406,7 +406,7 @@ class APITests(GeneratedPlanCase):
             tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
             self.assertTrue(REQUIRED_TABLES <= tables, f'Missing required tables: {REQUIRED_TABLES - tables}')
             self.assertIn('logs_journal', tables)
-            self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], 4)
+            self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], 5)
             self.assertEqual(db.execute('PRAGMA journal_mode').fetchone()[0].lower(), 'wal')
             self.assertEqual(db.execute('PRAGMA foreign_key_check').fetchall(), [])
             for table in ('plans', 'logs', 'logs_journal', 'readiness', 'archives', 'body_metrics'):

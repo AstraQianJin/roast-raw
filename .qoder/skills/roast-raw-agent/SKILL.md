@@ -75,7 +75,9 @@ For product behavior/statistical meaning/scope ambiguity ask the user with conci
 
 Update TODO every hundredth-version step: distinguish ideas from approved directions, remove verified completed work, retain unresolved dependencies. Change version in package.json and sync lockfile. Create new local commits only when authorized, review staged files and secrets, never bypass hooks or modify git config.
 
-Remote pushes occur only at tenth-version milestones and only to the explicitly authorized destination. Deployment timing, host, SSH identity, anonymous-access risk and AI quota come from current TODO decisions. Do not deploy early, create a public repository, overwrite an existing repository/service or claim deployment from a local build. Back up before shared-server replacement and verify health/restart/readback.
+Remote pushes occur only at tenth-version milestones and only to the explicitly authorized destination. Deployment timing, host, SSH identity, anonymous-access risk and AI quota come from current TODO decisions. Do not create a public repository, overwrite an existing repository/service or claim deployment from a local build. Back up before shared-server replacement and verify health/restart/readback.
+
+Stop-and-deploy preview (user ruling 2026-11-14): at every stop — batch close, blocker, or waiting on a ruling — commit locally first, then deploy the current build to the new server as an HTML preview for phone-browser inspection, using server/tools/deploy.py with the password gate injected from process environment. The formal acceptance deployment and git push remain 0.20-only. A stop without a preview deploy is an incomplete stop unless the deploy itself is the blocker; report that explicitly.
 
 Keep progress concise. A completion receipt states outcome, measured evidence, changed scope, unverified boundaries and next owner. Separate completed facts from future plans. Never substitute tool-call counts for billing/token usage. Use status emoji only when explicitly requested.
 
