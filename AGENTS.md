@@ -17,7 +17,7 @@ No completed zero exit code means no all-green claim. UI changes also require bu
 ## Safety boundaries
 
 - Only Web: Vue/Vite/Motion One + FastAPI/SQLite. No Android/WebView/APK, offline training cache or sync service. English UI, handwritten CSS, anatomy default-visible, editorial report layout.
-- Ref and the old project are read-only. Old Skills may be inspected; never run old build/deploy workflows or touch the old server. The only approved Ref edit changes SSH root to ubuntu in Ref/07_Permissions/ACCESS.md.
+- Ref and the old project source are read-only. Old Skills may be inspected; never run old build/deploy workflows. The old server is fully usable per user ruling 2026-11-14 (timestamped backup before any overwrite); after 0.20 keep the old site plus a friend link to the new site. The only approved Ref edit changes SSH root to ubuntu in Ref/07_Permissions/ACCESS.md.
 - Never print, commit or package keys/environment secrets/databases. AI/GitHub use process environment, SSH uses key/config. Never alter permissions or evade a denied operation. Credential steps are in Ref/07_Permissions/ACCESS.md; current TODO decisions override stale timings there.
 - Keep fail-closed imports, fixed Asia/Shanghai calendar, arbitrary weeks, actual-only completion and explicit zero sets. Preserve historical records/prescription versions. Back up before migration; do not reinterpret old fatigue.
 - Do not hand-edit generated data/dist, loosen tolerances, delete assertions or neutralize sabotage. Statistics, calendar, schemas and tokens each retain one source.
