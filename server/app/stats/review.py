@@ -210,6 +210,7 @@ def build_review(source, exported_at, app_version, as_of):
         'readiness': {'records': readiness, 'legacy': copy.deepcopy(source.get('legacy_readiness', []))},
         'prescription_versions': copy.deepcopy(source.get('prescription_versions', [])),
         'journals': copy.deepcopy(source.get('journals', {'logs': [], 'records': []})),
+        'questionnaire': copy.deepcopy(source.get('questionnaire')),
         'planned_vs_actual': _planned_actual(plan, logs),
         'completion': completion, 'attainment': attained,
         'e1rm': {'movements': copy.deepcopy(performance(plan, logs)['movements']), 'main': main},

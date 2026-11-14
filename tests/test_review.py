@@ -20,7 +20,7 @@ APP_VERSION = '0.0.6'
 REQUIRED = {
     'schema', 'exported_at', 'plan_id', 'profile_start', 'profile_end', 'plan',
     'logs', 'readiness', 'planned_vs_actual', 'completion', 'attainment',
-    'e1rm', 'end_state', 'next_outlook',
+    'e1rm', 'end_state', 'next_outlook', 'questionnaire',
 }
 OPTIONAL = {
     'app_version', 'as_of', 'cycle', 'body_metrics', 'prescription_versions',

@@ -180,14 +180,14 @@ class PrescriptionTests(unittest.TestCase):
                        (self.cycle, row['date'], 'legacy', 7, 'Fatigue is not recovery'))
         return row
 
-    def assert_snapshot(self, snapshot, rows, version=3):
+    def assert_snapshot(self, snapshot, rows, version=4):
         with open_db(snapshot) as db:
             self.assertEqual(db.execute('PRAGMA integrity_check').fetchone()[0], 'ok')
             self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], version)
             self.assertEqual(db.execute('PRAGMA foreign_key_check').fetchall(), [])
         self.assertEqual(database_rows(snapshot), rows)
 
-    def test_get_defaults_and_preview_are_read_only_with_fresh_version_three(self):
+    def test_get_defaults_and_preview_are_read_only_with_fresh_current_version(self):
         before = database_rows(self.path)
         before_backups = backups(self.path)
         current = self.current()
@@ -207,7 +207,7 @@ class PrescriptionTests(unittest.TestCase):
         self.assertEqual(current['versions'][0]['id'], canonical_id(self.seed))
         self.assertTrue(current['versions'][0]['current'])
         with open_db(self.path) as db:
-            self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], 3)
+            self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], 4)
         payload = {'cycle_id': self.cycle, 'current_id': current['currentId'], 'references': current['references']}
         preview = self.preview(payload)
         self.assertTrue(preview['changes'])
@@ -697,8 +697,14 @@ class PrescriptionMigrationTests(unittest.TestCase):
             store.initialize(seed)
             store.upgrade()
             store.upgrade_prescriptions()
-            self.assertEqual(database_rows(path), after)
-            self.assertEqual(backups(path), stable_backups)
+            expected = dict(after)
+            expected['questionnaires'] = []
+            self.assertEqual(database_rows(path), expected)
+            migrated_backups = backups(path) - stable_backups
+            self.assertEqual(len(migrated_backups), 1, 'v4 questionnaire migration must snapshot once')
+            with open_db(next(iter(migrated_backups))) as db:
+                self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], 3)
+                self.assertEqual(db.execute('PRAGMA integrity_check').fetchone()[0], 'ok')
 
 
 if __name__ == '__main__':

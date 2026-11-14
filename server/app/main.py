@@ -15,7 +15,8 @@ from .stats.readiness import score_readiness
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .calendar import calendar_state
-from .stats.engine import analyze
+from .questionnaire import skeleton, validate_questionnaire
+from .stats.engine import analyze, library
 from .stats.performance import performance
 from .store import ReadOnlyError, Store, timestamp
 from .validation import Reject, validate_plan
@@ -125,6 +126,13 @@ class RestorePrescription(BaseModel):
     revision_id: str = Field(pattern=r'^[a-f0-9]{64}$')
 
 
+class QuestionnaireInput(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+    cycle_id: str = Field(min_length=1)
+    status: Literal['draft', 'complete']
+    payload: dict
+
+
 def create_app(db_path=None, plan_path=None):
     store = Store(db_path or os.environ.get('RR_DB_PATH', ROOT / 'data' / 'roastraw.sqlite3'))
 
@@ -135,6 +143,7 @@ def create_app(db_path=None, plan_path=None):
         store.initialize(seed)
         store.upgrade()
         store.upgrade_prescriptions()
+        store.upgrade_questionnaire()
         yield
 
     package_version = json.loads((ROOT / 'web/package.json').read_text(encoding='utf-8'))['version']
@@ -284,6 +293,22 @@ def create_app(db_path=None, plan_path=None):
         writable(payload.cycle_id)
         store.save_metrics(payload.cycle_id, payload.model_dump(exclude={'cycle_id'}))
         return metrics(payload.cycle_id, payload.date)
+
+    @app.get('/api/questionnaire')
+    def questionnaire(cycle_id: str):
+        active_plan(cycle_id)
+        saved = store.questionnaire(cycle_id)
+        if saved is None:
+            return {'cycle_id': cycle_id, 'status': 'empty', 'payload': skeleton(), 'updated_at': None}
+        return {'cycle_id': cycle_id, **saved}
+
+    @app.put('/api/questionnaire')
+    def save_questionnaire(payload: QuestionnaireInput):
+        writable(payload.cycle_id)
+        movement_ids = {entry['id'] for entry in library()['movements']}
+        validate_questionnaire(payload.payload, payload.status, movement_ids)
+        return {'cycle_id': payload.cycle_id,
+                **store.save_questionnaire(payload.cycle_id, payload.payload, payload.status)}
 
     @app.get('/api/prescription')
     def prescription(cycle_id: str):

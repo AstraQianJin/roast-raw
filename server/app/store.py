@@ -32,7 +32,7 @@ class Store:
     def initialize(self, plan):
         with self.connect() as db:
             version = db.execute('PRAGMA user_version').fetchone()[0]
-            if version not in (0, 1, 2, 3):
+            if version not in (0, 1, 2, 3, 4):
                 raise RuntimeError('Unsupported database version; no data was changed')
             db.execute('PRAGMA journal_mode=WAL')
             db.executescript('''
@@ -88,7 +88,7 @@ class Store:
     def upgrade(self):
         with self.connect() as db:
             version = db.execute('PRAGMA user_version').fetchone()[0]
-        if version in (2, 3):
+        if version in (2, 3, 4):
             return
         if version != 1:
             raise RuntimeError('Unsupported database version; no data was changed')
@@ -108,7 +108,7 @@ class Store:
         from .stats.variations import digest
         with self.connect() as db:
             version = db.execute('PRAGMA user_version').fetchone()[0]
-        if version == 3:
+        if version in (3, 4):
             return
         if version != 2:
             raise RuntimeError('Unsupported database version; no data was changed')
@@ -123,6 +123,43 @@ class Store:
                 db.execute('INSERT INTO prescription_versions VALUES(?,?,?,?)',
                            (row['cycle_id'], digest(json.loads(row['json'])), row['json'], timestamp()))
             db.execute('PRAGMA user_version=3')
+
+    def upgrade_questionnaire(self):
+        with self.connect() as db:
+            version = db.execute('PRAGMA user_version').fetchone()[0]
+        if version == 4:
+            return
+        if version != 3:
+            raise RuntimeError('Unsupported database version; no data was changed')
+        self.snapshot()
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            db.execute('''CREATE TABLE questionnaires (
+                cycle_id TEXT PRIMARY KEY REFERENCES cycles(id),
+                payload TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ('draft','complete')),
+                updated_at TEXT NOT NULL)''')
+            db.execute('PRAGMA user_version=4')
+
+    def questionnaire(self, cycle_id):
+        with self.connect() as db:
+            row = db.execute('SELECT payload,status,updated_at FROM questionnaires WHERE cycle_id=?',
+                             (cycle_id,)).fetchone()
+        if row is None:
+            return None
+        return {'status': row['status'], 'payload': json.loads(row['payload']), 'updated_at': row['updated_at']}
+
+    def save_questionnaire(self, cycle_id, payload, status):
+        stamp = timestamp()
+        encoded = json.dumps(payload, ensure_ascii=False, allow_nan=False)
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            self.require_active(db, cycle_id)
+            db.execute('INSERT INTO records_journal(cycle_id,kind,key,payload,created_at) VALUES(?,?,?,?,?)',
+                       (cycle_id, 'questionnaire', status, json.dumps({'status': status, 'payload': payload}), stamp))
+            db.execute('''INSERT INTO questionnaires VALUES(?,?,?,?)
+                ON CONFLICT(cycle_id) DO UPDATE SET payload=excluded.payload,status=excluded.status,
+                updated_at=excluded.updated_at''', (cycle_id, encoded, status, stamp))
+        return {'status': status, 'payload': payload, 'updated_at': stamp}
 
     def prescription_versions(self, cycle_id):
         from .stats.variations import digest
@@ -248,9 +285,13 @@ class Store:
             journals[name] = [{**dict(row), 'payload': json.loads(row['payload'])}
                               for row in db.execute(f'SELECT * FROM {table} WHERE cycle_id=? ORDER BY id', (cycle_id,))]
         archived = db.execute('SELECT review_json FROM archives WHERE cycle_id=?', (cycle_id,)).fetchone()
+        questionnaire = db.execute('SELECT payload,status,updated_at FROM questionnaires WHERE cycle_id=?',
+                                   (cycle_id,)).fetchone()
         return {'cycle': dict(cycle), 'plan': plan, 'logs': logs, 'body_metrics': metrics,
                 'readiness': readiness, 'legacy_readiness': legacy, 'prescription_versions': versions,
-                'journals': journals, 'saved_review': json.loads(archived['review_json']) if archived else None}
+                'journals': journals, 'saved_review': json.loads(archived['review_json']) if archived else None,
+                'questionnaire': {'status': questionnaire['status'], 'payload': json.loads(questionnaire['payload']),
+                                  'updated_at': questionnaire['updated_at']} if questionnaire else None}
 
     def activate_plan(self, plan, expected_source_id, app_version):
         from .calendar import calendar_state
@@ -259,12 +300,12 @@ class Store:
         from .validation import validate_plan
         validate_plan(plan, file='import.json')
         with self.connect() as db:
-            if db.execute('PRAGMA user_version').fetchone()[0] != 3:
+            if db.execute('PRAGMA user_version').fetchone()[0] != 4:
                 raise RuntimeError('Unsupported database version. No data was changed.')
         self.snapshot()
         with self.connect() as db:
             db.execute('BEGIN IMMEDIATE')
-            if db.execute('PRAGMA user_version').fetchone()[0] != 3:
+            if db.execute('PRAGMA user_version').fetchone()[0] != 4:
                 raise RuntimeError('Unsupported database version. No data was changed.')
             active = db.execute("SELECT id FROM cycles WHERE status='active'").fetchone()
             source = self._review_source(db, active['id']) if active else None

@@ -83,10 +83,14 @@ def source_from_sql(path, cycle_id):
             journals[name] = [{**dict(row), 'payload': json.loads(row['payload'])}
                               for row in db.execute(f'SELECT * FROM {table} WHERE cycle_id=? ORDER BY id', (cycle_id,))]
         archived = db.execute('SELECT review_json FROM archives WHERE cycle_id=?', (cycle_id,)).fetchone()
+        questionnaire = db.execute('SELECT payload,status,updated_at FROM questionnaires WHERE cycle_id=?',
+                                   (cycle_id,)).fetchone()
     return {'cycle': cycle, 'plan': plan, 'logs': logs, 'body_metrics': metrics,
             'readiness': readiness, 'legacy_readiness': legacy,
             'prescription_versions': versions, 'journals': journals,
-            'saved_review': json.loads(archived[0]) if archived else None}
+            'saved_review': json.loads(archived[0]) if archived else None,
+            'questionnaire': {'status': questionnaire['status'], 'payload': json.loads(questionnaire['payload']),
+                              'updated_at': questionnaire['updated_at']} if questionnaire else None}
 
 
 def create_isolated_app(path):
@@ -197,7 +201,7 @@ class PlanImportCase(PlanImportFixtures):
             self.assertTrue(error['expected'])
         return errors
 
-    def assert_snapshot(self, snapshot, rows, schema, version=3):
+    def assert_snapshot(self, snapshot, rows, schema, version=4):
         with open_db(snapshot) as db:
             self.assertEqual(db.execute('PRAGMA integrity_check').fetchone()[0], 'ok')
             self.assertEqual(db.execute('PRAGMA foreign_key_check').fetchall(), [])
@@ -209,7 +213,7 @@ class PlanImportCase(PlanImportFixtures):
         with open_db(self.path) as db:
             for table, count in expected.items():
                 self.assertEqual(db.execute(f'SELECT count(*) FROM {table}').fetchone()[0], count, table)
-            self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], 3)
+            self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], 4)
             self.assertEqual(db.execute('PRAGMA foreign_key_check').fetchall(), [])
             self.assertEqual(db.execute('PRAGMA integrity_check').fetchone()[0], 'ok')
 
@@ -499,7 +503,7 @@ class PlanImportAPITests(PlanImportCase):
 
     def test_unknown_database_version_rejects_confirmation_without_mutation(self):
         body = self.confirmed_body()
-        for version in (4, 99):
+        for version in (0, 1, 2, 3, 99):
             with self.subTest(version=version):
                 with open_db(self.path) as db:
                     db.execute(f'PRAGMA user_version={version}')
@@ -513,7 +517,7 @@ class PlanImportAPITests(PlanImportCase):
                         self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], version)
                 finally:
                     with open_db(self.path) as db:
-                        db.execute('PRAGMA user_version=3')
+                        db.execute('PRAGMA user_version=4')
 
     def test_confirm_snapshots_and_preserves_complete_old_review_records_and_history(self):
         self.save_records(prescription=True)
@@ -748,7 +752,7 @@ class PlanImportStoreTests(PlanImportCase):
 
     def test_unknown_database_versions_fail_activation_without_schema_or_row_mutation(self):
         expected_source = canonical_id(source_from_sql(self.path, self.cycle))
-        for version in (0, 1, 2, 4, 99):
+        for version in (0, 1, 2, 3, 99):
             with self.subTest(version=version):
                 with open_db(self.path) as db:
                     db.execute(f'PRAGMA user_version={version}')
@@ -763,7 +767,7 @@ class PlanImportStoreTests(PlanImportCase):
                         self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], version)
                 finally:
                     with open_db(self.path) as db:
-                        db.execute('PRAGMA user_version=3')
+                        db.execute('PRAGMA user_version=4')
 
     def test_existing_id_direct_activation_raises_read_only_without_logical_writes(self):
         expected_source = canonical_id(source_from_sql(self.path, self.cycle))

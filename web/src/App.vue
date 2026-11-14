@@ -15,6 +15,7 @@ import PrescriptionSettings from './components/PrescriptionSettings.vue';
 import TrendView from './components/TrendView.vue';
 import ArchiveView from './components/ArchiveView.vue';
 import PlanImport from './components/PlanImport.vue';
+import QuestionnaireView from './components/QuestionnaireView.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -57,7 +58,7 @@ const currentWeek = computed(() => {
 const week = computed(() => analysis.value?.perWeek.find(week => week.n === currentWeek.value));
 const weekMeta = computed(() => plan.value?.weeks.find(week => week.n === currentWeek.value));
 const validRoute = computed(() => {
-  if (!['today', 'plan', 'analysis', 'archive', 'settings'].includes(page.value)) return false;
+  if (!['today', 'plan', 'analysis', 'archive', 'questionnaire', 'settings'].includes(page.value)) return false;
   if (!week.value) return false;
   return !route.params.day || plan.value.workouts.some(row => row.week === currentWeek.value && row.day === route.params.day);
 });
@@ -142,7 +143,7 @@ watch([() => route.fullPath, loading], async () => {
 <template>
   <div class="shell">
     <header class="masthead"><RouterLink to="/" class="brand" aria-label="Roast Raw, Today">Roast Raw</RouterLink><span class="edition">TRAINING JOURNAL / {{ releaseVersion }}</span><button class="theme-toggle" aria-label="Toggle color theme" @click="theme = theme === 'light' ? 'dark' : 'light'">{{ theme === 'light' ? 'DARK' : 'LIGHT' }}</button></header>
-    <nav class="primary-nav" aria-label="Primary"><RouterLink to="/plan">PLAN</RouterLink><RouterLink to="/analysis">ANALYSIS</RouterLink><RouterLink to="/archive">ARCHIVE</RouterLink><RouterLink to="/settings">SETTINGS</RouterLink></nav>
+    <nav class="primary-nav" aria-label="Primary"><RouterLink to="/plan">PLAN</RouterLink><RouterLink to="/analysis">ANALYSIS</RouterLink><RouterLink to="/archive">ARCHIVE</RouterLink><RouterLink to="/questionnaire">OUTLOOK</RouterLink><RouterLink to="/settings">SETTINGS</RouterLink></nav>
     <main :aria-busy="loading">
       <div v-if="loading" class="empty-state" role="status"><h1>Reading the plan.</h1><p>Loading your training data from the server.</p></div>
       <div v-else-if="error" class="error-panel" role="alert"><h2>Connection interrupted.</h2><p>{{ error }}</p><p>No offline copy is used for statistics.</p><button @click="refresh">Retry connection</button></div>
@@ -212,6 +213,7 @@ watch([() => route.fullPath, loading], async () => {
           <TrendView :analysis="analysis" :performance="performance" />
         </template>
         <ArchiveView v-else-if="page === 'archive'" :active-cycle-id="plan.meta.planId" />
+        <QuestionnaireView v-else-if="page === 'questionnaire'" />
         <template v-else-if="page === 'settings'"><div class="eyebrow">PREFERENCES / SYSTEM</div><h1>The essentials.</h1><div class="empty-state"><h2>Appearance</h2><p>Light by default. Choose the contrast that suits your session.</p><button class="inline-link" @click="theme = theme === 'light' ? 'dark' : 'light'">Use {{ theme === 'light' ? 'dark' : 'light' }} theme</button></div><div class="empty-state"><h2>Server storage</h2><p>Connected · SQLite · Asia/Shanghai</p><p>{{ plan.schemaVersion }} · {{ plan.meta.weeks }} weeks · {{ plan.meta.sessions }} sessions</p><p>Single-user release {{ releaseVersion }}. Records are saved on the server; prescribed and actual sets stay separate.</p></div><PlanImport /><PrescriptionSettings :cycle-id="plan.meta.planId" @changed="refresh" /></template>
       </template>
     </main>
