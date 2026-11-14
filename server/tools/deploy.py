@@ -127,13 +127,15 @@ fi
 '''
 
 
-def write_env(password, deepseek_key):
+def write_env(password, deepseek_key, username=''):
     lines = [
         f'RR_ACCESS_PASSWORD={password}',
         f'RR_ALLOWED_HOSTS={PUBLIC_HOST}',
         'RR_DB_PATH=/opt/roast-raw/data/roastraw.sqlite3',
         'TZ=Asia/Shanghai',
     ]
+    if username:
+        lines.append(f'RR_ACCESS_USERNAME={username}')
     if deepseek_key:
         lines.append(f'DEEPSEEK_API_KEY={deepseek_key}')
     content = '\n'.join(lines) + '\n'
@@ -142,9 +144,9 @@ def write_env(password, deepseek_key):
         input=content.encode('utf-8'), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
 
-def health_check(password, expected_version):
+def health_check(password, expected_version, username=''):
     import base64
-    auth = base64.b64encode(f'user:{password}'.encode()).decode()
+    auth = base64.b64encode(f'{username or "user"}:{password}'.encode()).decode()
     deadline = time.time() + 60
     last = ''
     while time.time() < deadline:
@@ -172,7 +174,7 @@ def health_check(password, expected_version):
     print(f'Public http://{PUBLIC_HOST}/ unreachable from here ({last}); verifying on the server itself.')
     check = remote(
         'set -euo pipefail\n'
-        f'code=$(curl -s -m 10 -o /tmp/rr-health.json -w "%{{http_code}}" -u "user:{password}" http://127.0.0.1/api/health)\n'
+        f'code=$(curl -s -m 10 -o /tmp/rr-health.json -w "%{{http_code}}" -u "{username or "user"}:{password}" http://127.0.0.1/api/health)\n'
         '[ "$code" = 200 ] || { echo "authenticated health returned $code"; exit 1; }\n'
         'cat /tmp/rr-health.json; rm /tmp/rr-health.json\n'
         'unauth=$(curl -s -m 10 -o /dev/null -w "%{http_code}" http://127.0.0.1/api/health)\n'
@@ -190,19 +192,20 @@ def main():
     password = os.environ.get('RR_ACCESS_PASSWORD', '')
     if not password:
         fail('RR_ACCESS_PASSWORD is not set in the process environment')
+    username = os.environ.get('RR_ACCESS_USERNAME', '')
     deepseek_key = os.environ.get('DEEPSEEK_API_KEY', '')
     with tempfile.TemporaryDirectory() as folder:
         payload = build_payload(folder)
         print(f'Payload built: {payload.stat().st_size} bytes')
         run(['scp', '-o', 'BatchMode=yes', str(payload), f'{REMOTE_HOST}:/tmp/rr-payload.tar.gz'],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        write_env(password, deepseek_key)
+        write_env(password, deepseek_key, username)
         output = remote(REMOTE_SETUP)
         tail = '\n'.join(output.splitlines()[-5:])
         print(f'Remote setup done. Tail:\n{tail}')
         version = json.loads((ROOT / 'web' / 'package.json').read_text(encoding='utf-8'))['version']
         parts = version.split('.')
-        health_check(password, f'{parts[0]}.{int(parts[2]):02d}')
+        health_check(password, f'{parts[0]}.{int(parts[2]):02d}', username)
 
 
 if __name__ == '__main__':

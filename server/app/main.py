@@ -159,6 +159,7 @@ def create_app(db_path=None, plan_path=None):
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
 
     access_password = os.environ.get('RR_ACCESS_PASSWORD', '')
+    access_username = os.environ.get('RR_ACCESS_USERNAME', '')
     if access_password:
         @app.middleware('http')
         async def password_gate(request, call_next):
@@ -168,7 +169,9 @@ def create_app(db_path=None, plan_path=None):
                     decoded = base64.b64decode(header[6:], validate=True).decode('utf-8')
                 except (ValueError, UnicodeDecodeError):
                     decoded = ''
-                if hmac.compare_digest(decoded.split(':', 1)[-1], access_password):
+                user, _, pwd = decoded.partition(':')
+                if hmac.compare_digest(pwd, access_password) and (
+                        not access_username or hmac.compare_digest(user, access_username)):
                     return await call_next(request)
             return JSONResponse(status_code=401, content={'error': 'Password required'},
                                 headers={'WWW-Authenticate': 'Basic realm="Roast Raw"'})
