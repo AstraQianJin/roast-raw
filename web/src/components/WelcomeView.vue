@@ -6,11 +6,20 @@ const releaseVersion = `${major}.${patch.padStart(2, '0')}`;
 
 const root = ref(null);
 const index = ref(0);
+const track = ref(null);
+const dragX = ref(0);
+const dragging = ref(false);
 let cleanup = () => {};
+let startX = 0;
+let startY = 0;
+let activePointer = null;
+let axis = null;
 
 const shots = [
-  { src: '/shots/today-390-light.png', k: 'TODAY', title: 'Loads, capacity and the working body.' },
-  { src: '/shots/analysis-390-light.png', k: 'ANALYSIS', title: 'Every contribution, weighted and mapped.' },
+  { src: '/shots/today-390-light.png', k: 'TODAY', title: 'Prescribed loads, recorded sets and the working body on one page.' },
+  { src: '/shots/plan-390-light.png', k: 'PLAN', title: 'A fixed calendar: every week is a square, every block a colour.' },
+  { src: '/shots/analysis-390-light.png', k: 'ANALYSIS', title: 'Weekly working sets, SBD equivalents and reference bands.' },
+  { src: '/shots/archive-390-light.png', k: 'ARCHIVE', title: 'Past cycles stay readable, exportable and comparable.' },
 ];
 function step(delta) { index.value = (index.value + delta + shots.length) % shots.length; }
 function offset(i) { const n = shots.length; let d = (i - index.value + n) % n; if (d > n / 2) d -= n; return d; }
@@ -22,6 +31,31 @@ function cardStyle(i) {
     zIndex: 20 - a,
     filter: a ? `blur(${(a * 1.1).toFixed(1)}px)` : 'none',
   };
+}
+function onDown(event) {
+  if (event.pointerType === 'mouse' && event.button !== 0) return;
+  activePointer = event.pointerId; startX = event.clientX; startY = event.clientY; axis = null; dragging.value = true; dragX.value = 0;
+}
+function onMove(event) {
+  if (!dragging.value || event.pointerId !== activePointer) return;
+  const dx = event.clientX - startX; const dy = event.clientY - startY;
+  if (!axis) {
+    if (Math.abs(dx) < 7 && Math.abs(dy) < 7) return;
+    axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+    if (axis === 'x') track.value?.setPointerCapture?.(activePointer);
+  }
+  if (axis !== 'x') return;
+  dragX.value = dx;
+}
+function onUp(event) {
+  if (!dragging.value || (event && event.pointerId !== activePointer)) return;
+  const dx = dragX.value; const width = track.value?.clientWidth || 390;
+  if (Math.abs(dx) > Math.max(44, width * 0.16)) step(dx < 0 ? 1 : -1);
+  dragging.value = false; dragX.value = 0; activePointer = null; axis = null;
+}
+function onKey(event) {
+  if (event.key === 'ArrowLeft') { event.preventDefault(); step(-1); }
+  if (event.key === 'ArrowRight') { event.preventDefault(); step(1); }
 }
 
 const features = [
@@ -43,7 +77,6 @@ onMounted(() => {
   const groups = [...el.querySelectorAll('[data-stagger]')];
   const hero = el.querySelector('.wl-hero');
   const deck = el.querySelector('.wl-grid');
-  const cards = deck ? [...deck.children] : [];
   const seq = {};
   rv.forEach(node => {
     const section = node.closest('section');
@@ -73,28 +106,7 @@ onMounted(() => {
         groups.splice(i, 1);
       }
     }
-    if (deck && cards.length && matchMedia('(max-width:760px)').matches) {
-      deck.classList.add('deck');
-      const tops = [];
-      const bots = [];
-      cards.forEach(card => { const rect = card.getBoundingClientRect(); tops.push(rect.top); bots.push(rect.bottom); });
-      let depth = 0;
-      for (let i = cards.length - 1; i >= 0; i -= 1) {
-        const cov = i < cards.length - 1 ? Math.max(0, Math.min(1, (bots[i] - tops[i + 1]) / Math.max(1, bots[i] - tops[i]))) : 0;
-        const fade = cov * cov * (3 - 2 * cov);
-        const inner = cards[i].firstElementChild;
-        if (inner) {
-          inner.style.setProperty('--sc', (1 - Math.min(.09, .022 * depth)).toFixed(3));
-          inner.style.setProperty('--ty', `${(-Math.min(9, 2 * depth)).toFixed(2)}px`);
-          inner.style.setProperty('--dim', Math.min(.24, .4 * cov).toFixed(3));
-          inner.style.setProperty('--op', Math.max(.12, 1 - .85 * fade).toFixed(3));
-        }
-        const pin = 86 + i * 16;
-        let p = 1 - (tops[i] - pin) / 220;
-        p = p < 0 ? 0 : p > 1 ? 1 : p;
-        depth += p;
-      }
-    } else if (deck) deck.classList.remove('deck');
+    if (deck) deck.classList.remove('deck');
     const max = document.documentElement.scrollHeight - vh;
     el.style.setProperty('--prog', max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)).toFixed(4) : '0');
   };
@@ -159,18 +171,21 @@ onBeforeUnmount(() => cleanup());
     </section>
 
     <section id="wl-screens" class="wl-sec">
-      <div class="wl-sec-head rv"><span class="section-kicker">AS IT RUNS</span><h2>The journal, on the record.</h2><p class="wl-deck">Captured from the automated regression at phone width. Use the arrows to move through the set.</p></div>
-      <div class="wl-shots rv" data-stagger aria-roledescription="carousel" aria-label="Product screenshots">
-        <button type="button" class="wl-arrow left" aria-label="Previous screenshot" @click="step(-1)">‹</button>
-        <div class="wl-shots-track">
-          <figure v-for="(shot, i) in shots" :key="shot.src" class="wl-card" :class="{ front: offset(i) === 0 }" :style="cardStyle(i)" :aria-hidden="offset(i) !== 0">
-            <img :src="shot.src" :alt="`${shot.k} page screenshot`" loading="lazy">
-          </figure>
-        </div>
-        <button type="button" class="wl-arrow right" aria-label="Next screenshot" @click="step(1)">›</button>
+      <div class="wl-sec-head rv"><span class="section-kicker">AS IT RUNS</span><h2>The journal, on the record.</h2><p class="wl-deck">Captured from the automated regression at phone width. Drag the deck, or use the slider, to move through the set.</p></div>
+      <div ref="track" class="wl-shots rv" :class="{ grabbing: dragging }" :style="dragX ? { transform: `translate3d(${dragX}px,0,0)` } : null" tabindex="0" role="region" aria-roledescription="carousel" aria-label="Product screenshots" @pointerdown="onDown" @pointermove="onMove" @pointerup="onUp" @pointercancel="onUp" @keydown="onKey">
+        <figure v-for="(shot, i) in shots" :key="shot.src" class="wl-card" :class="{ front: offset(i) === 0 }" :style="cardStyle(i)" :aria-hidden="offset(i) !== 0">
+          <img :src="shot.src" :alt="`${shot.k} page screenshot`" loading="lazy" draggable="false">
+        </figure>
       </div>
-      <p class="wl-deck-cap"><b>{{ shots[index].k }}</b><span>{{ shots[index].title }}</span></p>
-      <div class="wl-dots"><button v-for="(shot, i) in shots" :key="shot.src" type="button" :aria-label="`Show ${shot.k}`" :aria-current="index === i ? 'true' : 'false'" @click="index = i"></button></div>
+      <div class="wl-slider" aria-label="Screenshot position">
+        <i class="wl-slider-rail" aria-hidden="true"></i>
+        <i class="wl-slider-thumb" aria-hidden="true" :style="{ left: `${index / shots.length * 100}%`, width: `${100 / shots.length}%` }"></i>
+        <button v-for="(shot, i) in shots" :key="`t-${shot.src}`" type="button" :aria-label="`Show ${shot.k}`" :aria-current="index === i ? 'true' : 'false'" @click="index = i"></button>
+      </div>
+      <div class="wl-caption" aria-live="polite">
+        <p class="wl-cap-name">Figure {{ index + 1 }} · {{ shots[index].k }}</p>
+        <p class="wl-cap-desc">{{ shots[index].title }}</p>
+      </div>
     </section>
 
     <section id="wl-enter" class="wl-sec wl-enter">
@@ -266,16 +281,9 @@ onBeforeUnmount(() => cleanup());
   .wl-hero-grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'copy' 'visual' 'lede' 'fine'; row-gap: 18px; }
   .wl-lede { margin-top: 0; }
 }
-@media (max-width: 760px) {
-  .wl-grid.deck { display: block; background: none; border: 0; }
-  .wl-grid.deck .wl-cap { position: sticky; top: calc(86px + var(--i, 0) * 16px); margin: 0 0 14px; padding: 0; background: none; border: 0; }
-  .wl-grid.deck .wl-cap:last-child { margin-bottom: 0; }
-  .wl-grid.deck .wl-cap-in { position: relative; padding: clamp(18px, 4.6vw, 24px); border: 1px solid var(--line); background: var(--panel); box-shadow: 0 -8px 16px rgba(17, 17, 17, .06), 0 10px 22px rgba(17, 17, 17, .09); transform-origin: 50% 0; transform: translate3d(0, var(--ty, 0px), 0) scale(var(--sc, 1)); will-change: transform; overflow: hidden; }
-  .wl-grid.deck .wl-cap-in::after { content: ''; position: absolute; inset: 0; background: var(--panel); opacity: var(--dim, 0); pointer-events: none; }
-  .wl-grid.deck .wl-cap-in > * { position: relative; z-index: 1; opacity: var(--op, 1); }
-}
 @media (max-width: 560px) {
   .wl-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .wl-grid { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 400px) {
   .hv-stack { grid-template-columns: minmax(0, 1fr); }
@@ -287,25 +295,25 @@ onBeforeUnmount(() => cleanup());
   .js [data-stagger] > *, .js .wl-hero .wl-lede, .js .wl-hero .wl-fine, .js .wl-hero .hv-card, .js .wl-hero h1 .li { opacity: 1; transform: none; transition: none; }
 }
 
-/* Screenshot deck: cards fan behind the active one and cross-fade on switch. */
-.wl-shots { position: relative; overflow: hidden; max-width: 860px; margin: 0 auto; }
-.wl-shots-track { position: relative; height: clamp(340px, 58vh, 600px); }
-.wl-card { position: absolute; inset: 0; margin: auto; height: 100%; width: auto; aspect-ratio: 390 / 844; overflow: hidden; border: 1px solid var(--line); background: var(--panel2); box-shadow: 0 18px 44px rgba(17, 17, 17, .16); transition: transform .62s var(--ease), opacity .52s var(--ease), filter .52s var(--ease); will-change: transform, opacity; }
+/* Screenshot deck: pointer-tracked drag, cards fan behind the active one and cross-fade on switch. */
+.wl-shots { position: relative; overflow: hidden; height: clamp(420px, 64vh, 640px); max-width: 860px; margin: 0 auto; touch-action: pan-y; cursor: grab; transition: transform .42s var(--ease); user-select: none; }
+.wl-shots.grabbing { cursor: grabbing; transition: none; }
+.wl-card { position: absolute; inset: 0; margin: auto; height: 100%; width: auto; aspect-ratio: 390 / 844; overflow: hidden; border: 1px solid var(--line); background: var(--panel2); box-shadow: 0 18px 44px rgba(17, 17, 17, .16); transition: transform .62s var(--ease), opacity .52s var(--ease), filter .52s var(--ease); will-change: transform, opacity; pointer-events: none; }
 .wl-card.front { box-shadow: 0 26px 60px rgba(17, 17, 17, .22); }
-.wl-card img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+.wl-card img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top center; -webkit-user-drag: none; }
 .wl-card::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(17, 17, 17, 0) 62%, rgba(17, 17, 17, .10) 100%); }
-.wl-arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 30; width: 44px; min-width: 44px; height: 44px; padding: 0; border: 1px solid var(--line2); border-radius: 50%; background: var(--panel); color: var(--ink); font-size: 20px; line-height: 1; }
-.wl-arrow.left { left: 2px; }
-.wl-arrow.right { right: 2px; }
-.wl-arrow:hover { border-color: var(--ink); background: var(--panel2); }
-.wl-deck-cap { display: flex; align-items: baseline; justify-content: center; gap: 10px; margin-top: 18px; font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); text-align: center; }
-.wl-deck-cap b { color: var(--ink); }
-.wl-dots { display: flex; justify-content: center; gap: 6px; margin-top: 12px; }
-.wl-dots button { width: 26px; height: 26px; min-height: 26px; padding: 0; border: 0; border-radius: 0; background: none; position: relative; }
-.wl-dots button::before { content: ''; position: absolute; inset: 10px 3px; background: var(--line-soft); }
-.wl-dots button[aria-current='true']::before { background: var(--accent); }
+.wl-slider { position: relative; display: flex; width: min(184px, 48vw); height: 22px; margin: 18px auto 0; }
+.wl-slider-rail { position: absolute; left: 0; right: 0; top: 10px; height: 1px; background: var(--line); }
+.wl-slider-thumb { position: absolute; top: 8px; height: 5px; background: var(--ink); transition: left .38s var(--ease), width .38s var(--ease); }
+.wl-slider button { position: relative; z-index: 2; flex: 1; min-width: 0; height: 22px; min-height: 22px; padding: 0; border: 0; border-radius: 0; background: none; }
+.wl-slider button:focus-visible { outline: 1px solid var(--ink); outline-offset: 2px; }
+.wl-caption { text-align: center; margin: 14px auto 0; max-width: 34em; }
+.wl-cap-name { font: 9.5px var(--mono); letter-spacing: .13em; text-transform: uppercase; color: var(--ink); }
+.wl-cap-desc { margin: 5px auto 0; font-family: var(--serif); font-size: 13px; line-height: 1.7; color: var(--muted); max-width: 38ch; }
 @media (max-width: 760px) {
-  .wl-shots-track { height: clamp(320px, 54vh, 460px); }
-  .wl-arrow { width: 38px; min-width: 38px; height: 38px; }
+  .wl-shots { height: clamp(360px, 62vh, 540px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wl-shots, .wl-card, .wl-slider-thumb { transition: none; }
 }
 </style>

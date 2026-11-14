@@ -19,6 +19,8 @@
 | 0.15–0.19 | 综合审查打磨 | 已完成：0.15老App视觉语言全页复用+主项杠铃UI（去除TOP/WORK/BACKOFF、重量前置、LOG内联）；0.16不对称单行清理+真实横向溢出修复（CycleStrip周范围标签、容量值列宽）+noOverflow改用clientWidth并新增ink溢出断言（移动端innerWidth会随溢出膨胀使旧断言恒真）；0.17日分享卡TopSet骨架+赛扣杠铃；0.18复刻老App开训前屏（倒计时环+事实卡+LOAD PROFILE相位柱/顶组%1RM线，固定日历口径改写note与Adjust入口）；0.19自审+回归加固+README/Skill指针同步。verify 6290 checks、browser 2235断言/174截图全绿 | 审查结论点名位置 | 已完成 |
 | 0.20 | 部署、推送 | 访问口径已按用户裁定改为「公开落地页 + 账户登录」，并已于 2026-11-14 20:40 部署上线：SPA 外壳与 /welcome /login /register 公开、仅 journal API 需会话、accounts 表附加迁移（不动 user_version）、PBKDF2 口令与 HttpOnly SameSite=Lax 会话 cookie、用户名不区分大小写、SPA 外壳 no-store 防止手机留旧页；deploy.py 部署后从公网核验完整访问契约而非只探 health。线上 `GET /` 200 且无 Basic 挑战、`/api/plan` 401、`Astra` 任意大小写登录 200、注册/登出复锁均 PASS（25/25 项，见 README 访问段）。owner 口令统一为本机用户环境变量 RR_ACCESS_USERNAME/RR_ACCESS_PASSWORD（值不入仓/文档/bundle） | 验收：公网实测 25/25 PASS（landing/资产/welcome/login/register 公开、匿名 journal 401、错口令 401、owner 登录 200、登出复锁）；待最末一步：私有远程 AstraQianJin/roast-raw 推送 | 已完成（部署）；推送待办 |
 
+| 0.22 | L2 + 首页截图交互 | 已完成：`/plan` 周期总览、`/plan/block/:id` 块概览、`/plan/week/:n` 当周三天视图分离；删 4 张 Block 卡与 week rail，周方块直接跳周；指标区三等列等高；无主项日去掉 ACCESSORY WORK；主项重量放大、日标题句式大小写；LoadProfile 文献式图注/轴说明/去卡片阴影；首页去左右箭头改 pointer 跟手拖拽+吸附、细轨滑块指示器、图注名与简介居中、截图扩到 4 张（390×844 实拍）。证据：RR/shots-0.22。 | 未做：L3 全部；browser.mjs 旧契约待 L3 后重写；公网部署待用户验收 | 本地完成 |
+
 ## 审美回炉八项清单（用户2026-11-14主观反馈）
 
 保留优点：Dark配色、肌群图点击切换、PLAN页面。待改：

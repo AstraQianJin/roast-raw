@@ -17,44 +17,43 @@ const summary = computed(() => segments.value.map(segment => `${segment.name}: $
 
 <template>
   <div class="cycle-strip" data-testid="cycle-strip">
-    <div class="strip-track" role="img" :aria-label="`Cycle phases. ${summary}`">
-      <div v-for="segment in segments" :key="segment.id" class="strip-segment" :class="`ct-${segment.type}`" :style="{ flexGrow: segment.weeks.length }">
-        <i v-for="week in segment.weeks" :key="week.n" :class="[week.kind, { on: week.n === current }]"></i>
+    <div class="strip-rail" role="list" :aria-label="`Weeks in this cycle. ${summary}`">
+      <div v-for="segment in segments" :key="segment.id" class="strip-segment" :class="`ct-${segment.type}`" :style="{ flexGrow: segment.weeks.length }" role="group" :aria-label="`${segment.name}, ${range(segment)}`">
+        <RouterLink v-for="week in segment.weeks" :key="week.n" :to="`/plan/week/${week.n}`" class="strip-week" :class="[week.kind, { on: week.n === current }]" role="listitem" :title="`${segment.name} · Week ${week.n}`" :aria-label="`Week ${week.n}, ${segment.name}`">
+          <span>{{ week.n }}</span>
+        </RouterLink>
       </div>
     </div>
-    <div class="strip-labels" aria-hidden="true">
-      <div v-for="segment in segments" :key="segment.id" class="strip-label" :class="`ct-${segment.type}`" :style="{ flexGrow: segment.weeks.length }">
-        <b>{{ segment.id }}</b>
-        <span>{{ segment.name }}</span>
-        <small>{{ range(segment) }} · {{ segment.weeks.length }} WK</small>
+    <div class="strip-key" aria-hidden="true">
+      <div v-for="segment in segments" :key="segment.id" class="strip-key-item" :class="`ct-${segment.type}`">
+        <i></i><b>{{ segment.id }}</b><span>{{ range(segment) }}</span>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.cycle-strip { margin: 14px 0 6px; }
-.strip-track { display: flex; gap: 3px; height: 14px; }
-.strip-segment { display: flex; gap: 2px; min-width: 0; flex-basis: 0; }
-.strip-segment i { flex: 1; min-width: 2px; background: var(--seg); }
-.strip-segment i.deload { background: repeating-linear-gradient(135deg, var(--ct-deload) 0 3px, var(--ct-deload-s) 3px 6px); }
-.strip-segment i.test { background: var(--ct-peak); }
-.strip-segment i.on { outline: 2px solid var(--ink); outline-offset: 1px; }
-.ct-hyper { --seg: var(--ct-hyper); --seg-text: var(--ct-hyper); }
-.ct-strength { --seg: var(--ct-strength); --seg-text: var(--ct-strength); }
-.ct-transmute { --seg: var(--ct-transmute); --seg-text: var(--ct-transmute); }
-.ct-peak { --seg: var(--ct-peak); --seg-text: var(--ct-peak); }
-.ct-custom { --seg: var(--ct-custom); --seg-text: var(--ct-custom); }
-.ct-deload { --seg: var(--ct-deload); --seg-text: var(--ct-deload); }
-.strip-labels { display: flex; gap: 3px; margin-top: 7px; }
-.strip-label { flex-basis: 0; min-width: 0; border-top: 2px solid var(--seg); padding-top: 5px; }
-.strip-label b { font: 700 9px var(--mono); color: var(--seg-text); }
-.strip-label span { display: block; font-size: 8.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink); line-height: 1.35; overflow-wrap: anywhere; }
-.strip-label small { display: block; font: 8px var(--mono); color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-@media (max-width: 420px) {
-  .strip-label span { display: none; }
-}
+.cycle-strip { margin: 16px 0 8px; }
+.strip-rail { display: flex; gap: 10px; }
+.strip-segment { display: flex; gap: 2px; min-width: 0; flex-basis: 0; flex-grow: var(--grow, 1); }
+.strip-week { display: grid; place-items: center; flex: 1; min-width: 0; aspect-ratio: 1; border: 1px solid var(--seg); color: var(--seg-text); background: var(--seg-s); font: 600 9px var(--mono); line-height: 1; text-decoration: none; }
+.strip-week.deload { background: repeating-linear-gradient(135deg, var(--ct-deload-s) 0 3px, transparent 3px 6px); }
+.strip-week.test { border-width: 2px; }
+.strip-week.on { background: var(--seg); color: var(--bg); }
+.strip-week:hover { background: var(--seg); color: var(--bg); }
+.ct-hyper { --seg: var(--ct-hyper); --seg-text: var(--ct-hyper); --seg-s: var(--ct-hyper-s); }
+.ct-strength { --seg: var(--ct-strength); --seg-text: var(--ct-strength); --seg-s: var(--ct-strength-s); }
+.ct-transmute { --seg: var(--ct-transmute); --seg-text: var(--ct-transmute); --seg-s: var(--ct-transmute-s); }
+.ct-peak { --seg: var(--ct-peak); --seg-text: var(--ct-peak); --seg-s: var(--ct-peak-s); }
+.ct-custom { --seg: var(--ct-custom); --seg-text: var(--ct-custom); --seg-s: var(--ct-custom-s); }
+.ct-deload { --seg: var(--ct-deload); --seg-text: var(--ct-deload); --seg-s: var(--ct-deload-s); }
+.strip-key { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; }
+.strip-key-item { display: flex; align-items: baseline; gap: 4px; font: 9px var(--mono); color: var(--muted); }
+.strip-key-item i { width: 6px; height: 6px; background: var(--seg); align-self: center; }
+.strip-key-item b { color: var(--seg-text); font-weight: 700; }
+.strip-key-item span { letter-spacing: .02em; }
 @media (max-width: 560px) {
-  .strip-label small { display: none; }
+  .strip-segment { --grow: 1; }
+  .strip-key-item span { display: none; }
 }
 </style>

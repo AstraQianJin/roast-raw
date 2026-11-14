@@ -43,8 +43,8 @@ const summary = computed(() => {
 
 <template>
   <section class="card load" data-testid="load-profile" aria-label="Load profile">
-    <div class="load-head"><div><div class="eyebrow">LOAD PROFILE</div><h2 class="load-title">How the {{ weeks.length }} weeks load</h2></div></div>
-    <p class="load-sub">Bars are weekly working sets. The line is the top set as a share of 1RM.</p>
+    <div class="load-head"><div><div class="eyebrow">FIG. 1 · LOAD PROFILE</div><h2 class="load-title">Weekly work and top-set intensity across the {{ weeks.length }} weeks</h2></div></div>
+    <p class="load-sub">Bars, weekly working sets. Line, the top set as a share of 1RM (scale at left). Week numbers run along the bottom.</p>
     <div class="legend">
       <div class="legend-row"><span class="lg hyper"><i></i>Hypertrophy</span><span class="lg strength"><i></i>Strength</span><span class="lg transmute"><i></i>Transmute</span><span class="lg deload"><i></i>Deload</span></div>
       <div class="legend-row"><span class="lg test"><i></i>Test</span><span class="lg line"><i></i>Top set %1RM</span></div>
@@ -76,11 +76,12 @@ const summary = computed(() => {
 </template>
 
 <style scoped>
-.load { --dur-slow: .5s; --dur-live: .6s; --dur-stagger: .03s; position: relative; background: var(--card-grad); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--card-shadow); padding: 16px; min-width: 0; margin: 14px 0; }
+.load { --dur-slow: .5s; --dur-live: .6s; --dur-stagger: .03s; position: relative; background: transparent; border: 0; border-top: 1px solid var(--ink); border-radius: 0; box-shadow: none; padding: 14px 0 6px; min-width: 0; margin: 22px 0; }
 .eyebrow { font-family: var(--mono); font-size: 8.5px; font-weight: 500; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
 .sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .load-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-.load-title { margin-top: 3px; font-family: var(--serif); font-size: 18px; }
+.load-fig { font: 9px var(--mono); letter-spacing: .08em; color: var(--muted); border: 1px solid var(--line); padding: 3px 6px; white-space: nowrap; }
+.load-title { margin-top: 4px; font-family: var(--serif); font-size: 17px; line-height: 1.3; font-weight: 400; max-width: 34ch; }
 .load-sub { margin-top: 5px; font-size: 10.5px; line-height: 1.5; color: var(--muted); max-width: 46ch; }
 .legend { display: grid; gap: 4px; margin-top: 10px; }
 .legend-row { display: flex; flex-wrap: wrap; gap: 4px 10px; }
