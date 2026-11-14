@@ -16,6 +16,8 @@ import TrendView from './components/TrendView.vue';
 import ArchiveView from './components/ArchiveView.vue';
 import PlanImport from './components/PlanImport.vue';
 import QuestionnaireView from './components/QuestionnaireView.vue';
+import WelcomeView from './components/WelcomeView.vue';
+import CycleStrip from './components/CycleStrip.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -48,7 +50,7 @@ watch(theme, value => {
   document.querySelector('meta[name="theme-color"]').content = value === 'dark' ? '#07090D' : '#F1F0EB';
   localStorage.setItem('roastraw-theme', value);
 }, { immediate: true });
-const page = computed(() => route.path.startsWith('/plan') ? 'plan' : route.path === '/archive' || route.path.startsWith('/archive/') ? 'archive' : ['/', '/today'].includes(route.path) ? 'today' : route.path.slice(1));
+const page = computed(() => ['/', '/welcome'].includes(route.path) ? 'welcome' : route.path.startsWith('/plan') ? 'plan' : route.path === '/archive' || route.path.startsWith('/archive/') ? 'archive' : route.path === '/today' ? 'today' : route.path.slice(1));
 const currentWeek = computed(() => {
   if (!plan.value) return 1;
   if (route.params.blockId) return plan.value.weeks.find(week => week.blockId === route.params.blockId)?.n || 0;
@@ -58,6 +60,7 @@ const currentWeek = computed(() => {
 const week = computed(() => analysis.value?.perWeek.find(week => week.n === currentWeek.value));
 const weekMeta = computed(() => plan.value?.weeks.find(week => week.n === currentWeek.value));
 const validRoute = computed(() => {
+  if (page.value === 'welcome') return true;
   if (!['today', 'plan', 'analysis', 'archive', 'questionnaire', 'settings'].includes(page.value)) return false;
   if (!week.value) return false;
   return !route.params.day || plan.value.workouts.some(row => row.week === currentWeek.value && row.day === route.params.day);
@@ -91,6 +94,7 @@ const leaves = computed(() => analysis.value.leafOrder.map(id => {
 const display = value => value === null || value === undefined ? '—' : Number(value).toLocaleString('en-US', { maximumFractionDigits: 1 });
 const DELOAD_NOTE = 'Deload week: lighter loads, same movements. Nothing is skipped and no date moves.';
 const needsMicroPlates = rows => rows.some(row => row.segments.some(segment => segment.load !== null && segment.load % 2.5 !== 0));
+const blockType = blockId => (plan.value?.blocks.find(block => block.id === blockId)?.cycleType || 'custom').toLowerCase();
 const weekGpp = computed(() => (plan.value?.gpp || []).filter(item => item.week === currentWeek.value));
 const weekCardio = computed(() => (plan.value?.runPlan || []).filter(item => item.week === currentWeek.value));
 function dateLabel(value) { return new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit', timeZone: 'Asia/Shanghai' }).format(new Date(`${value}T00:00:00+08:00`)).toUpperCase(); }
@@ -128,7 +132,7 @@ onMounted(async () => {
     animate('.main-loads', { transform: ['translateY(6px)', 'translateY(0)'] }, { duration: .24, easing: 'ease-out' });
   }
 });
-watch(() => route.path, () => { document.title = `${page.value === 'today' ? 'Today' : page.value.charAt(0).toUpperCase() + page.value.slice(1)} — Roast Raw`; }, { immediate: true });
+watch(() => route.path, () => { document.title = page.value === 'welcome' ? 'Roast Raw — Powerlifting training journal' : `${page.value === 'today' ? 'Today' : page.value.charAt(0).toUpperCase() + page.value.slice(1)} — Roast Raw`; }, { immediate: true });
 watch(page, value => { if (value !== 'analysis' && mode.value !== 'plan') changeMode('plan'); });
 watch([() => route.fullPath, loading], async () => {
   if (loading.value || error.value || !validRoute.value || !route.params.day) return;
@@ -136,16 +140,17 @@ watch([() => route.fullPath, loading], async () => {
   const target = document.getElementById(`day-${currentWeek.value}-${route.params.day}`);
   if (!target) return;
   target.focus({ preventScroll: true });
-  target.scrollIntoView({ block: 'start', behavior: 'instant' });
+  scrollTo(0, target.getBoundingClientRect().top + scrollY - 16);
 }, { flush: 'post' });
 </script>
 
 <template>
   <div class="shell">
-    <header class="masthead"><RouterLink to="/" class="brand" aria-label="Roast Raw, Today">Roast Raw</RouterLink><span class="edition">TRAINING JOURNAL / {{ releaseVersion }}</span><div class="theme-segment" role="group" aria-label="Color theme"><button :aria-pressed="theme === 'light'" aria-label="Light theme" @click="theme = 'light'">L</button><button :aria-pressed="theme === 'dark'" aria-label="Dark theme" @click="theme = 'dark'">D</button></div><RouterLink to="/settings" class="settings-link" aria-label="Settings"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M18.5 5.5l-1.8 1.8M7.3 16.7l-1.8 1.8"/></svg></RouterLink></header>
+    <header class="masthead"><RouterLink to="/today" class="brand" aria-label="Roast Raw, Today">Roast Raw</RouterLink><span class="edition">TRAINING JOURNAL / {{ releaseVersion }}</span><div class="theme-segment" role="group" aria-label="Color theme"><button :aria-pressed="theme === 'light'" aria-label="Light theme" @click="theme = 'light'">L</button><button :aria-pressed="theme === 'dark'" aria-label="Dark theme" @click="theme = 'dark'">D</button></div><RouterLink to="/settings" class="settings-link" aria-label="Settings"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M18.5 5.5l-1.8 1.8M7.3 16.7l-1.8 1.8"/></svg></RouterLink></header>
     <nav class="primary-nav" aria-label="Primary"><RouterLink to="/plan">PLAN</RouterLink><RouterLink to="/analysis">ANALYSIS</RouterLink><RouterLink to="/archive">ARCHIVE</RouterLink><RouterLink to="/questionnaire">OUTLOOK</RouterLink></nav>
     <main :aria-busy="loading">
-      <div v-if="loading" class="empty-state" role="status"><h1>Reading the plan.</h1><p>Loading your training data from the server.</p></div>
+      <WelcomeView v-if="page === 'welcome'" />
+      <div v-else-if="loading" class="empty-state" role="status"><h1>Reading the plan.</h1><p>Loading your training data from the server.</p></div>
       <div v-else-if="error" class="error-panel" role="alert"><h2>Connection interrupted.</h2><p>{{ error }}</p><p>No offline copy is used for statistics.</p><button @click="refresh">Retry connection</button></div>
       <div v-else-if="!validRoute" class="empty-state"><h1>Not in this plan.</h1><p>This page, block, week or day does not exist.</p><RouterLink to="/plan" class="inline-link">Return to the plan</RouterLink></div>
       <template v-else>
@@ -163,11 +168,12 @@ watch([() => route.fullPath, loading], async () => {
                 <div class="load-total"><small>TOTAL LOAD<br>main work + variations</small><strong>{{ display(todayRows.reduce((sum, row) => sum + row.tonnageKg, 0)) }}<small> kg</small></strong></div>
               </section>
               <section class="day-capacity" aria-label="Session capacity"><header><span class="section-label">SESSION CAPACITY · PLANNED</span><strong>{{ todaySetCount }} SETS</strong></header><div class="capacity-track"><i v-for="(sets, index) in [todayTotals.main, todayTotals.sbdVar + todayTotals.nonSbdVar, todayTotals.accessory]" :key="index" :style="{ width: `${sets / Math.max(todaySetCount, 1) * 100}%` }"></i></div><div class="capacity-key"><span>MAIN {{ todayTotals.main }}</span><span>VAR {{ todayTotals.sbdVar + todayTotals.nonSbdVar }}</span><span>ACCESSORY {{ todayTotals.accessory }}</span></div></section>
-              <details class="gear"><summary>GEAR <span class="chip">{{ needsMicroPlates(todayRows) ? 'MICRO PLATES' : 'SESSION SETUP' }}</span><span v-if="plan.meta.profile.bar_kg" class="chip">{{ display(plan.meta.profile.bar_kg) }} KG BAR</span></summary><p>{{ needsMicroPlates(todayRows) ? 'Some prescribed loads need micro plates. Prepare equipment before the session; loads remain unchanged.' : 'Standard plates cover these prescribed loads. Prepare equipment before the session.' }}</p><p v-if="plan.meta.profile.bar_kg">Plan bar reference: {{ display(plan.meta.profile.bar_kg) }} kg. {{ plan.meta.profile.collars ? 'Collars included in the plan setup.' : 'Collars are not included in the plan load reference.' }}</p><p v-if="todayRows.some(row => prescriptionInfo?.systemLoads[row.week + '|' + row.day + '|' + row.seq])">Pull-up and dip loads include bodyweight. Check the dated bodyweight reading before choosing assistance or added weight.</p></details>
+              <CycleStrip :weeks="plan.weeks" :blocks="plan.blocks" :current="todaySession.week" />
               <RouterLink :to="`/plan/week/${todaySession.week}/day/${todaySession.day}`" class="inline-link">Open the scheduled day →</RouterLink>
+              <DailyRecord :cycle-id="plan.meta.planId" :date="todaySession.date" :session-id="`${todaySession.week}|${todaySession.day}`" @saved="refreshPrescription" />
+              <details class="gear"><summary>GEAR <span class="chip">{{ needsMicroPlates(todayRows) ? 'MICRO PLATES' : 'SESSION SETUP' }}</span><span v-if="plan.meta.profile.bar_kg" class="chip">{{ display(plan.meta.profile.bar_kg) }} KG BAR</span></summary><p>{{ needsMicroPlates(todayRows) ? 'Some prescribed loads need micro plates. Prepare equipment before the session; loads remain unchanged.' : 'Standard plates cover these prescribed loads. Prepare equipment before the session.' }}</p><p v-if="plan.meta.profile.bar_kg">Plan bar reference: {{ display(plan.meta.profile.bar_kg) }} kg. {{ plan.meta.profile.collars ? 'Collars included in the plan setup.' : 'Collars are not included in the plan load reference.' }}</p><p v-if="todayRows.some(row => prescriptionInfo?.systemLoads[row.week + '|' + row.day + '|' + row.seq])">Pull-up and dip loads include bodyweight. Check the dated bodyweight reading before choosing assistance or added weight.</p></details>
               <WarmupSuggestions :entries="plan.warmups?.[todaySession.date] || []" />
               <ExerciseRows :rows="todayRows" :cycle-id="plan.meta.planId" :logs="logs" :system-loads="prescriptionInfo?.systemLoads || {}" @saved="savedLog" />
-              <DailyRecord :cycle-id="plan.meta.planId" :date="todaySession.date" :session-id="`${todaySession.week}|${todaySession.day}`" @saved="refreshPrescription" />
             </template>
           </div>
           <aside><MuscleMap compact :geometry="geometry" :leaves="leaves" :heat-scale="analysis.heatScale" :week-number="currentWeek" :week-count="plan.weeks.length" @week="selectWeek" /><WeekCapacity :week="week" :ranges="analysis.ranges" /></aside>
@@ -177,10 +183,10 @@ watch([() => route.fullPath, loading], async () => {
           <div class="plan-metrics"><div class="metric"><span class="section-label">START</span><strong>{{ plan.meta.startDate }}</strong></div><div class="metric"><span class="section-label">TEST DAY</span><strong>{{ plan.testPlan?.dates?.sbd || 'Not scheduled' }}</strong></div><div class="metric"><span class="section-label">CYCLE TONNAGE</span><strong>{{ display(analysis.cycle.tonnageKg / 1000) }} t</strong><small>{{ analysis.cycle.auxSets }} AUX SETS</small></div></div>
           <div class="workspace">
             <div>
-              <nav class="block-nav" aria-label="Plan blocks"><RouterLink v-for="block in plan.blocks" :key="block.id" :to="`/plan/block/${block.id}`" :class="{ active: week.blockId === block.id }"><span>{{ block.id }} · {{ block.nameEn }}</span><small>W{{ String(plan.weeks.find(w => w.blockId === block.id)?.n).padStart(2, '0') }} — W{{ String(plan.weeks.filter(w => w.blockId === block.id).at(-1)?.n).padStart(2, '0') }}</small></RouterLink></nav>
+              <nav class="block-nav" aria-label="Plan blocks"><RouterLink v-for="block in plan.blocks" :key="block.id" :to="`/plan/block/${block.id}`" :class="[`ct-${blockType(block.id)}`, { active: week.blockId === block.id }]"><span>{{ block.id }} · {{ block.nameEn }}</span><small>W{{ String(plan.weeks.find(w => w.blockId === block.id)?.n).padStart(2, '0') }} — W{{ String(plan.weeks.filter(w => w.blockId === block.id).at(-1)?.n).padStart(2, '0') }}</small></RouterLink></nav>
               <div class="week-stepper"><button aria-label="Previous plan week" :disabled="currentWeek <= 1" @click="selectWeek(currentWeek-1)">‹</button><strong>WEEK {{ String(currentWeek).padStart(2, '0') }}</strong><button aria-label="Next plan week" :disabled="currentWeek >= plan.weeks.length" @click="selectWeek(currentWeek+1)">›</button></div>
-              <div class="week-progress" aria-hidden="true"><i v-for="item in plan.weeks" :key="item.n" :class="{ active: item.n === currentWeek, deload: item.kind === 'deload' }"></i></div>
-              <nav class="week-rail" aria-label="Weeks in selected block"><RouterLink v-for="item in plan.weeks.filter(w => w.blockId === week.blockId)" :key="item.n" :to="`/plan/week/${item.n}`" :class="[item.kind, { active: item.n === currentWeek }]">{{ String(item.n).padStart(2, '0') }}</RouterLink></nav>
+              <CycleStrip :weeks="plan.weeks" :blocks="plan.blocks" :current="currentWeek" />
+              <nav class="week-rail" aria-label="Weeks in selected block"><RouterLink v-for="item in plan.weeks.filter(w => w.blockId === week.blockId)" :key="item.n" :to="`/plan/week/${item.n}`" :class="[item.kind, `ct-${blockType(item.blockId)}`, { active: item.n === currentWeek }]">{{ String(item.n).padStart(2, '0') }}</RouterLink></nav>
               <div class="week-header"><span class="week-number">{{ currentWeek }}</span><div><h2>{{ weekMeta.blockName }}</h2><small>{{ week.kind.toUpperCase() }} WEEK</small></div><div class="week-summary"><strong>{{ display(week.tonnageKg / 1000) }} t</strong><small>{{ week.sessions }} SESSIONS</small></div></div>
               <p v-if="weekMeta.kind === 'deload'" class="notice">{{ DELOAD_NOTE }}</p>
               <div class="top-intensity"><span>TOP %1RM <b>{{ display(week.topPct) }}%</b></span><span>S {{ display(week.topPctByLift.S) }} · B {{ display(week.topPctByLift.B) }} · D {{ display(week.topPctByLift.D) }}</span></div>
@@ -188,10 +194,10 @@ watch([() => route.fullPath, loading], async () => {
               <div v-for="day in days" :id="day.id ? `day-${currentWeek}-${day.id}` : undefined" :key="day.date" :tabindex="route.params.day === day.id ? -1 : undefined" class="plan-day">
                 <template v-if="day.rows.length">
                   <RouterLink class="day-row" :to="route.params.day === day.id ? `/plan/week/${currentWeek}` : `/plan/week/${currentWeek}/day/${day.id}`" :aria-expanded="route.params.day === day.id"><span class="day-date"><strong>{{ day.label }}</strong>{{ day.weekday }}</span><span class="day-letter">{{ day.id }}</span><span class="day-info"><span class="top-load"><small>TOP</small>{{ topLifts(day.rows).map(lift => `${lift.code} ${display(lift.load)}`).join(' · ') || 'ACCESSORY WORK' }}</span><span class="day-title" style="display:block">{{ plan.days.find(item => item.id === day.id).titleEn }}</span><span class="day-status">{{ (calendar.sessionStates[`${currentWeek}|${day.id}`] || 'scheduled').toUpperCase() }}</span></span><span>{{ route.params.day === day.id ? '−' : '›' }}</span></RouterLink>
+                  <DailyRecord v-if="route.params.day === day.id" :cycle-id="plan.meta.planId" :date="day.date" :session-id="`${currentWeek}|${day.id}`" @saved="refreshPrescription" />
                   <details v-if="route.params.day === day.id" class="gear"><summary>GEAR <span class="chip">{{ needsMicroPlates(day.rows) ? 'MICRO PLATES' : 'SESSION SETUP' }}</span><span v-if="plan.meta.profile.bar_kg" class="chip">{{ display(plan.meta.profile.bar_kg) }} KG BAR</span></summary><p>{{ needsMicroPlates(day.rows) ? 'Prepare micro plates for the prescribed loads.' : 'Standard plates cover these prescribed loads.' }} All loads stay as prescribed; bodyweight movements use dated total system weight when shown.</p></details>
                   <WarmupSuggestions v-if="route.params.day === day.id" :entries="plan.warmups?.[day.date] || []" />
                   <ExerciseRows v-if="route.params.day === day.id" :rows="day.rows" :cycle-id="plan.meta.planId" :logs="logs" :system-loads="prescriptionInfo?.systemLoads || {}" @saved="savedLog" />
-                  <DailyRecord v-if="route.params.day === day.id" :cycle-id="plan.meta.planId" :date="day.date" :session-id="`${currentWeek}|${day.id}`" @saved="refreshPrescription" />
                 </template>
                 <div v-else class="rest-row"><span>{{ day.label }} · {{ day.weekday }}</span><span>REST</span></div>
               </div>
@@ -217,7 +223,7 @@ watch([() => route.fullPath, loading], async () => {
         <template v-else-if="page === 'settings'"><div class="eyebrow">PREFERENCES / SYSTEM</div><h1>The essentials.</h1><div class="empty-state"><h2>Appearance</h2><p>Light by default. Choose the contrast that suits your session.</p><button class="inline-link" @click="theme = theme === 'light' ? 'dark' : 'light'">Use {{ theme === 'light' ? 'dark' : 'light' }} theme</button></div><div class="empty-state"><h2>Server storage</h2><p>Connected · SQLite · Asia/Shanghai</p><p>{{ plan.schemaVersion }} · {{ plan.meta.weeks }} weeks · {{ plan.meta.sessions }} sessions</p><p>Single-user release {{ releaseVersion }}. Records are saved on the server; prescribed and actual sets stay separate.</p></div><PlanImport /><PrescriptionSettings :cycle-id="plan.meta.planId" @changed="refresh" /></template>
       </template>
     </main>
-    <footer class="site-footer"><span>ROAST RAW / TRAIN WITH INTENT</span><span>{{ releaseVersion }} · LOCAL PREVIEW</span></footer>
+    <footer class="site-footer"><span>ROAST RAW / TRAIN WITH INTENT</span><RouterLink to="/welcome" class="footer-about">ABOUT</RouterLink><span>{{ releaseVersion }} · LOCAL PREVIEW</span></footer>
   </div>
 </template>
 

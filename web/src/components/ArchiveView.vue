@@ -2,6 +2,7 @@
 import { computed, defineComponent, h, onBeforeUnmount, ref, watch } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import TrendView from './TrendView.vue';
+import CycleStrip from './CycleStrip.vue';
 
 const props = defineProps({ activeCycleId: { type: String, required: true } });
 const route = useRoute();
@@ -439,6 +440,7 @@ onBeforeUnmount(() => {
             <option v-for="week in weeks" :key="week.n" :value="week.n">{{ weekLabel(week.n) }} · {{ text(week.blockName) }} · {{ text(week.kind) }}</option>
           </select>
         </label>
+        <CycleStrip v-if="Array.isArray(review.plan.blocks) && review.plan.blocks.length && weeks.length" :weeks="weeks" :blocks="review.plan.blocks" :current="selectedWeek || 0" />
         <div v-if="currentWeek" class="week-context"><h3>{{ weekLabel(currentWeek.n) }}</h3><p class="reading-note">{{ text(currentWeek.dateStart) }} — {{ text(currentWeek.dateEnd) }} · {{ text(currentWeek.blockName) }} · {{ text(currentWeek.kind) }}</p></div>
         <ol class="workout-list" data-testid="archive-rows">
           <li v-for="row in weekRows" :key="logKey(row)" class="workout-row">

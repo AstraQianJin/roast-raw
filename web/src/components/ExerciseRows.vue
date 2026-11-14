@@ -52,7 +52,7 @@ const display = value => value === null || value === undefined ? '—' : Number(
             class="log-toggle"
             :aria-expanded="openEditor === editorKey(row)"
             @click="toggleEditor(row)"
-          >{{ openEditor === editorKey(row) ? 'Close log' : `Log ${row.nameEn}` }}</button>
+          >{{ openEditor === editorKey(row) ? 'Close' : 'Log sets' }}</button>
           <LogEditor
             v-if="visitedEditors.has(editorKey(row))"
             v-show="!readonly && openEditor === editorKey(row)"
@@ -73,15 +73,22 @@ const display = value => value === null || value === undefined ? '—' : Number(
 .logged-system { display: block; }
 .log-toggle {
   box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
   min-height: 44px;
   min-width: 44px;
   max-width: 100%;
-  margin-top: 12px;
-  padding: 8px 12px;
+  margin-top: 10px;
+  padding: 6px 14px;
+  font: 600 10px var(--mono);
+  letter-spacing: .08em;
+  text-transform: uppercase;
   white-space: normal;
   overflow-wrap: anywhere;
-  text-align: left;
 }
+.log-toggle::before { content: '+'; margin-right: 7px; font-size: 13px; }
+.log-toggle[aria-expanded='true'] { border-color: var(--accent); color: var(--accent); }
+.log-toggle[aria-expanded='true']::before { content: '−'; }
 .log-toggle:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;

@@ -427,7 +427,7 @@ async function saveBody() {
 <style scoped>
 .daily-record { min-width: 0; width: 100%; border-block: 1px solid var(--line); color: var(--ink); font-family: var(--sans); }
 .daily-record *, .daily-record *::before, .daily-record *::after { box-sizing: border-box; }
-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 10px 0; cursor: pointer; list-style: none; font-size: 14px; font-weight: 650; }
+summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 10px 0; cursor: pointer; list-style: none; font: 600 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
 summary::-webkit-details-marker { display: none; }
 summary span { min-width: 0; overflow-wrap: anywhere; }
 .disclosure { flex: 0 0 18px; width: 18px; height: 18px; }

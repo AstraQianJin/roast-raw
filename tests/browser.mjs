@@ -79,13 +79,14 @@ try {
   for (const width of [320, 360, 390, 412]) {
     await browser.viewport(width);
     for (const theme of ['light', 'dark']) {
-      await load(base, '/');
+      await load(base, '/today');
       await browser.evaluate(`localStorage.setItem('roastraw-theme', '${theme}')`);
-      await load(base, '/');
+      await load(base, '/today');
       equal(await browser.evaluate('document.documentElement.dataset.theme'), theme, 'theme persists');
       equal(await browser.evaluate('document.querySelector(".gear").open'), false, 'gear starts collapsed');
       equal(await browser.evaluate('document.querySelectorAll(".muscle-map.compact svg").length'), 2, 'Today anatomy visible without tabs');
       equal(await browser.evaluate('document.querySelectorAll(".leaf-list button").length'), 0, 'Today does not duplicate full muscle list');
+      equal(await browser.evaluate('(() => { const kids = [...document.querySelector("[data-testid=today] > div").children]; return kids.findIndex(el => el.classList.contains("daily-record")) < kids.findIndex(el => el.classList.contains("gear")); })()'), true, 'Today places recovery and body metrics above gear');
       equal(await browser.evaluate('document.querySelector(".site-footer").textContent.includes(' + JSON.stringify(releaseVersion) + ')'), true, 'footer version matches package');
       equal(await browser.evaluate('document.querySelector(".edition").textContent'), `TRAINING JOURNAL / ${releaseVersion}`, 'masthead version matches package');
       equal(await browser.evaluate('document.querySelectorAll(".primary-nav a").length'), 4, 'primary nav has four items');
@@ -107,6 +108,10 @@ try {
       await click('.primary-nav a[href="/plan"]');
       await browser.waitFor('Boolean(document.querySelector(".plan-metrics"))');
       equal(await browser.evaluate('document.querySelectorAll(".muscle-map.compact svg").length'), 2, 'Plan compact anatomy default visible');
+      equal(await browser.evaluate('document.querySelectorAll("[data-testid=cycle-strip] .strip-segment").length'), plan.blocks.length, `cycle strip shows every block ${width} ${theme}`);
+      equal(await browser.evaluate('[...document.querySelectorAll(".week-rail a")].every(a => /ct-(hyper|strength|transmute|peak|custom|deload)/.test(a.className))'), true, 'week rail pills carry phase colors');
+      equal(await browser.evaluate('document.querySelectorAll(".week-capacity .cap-band").length'), 3, 'MEV–MRV bands render for SBD');
+      equal(await browser.evaluate('document.querySelectorAll(".week-capacity .cap-tick.mrv").length'), 3, 'MRV ticks render for SBD');
       equal(await browser.evaluate('document.querySelectorAll(".leaf-list button, .capacity-board").length'), 0, 'Plan leaves full list and cycle board to Analysis');
       await noOverflow(`Plan ${width} ${theme}`);
       const targetSizes = await browser.evaluate('[...document.querySelectorAll("button, .primary-nav a, .week-rail a, .block-nav a, .day-row")].filter(e => { const r=e.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).map(e=>e.textContent.trim())');
@@ -174,6 +179,43 @@ try {
       console.log(`PASS CDP ${width}px ${theme}: Today, Plan, map, day reload, 44px targets, no page overflow`);
     }
   }
+  for (const width of [320, 360, 390, 412]) {
+    await browser.viewport(width);
+    for (const theme of ['light', 'dark']) {
+      await browser.evaluate(`localStorage.setItem('roastraw-theme', '${theme}')`);
+      await load(base, '/');
+      equal(await browser.evaluate('Boolean(document.querySelector("[data-testid=welcome]"))'), true, `landing renders at / ${width} ${theme}`);
+      equal(await browser.evaluate('document.title'), 'Roast Raw — Powerlifting training journal', `landing title ${width} ${theme}`);
+      await browser.waitFor('document.querySelector(".wl-hero").classList.contains("in")');
+      equal(await browser.evaluate('document.querySelectorAll(".wl-cap").length'), 6, `six instrument cards ${width} ${theme}`);
+      equal(await browser.evaluate('[...document.querySelectorAll(".wl-shot img")].filter(img => getComputedStyle(img).visibility !== "hidden").length'), 2, `theme-matched landing screenshots ${width} ${theme}`);
+      equal(await browser.evaluate(`document.querySelector('.theme-segment button[aria-label="${theme === 'light' ? 'Light' : 'Dark'} theme"]').getAttribute('aria-pressed')`), 'true', `landing theme segment ${width} ${theme}`);
+      const landingTargets = await browser.evaluate('[...document.querySelectorAll(".welcome a, .welcome button, .welcome [role=button]")].filter(e => { const r = e.getBoundingClientRect(); return r.width > 0 && (r.height < 44 || r.width < 44); }).map(e => e.textContent.trim())');
+      equal(landingTargets, [], `landing 44px targets ${width} ${theme}`);
+      await noOverflow(`Landing ${width} ${theme}`);
+      await screenshot(`landing-${width}-${theme}`);
+    }
+  }
+  await browser.viewport(390);
+  await load(base, '/welcome');
+  equal(await browser.evaluate('Boolean(document.querySelector("[data-testid=welcome]"))'), true, '/welcome deep link renders landing');
+  await click('.wl-shot');
+  await browser.waitFor('document.querySelector(".wl-lb").open && Boolean(document.querySelector(".wl-lb img").getAttribute("src"))');
+  await click('.wl-lb-x');
+  await browser.waitFor('!document.querySelector(".wl-lb").open');
+  await browser.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
+  await load(base, '/');
+  equal(await browser.evaluate('document.querySelector(".welcome").classList.contains("js")'), false, 'reduced motion skips the motion driver');
+  equal(await browser.evaluate('getComputedStyle(document.querySelector(".wl-facts")).clipPath'), 'none', 'reduced motion keeps blocks visible');
+  await browser.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: '' }] });
+  await load(base, '/');
+  await click('.wl-cta a[href="/today"]');
+  await browser.waitFor('location.pathname === "/today" && Boolean(document.querySelector("[data-testid=today]"))');
+  await click('.brand');
+  await browser.waitFor('location.pathname === "/today"');
+  await click('.footer-about');
+  await browser.waitFor('location.pathname === "/welcome" && Boolean(document.querySelector("[data-testid=welcome]"))');
+  console.log('PASS landing: / and /welcome release page, hero motion, theme-matched screenshots, lightbox, reduced-motion fallback, Today at /today, four widths and two themes');
   await browser.viewport(390);
   for (const block of plan.blocks) {
     await load(base, `/plan/block/${block.id}`);
@@ -256,9 +298,9 @@ try {
   for (const width of [320, 360, 390, 412]) {
     await browser.viewport(width);
     for (const theme of ['light', 'dark']) {
-      await load(server.base, '/');
+      await load(server.base, '/today');
       await browser.evaluate(`localStorage.setItem('roastraw-theme', '${theme}')`);
-      await load(server.base, '/');
+      await load(server.base, '/today');
       assert.match(await browser.evaluate('document.querySelector(".badges").textContent'), /TODAY’S SESSION/); checks++;
       assert.doesNotMatch(await browser.evaluate('document.querySelector(".badges").textContent'), /PREVIEW/); checks++;
       assert.ok(await browser.evaluate('document.querySelectorAll(".main-load .load-value b").length > 0'), 'training day exposes hero loads'); checks++;
@@ -347,7 +389,7 @@ try {
   const withoutStamp = record => Object.fromEntries(Object.entries(record).filter(([key]) => key !== 'updated_at'));
 
   await browser.viewport(390);
-  await load(trainingBase, '/');
+  await load(trainingBase, '/today');
   await dailyLoaded();
   equal((await trainingApi(logUrl)).logs, {}, 'isolated training fixture starts with no actual logs');
   equal((await trainingApi(readinessUrl)).record, null, 'training recovery starts unrecorded');
@@ -391,7 +433,7 @@ try {
   equal(actualValues(positiveLogs.logs[firstKey]), firstActual, 'UI positive-set save persists exact load, sets, reps, RPE and note');
   equal(typeof positiveLogs.logs[firstKey].updated_at, 'string', 'real SQLite log carries a save timestamp');
   equal(await trainingApi('/api/plan'), trainingPlan, 'saving actual sets never changes the prescription');
-  await load(trainingBase, '/');
+  await load(trainingBase, '/today');
   await dailyLoaded();
   await click(`${firstExercise} .log-toggle`);
   equal(await fields(firstEditor), firstDraft, 'reload hydrates saved positive actuals from the API');
@@ -422,7 +464,7 @@ try {
   equal(Object.keys(skippedLogs.logs).sort(), [firstKey, secondKey].sort(), 'explicit skip creates only the selected second log');
   equal(actualValues(skippedLogs.logs[secondKey]), skippedActual, 'zero-set UI save normalizes load/RPE to null and reps to zero');
   equal(actualValues(skippedLogs.logs[firstKey]), retryActual, 'skipping another exercise preserves positive actuals');
-  await load(trainingBase, '/');
+  await load(trainingBase, '/today');
   await dailyLoaded();
   await click(`${secondExercise} .log-toggle`);
   equal(await fields(secondEditor), { load: '', sets: '0', reps: '0', rpe: '', note: skipNote }, 'explicit skip hydrates as zero sets, zero reps and blank load/RPE');
@@ -508,7 +550,7 @@ try {
   equal(finalMetrics.records, [bodyRecord], 'real body retry saves 82.5 kg, 0% fat, 80 cm waist and null other measurements');
   equal(finalMetrics.bodyweight, { value: 82.5, date: trainingDate }, 'bodyweight source retains its actual recorded date');
   equal(await fields(bodyForm), bodyDraft, 'body retry hydrates explicit zero without converting it to blank');
-  await load(trainingBase, '/');
+  await load(trainingBase, '/today');
   await dailyLoaded();
   equal(await browser.evaluate('document.querySelector(".daily-record").open'), false, 'saved daily records still reload collapsed');
   await click('.daily-record summary');
@@ -538,7 +580,7 @@ try {
   equal((await trainingApi(metricsUrl)).records, [bodyRecord], 'date navigation never creates or mutates body measurements');
 
   await blockedTrainingRequests(['/api/readiness', '/api/body-metrics'], async () => {
-    await load(trainingBase, '/');
+    await load(trainingBase, '/today');
     await browser.waitFor('document.querySelectorAll(".daily-record .load-failure").length === 2 && [...document.querySelectorAll(".daily-record .record-form")].every(form => form.getAttribute("aria-busy") === "false")');
     await click('.daily-record summary');
     equal(await fields(recoveryForm), emptyRecovery, 'blocked recovery GET never substitutes previously saved inputs');
@@ -564,7 +606,7 @@ try {
   equal(await browser.evaluate('document.querySelector(".evaluation-line strong").textContent'), '66.7', 'successful recovery GET retry restores backend score');
   equal(await browser.evaluate('Boolean(document.querySelector(".pain-warning"))'), true, 'successful GET retry restores independent pain caution');
   await blockedTrainingRequests(['/api/log'], async () => {
-    await browser.navigate(`${trainingBase}/`);
+    await browser.navigate(`${trainingBase}/today`);
     await browser.waitFor('Boolean(document.querySelector(".error-panel")) && document.querySelector("main").getAttribute("aria-busy") === "false"');
     equal(await browser.evaluate('document.querySelectorAll(".log-toggle, .log-editor, .daily-record").length'), 0, 'failed initial log GET exposes no write controls or stale records');
     equal((await trainingApi(logUrl)).logs, skippedLogs.logs, 'blocked browser GET leaves both saved SQLite logs unchanged and readable');
@@ -580,9 +622,9 @@ try {
   for (const width of [320, 360, 390, 412]) {
     await browser.viewport(width);
     for (const theme of ['light', 'dark']) {
-      await load(trainingBase, '/');
+      await load(trainingBase, '/today');
       await browser.evaluate(`localStorage.setItem('roastraw-theme', '${theme}')`);
-      await load(trainingBase, '/');
+      await load(trainingBase, '/today');
       await dailyLoaded();
       await click(`${firstExercise} .log-toggle`);
       await click('.daily-record summary');
@@ -778,9 +820,9 @@ try {
   for (const width of [320, 360, 390, 412]) {
     await browser.viewport(width);
     for (const theme of ['light', 'dark']) {
-      await load(server.base, '/');
+      await load(server.base, '/today');
       await browser.evaluate(`localStorage.setItem('roastraw-theme', '${theme}')`);
-      await load(server.base, '/');
+      await load(server.base, '/today');
       assert.match(await browser.evaluate('document.querySelector("main .notice")?.textContent || ""'), /lighter loads, same movements/, 'Today deload notice uses scheduled week'); checks++;
       await noOverflow(`Today deload ${width} ${theme}`);
       await load(server.base, `/plan/week/${deloadWeek.n}`);
