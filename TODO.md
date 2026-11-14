@@ -17,7 +17,7 @@
 | 0.13 | 停即部署+AI | 已完成：Basic口令门（环境变量启用，401整站）、DeepSeek展望/聊天/北京日20次事务配额/失败导出、v5迁移ai_calls、deploy.py备份管线；verify+browser全绿+1次真实调用 | 停即部署预览协议已入AGENTS/Skill | 已完成 |
 | 0.14 | 测试周+删除 | 已完成：测试周/比赛三把（92.5/100/102.5%向下2.5kg、逐把确认、miss重复/good不降）；归档删除三件套（强制导出token+精确ID二次确认+删前快照+删全部子表）；v5扩展attempts/deletion_tokens；13+4单测、browser全绿（1902断言） | 迁移仍走未发布v5扩展 | 已完成 |
 | 0.15–0.19 | 综合审查打磨 | 已完成：0.15老App视觉语言全页复用+主项杠铃UI（去除TOP/WORK/BACKOFF、重量前置、LOG内联）；0.16不对称单行清理+真实横向溢出修复（CycleStrip周范围标签、容量值列宽）+noOverflow改用clientWidth并新增ink溢出断言（移动端innerWidth会随溢出膨胀使旧断言恒真）；0.17日分享卡TopSet骨架+赛扣杠铃；0.18复刻老App开训前屏（倒计时环+事实卡+LOAD PROFILE相位柱/顶组%1RM线，固定日历口径改写note与Adjust入口）；0.19自审+回归加固+README/Skill指针同步。verify 6290 checks、browser 2235断言/174截图全绿 | 审查结论点名位置 | 已完成 |
-| 0.20 | 部署、推送 | 共享简单口令+ubuntu@新服务器HTTP+私有远程；老站友链指向新站（Jhin footer，覆盖前时间戳备份） | 备份/恢复/重启；部署后用户真环境验收；公网需用户在腾讯云控制台放通TCP 80 | 进行中 |
+| 0.20 | 部署、推送 | 已完成：正式部署新服务器（覆盖前时间戳tar备份、systemd重启、Caddy备份reload、health 0.20、无口令401、带口令读回活周期）；私有远程AstraQianJin/roast-raw首推；老站首页Friends区与Jhin footer友链（均先时间戳备份） | 公网需用户在腾讯云控制台放通TCP 80后真环境验收 | 已完成 |
 
 ## 审美回炉八项清单（用户2026-11-14主观反馈）
 
