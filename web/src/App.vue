@@ -45,7 +45,7 @@ const mode = ref('plan');
 const theme = ref(localStorage.getItem('roastraw-theme') === 'dark' ? 'dark' : 'light');
 watch(theme, value => {
   document.documentElement.dataset.theme = value;
-  document.querySelector('meta[name="theme-color"]').content = value === 'dark' ? '#07090D' : '#F4F7FA';
+  document.querySelector('meta[name="theme-color"]').content = value === 'dark' ? '#07090D' : '#F1F0EB';
   localStorage.setItem('roastraw-theme', value);
 }, { immediate: true });
 const page = computed(() => route.path.startsWith('/plan') ? 'plan' : route.path === '/archive' || route.path.startsWith('/archive/') ? 'archive' : ['/', '/today'].includes(route.path) ? 'today' : route.path.slice(1));
@@ -142,8 +142,8 @@ watch([() => route.fullPath, loading], async () => {
 
 <template>
   <div class="shell">
-    <header class="masthead"><RouterLink to="/" class="brand" aria-label="Roast Raw, Today">Roast Raw</RouterLink><span class="edition">TRAINING JOURNAL / {{ releaseVersion }}</span><button class="theme-toggle" aria-label="Toggle color theme" @click="theme = theme === 'light' ? 'dark' : 'light'">{{ theme === 'light' ? 'DARK' : 'LIGHT' }}</button></header>
-    <nav class="primary-nav" aria-label="Primary"><RouterLink to="/plan">PLAN</RouterLink><RouterLink to="/analysis">ANALYSIS</RouterLink><RouterLink to="/archive">ARCHIVE</RouterLink><RouterLink to="/questionnaire">OUTLOOK</RouterLink><RouterLink to="/settings">SETTINGS</RouterLink></nav>
+    <header class="masthead"><RouterLink to="/" class="brand" aria-label="Roast Raw, Today">Roast Raw</RouterLink><span class="edition">TRAINING JOURNAL / {{ releaseVersion }}</span><div class="theme-segment" role="group" aria-label="Color theme"><button :aria-pressed="theme === 'light'" aria-label="Light theme" @click="theme = 'light'">L</button><button :aria-pressed="theme === 'dark'" aria-label="Dark theme" @click="theme = 'dark'">D</button></div><RouterLink to="/settings" class="settings-link" aria-label="Settings"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M18.5 5.5l-1.8 1.8M7.3 16.7l-1.8 1.8"/></svg></RouterLink></header>
+    <nav class="primary-nav" aria-label="Primary"><RouterLink to="/plan">PLAN</RouterLink><RouterLink to="/analysis">ANALYSIS</RouterLink><RouterLink to="/archive">ARCHIVE</RouterLink><RouterLink to="/questionnaire">OUTLOOK</RouterLink></nav>
     <main :aria-busy="loading">
       <div v-if="loading" class="empty-state" role="status"><h1>Reading the plan.</h1><p>Loading your training data from the server.</p></div>
       <div v-else-if="error" class="error-panel" role="alert"><h2>Connection interrupted.</h2><p>{{ error }}</p><p>No offline copy is used for statistics.</p><button @click="refresh">Retry connection</button></div>

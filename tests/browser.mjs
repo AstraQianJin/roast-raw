@@ -88,6 +88,14 @@ try {
       equal(await browser.evaluate('document.querySelectorAll(".leaf-list button").length'), 0, 'Today does not duplicate full muscle list');
       equal(await browser.evaluate('document.querySelector(".site-footer").textContent.includes(' + JSON.stringify(releaseVersion) + ')'), true, 'footer version matches package');
       equal(await browser.evaluate('document.querySelector(".edition").textContent'), `TRAINING JOURNAL / ${releaseVersion}`, 'masthead version matches package');
+      equal(await browser.evaluate('document.querySelectorAll(".primary-nav a").length'), 4, 'primary nav has four items');
+      equal(await browser.evaluate('new Set([...document.querySelectorAll(".primary-nav a")].map(a => a.getBoundingClientRect().top)).size'), 1, 'primary nav stays on one row');
+      equal(await browser.evaluate(`document.querySelector('.theme-segment button[aria-label="${theme === 'light' ? 'Light' : 'Dark'} theme"]').getAttribute('aria-pressed')`), 'true', 'theme segment reflects active theme');
+      equal(await browser.evaluate('Boolean(document.querySelector(".settings-link[href=\\"/settings\\"]"))'), true, 'settings reachable from masthead gear');
+      await click(`.theme-segment button[aria-label="${theme === 'light' ? 'Dark' : 'Light'} theme"]`);
+      equal(await browser.evaluate('document.documentElement.dataset.theme'), theme === 'light' ? 'dark' : 'light', 'theme segment switches theme');
+      await click(`.theme-segment button[aria-label="${theme === 'light' ? 'Light' : 'Dark'} theme"]`);
+      equal(await browser.evaluate('document.documentElement.dataset.theme'), theme, 'theme segment switches back');
       const separator = await browser.evaluate('getComputedStyle(document.querySelector(".anatomy-grid path[data-leaf]")).stroke');
       equal(separator, theme === 'light' ? 'rgb(255, 255, 255)' : 'rgb(52, 62, 77)', 'anatomy separators follow theme');
       await noOverflow(`Today ${width} ${theme}`);
