@@ -12,6 +12,7 @@ Requires: node/npm on PATH, ssh alias `roast-raw` (key-based), sudo on remote.
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -31,15 +32,26 @@ def fail(message):
 
 
 def run(args, **kwargs):
-    result = subprocess.run(args, cwd=ROOT, encoding='utf-8', errors='replace', **kwargs)
+    executable = shutil.which(args[0])
+    if executable is None:
+        fail(f'command not found on PATH: {args[0]}')
+    if not isinstance(kwargs.get('input'), bytes):
+        kwargs.update(encoding='utf-8', errors='replace')
+    result = subprocess.run([executable, *args[1:]], cwd=ROOT, **kwargs)
     if result.returncode != 0:
+        output = result.stdout
+        if isinstance(output, bytes):
+            output = output.decode('utf-8', 'replace')
+        if output:
+            print(output[-3000:])
         fail(f'command exited {result.returncode}: {args[0]} ...')
     return result
 
 
 def remote(script, input_text=None):
+    # Bytes input: Windows text mode would rewrite \n to \r\n and break the remote shell.
     return run(['ssh', '-o', 'BatchMode=yes', REMOTE_HOST, 'bash -s'],
-               input=input_text, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
+               input=script.encode('utf-8'), stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout.decode('utf-8', 'replace')
 
 
 def build_payload(folder):
@@ -123,7 +135,7 @@ def write_env(password, deepseek_key):
     content = '\n'.join(lines) + '\n'
     run(['ssh', '-o', 'BatchMode=yes', REMOTE_HOST,
          'sudo tee /etc/roast-raw.env >/dev/null && sudo chmod 600 /etc/roast-raw.env'],
-        input=content, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        input=content.encode('utf-8'), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
 
 def health_check(password, expected_version):
@@ -153,7 +165,21 @@ def health_check(password, expected_version):
         except Exception as exc:
             last = str(exc)
         time.sleep(3)
-    fail(f'health check did not pass within 60s: {last}')
+    print(f'Public http://{PUBLIC_HOST}/ unreachable from here ({last}); verifying on the server itself.')
+    check = remote(
+        'set -euo pipefail\n'
+        f'code=$(curl -s -m 10 -o /tmp/rr-health.json -w "%{{http_code}}" -u "user:{password}" http://127.0.0.1/api/health)\n'
+        '[ "$code" = 200 ] || { echo "authenticated health returned $code"; exit 1; }\n'
+        'cat /tmp/rr-health.json; rm /tmp/rr-health.json\n'
+        'unauth=$(curl -s -m 10 -o /dev/null -w "%{http_code}" http://127.0.0.1/api/health)\n'
+        '[ "$unauth" = 401 ] || { echo "gate not active: unauthenticated returned $unauth"; exit 1; }\n'
+        'echo GATE-401-OK\n')
+    if f'"version": "{expected_version}"' not in check and f'"version":"{expected_version}"' not in check:
+        fail(f'on-server health check missing expected version {expected_version}: {check[-400:]}')
+    if 'GATE-401-OK' not in check:
+        fail(f'on-server health check failed: {check[-400:]}')
+    print(f'PASS deploy (on-server): health ok, version {expected_version}, gate 401 without password')
+    print(f'BLOCKED public access: open TCP 80 for 0.0.0.0/0 in the Tencent Lighthouse console firewall, then http://{PUBLIC_HOST}/ works.')
 
 
 def main():

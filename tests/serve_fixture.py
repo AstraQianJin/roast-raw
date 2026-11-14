@@ -1,9 +1,15 @@
 import argparse
 from datetime import datetime
 import json
+import os
 from pathlib import Path
 import sys
 import tempfile
+
+# Fixture servers are hermetic: deployment secrets in the developer environment
+# must not turn the gate on or make DeepSeek appear configured.
+os.environ.pop('RR_ACCESS_PASSWORD', None)
+os.environ.pop('DEEPSEEK_API_KEY', None)
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))

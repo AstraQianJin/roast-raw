@@ -700,6 +700,8 @@ class PrescriptionMigrationTests(unittest.TestCase):
             expected = dict(after)
             expected['questionnaires'] = []
             expected['ai_calls'] = []
+            expected['attempts'] = []
+            expected['deletion_tokens'] = []
             self.assertEqual(database_rows(path), expected)
             migrated_backups = backups(path) - stable_backups
             self.assertEqual(len(migrated_backups), 2, 'v4 questionnaire and v5 AI migrations must each snapshot once')

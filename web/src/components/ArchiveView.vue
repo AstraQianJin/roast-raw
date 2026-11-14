@@ -18,6 +18,10 @@ const exporting = ref(false);
 const error = ref('');
 const errorHeading = ref('');
 const exportNotice = ref('');
+const deleteToken = ref('');
+const deleteConfirm = ref('');
+const deleteBusy = ref(false);
+const deleteError = ref('');
 const selectedWeek = ref(null);
 const retryCount = ref(0);
 const expandedSections = ref({});
@@ -188,6 +192,10 @@ function clearReview() {
   performance.value = null;
   selectedWeek.value = null;
   expandedSections.value = {};
+  deleteToken.value = '';
+  deleteConfirm.value = '';
+  deleteError.value = '';
+  deleteBusy.value = false;
 }
 function retry() { retryCount.value += 1; }
 
@@ -292,6 +300,64 @@ async function downloadReview() {
     error.value = `${failure.message || 'The request failed.'} Retry to reload the review before exporting again.`;
   } finally {
     if (current()) exporting.value = false;
+  }
+}
+async function prepareDeletion() {
+  if (!review.value || deleteBusy.value || inProgress.value) return;
+  const id = selectedCycleId.value;
+  deleteBusy.value = true;
+  deleteError.value = '';
+  try {
+    const response = await fetch('/api/archive/delete/prepare', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cycle_id: id }), cache: 'no-store',
+    });
+    await checkResponse(response);
+    const blob = await response.blob();
+    let payload;
+    try { payload = JSON.parse(await blob.text()); }
+    catch { throw new Error('The deletion export was unreadable. Nothing was deleted.'); }
+    if (payload?.cycle_id !== id || typeof payload?.token !== 'string' || !payload.token) {
+      throw new Error('The deletion export did not match this cycle. Nothing was deleted.');
+    }
+    const url = URL.createObjectURL(blob);
+    objectUrls.add(url);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `RoastRaw-delete-export-${id}.json`;
+    try {
+      document.body.appendChild(anchor);
+      anchor.click();
+    } finally {
+      anchor.remove();
+      setTimeout(() => { URL.revokeObjectURL(url); objectUrls.delete(url); }, 0);
+    }
+    deleteToken.value = payload.token;
+    deleteConfirm.value = '';
+  } catch (failure) {
+    deleteError.value = failure.message || 'The deletion export failed. Nothing was deleted.';
+  } finally {
+    deleteBusy.value = false;
+  }
+}
+async function confirmDeletion() {
+  const id = selectedCycleId.value;
+  if (!deleteToken.value || deleteConfirm.value !== id || deleteBusy.value || inProgress.value) return;
+  deleteBusy.value = true;
+  deleteError.value = '';
+  try {
+    const response = await fetch(`/api/archive/${encodeURIComponent(id)}`, {
+      method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: deleteToken.value, confirm: deleteConfirm.value }), cache: 'no-store',
+    });
+    await checkResponse(response);
+    deleteToken.value = '';
+    deleteConfirm.value = '';
+    router.push('/archive');
+  } catch (failure) {
+    deleteError.value = failure.message || 'The cycle was not deleted.';
+  } finally {
+    deleteBusy.value = false;
   }
 }
 onBeforeUnmount(() => {
@@ -482,7 +548,25 @@ onBeforeUnmount(() => {
         <p v-if="section.note" class="reading-note">{{ section.note }}</p>
         <ReadOnlyFields v-if="expandedSections[section.key]" :value="review[section.key]" />
       </details>
-      <p class="reading-note report-footnote">Export generated {{ text(review.exported_at) }}. This screen is a reading surface, not a cycle-management or deletion tool.</p>
+      <section v-if="!inProgress" class="report-section deletion-section" data-testid="review-deletion" aria-label="Delete this cycle">
+        <div class="section-kicker"><span>DANGER ZONE</span><span>PERMANENT</span></div>
+        <h2>Delete this cycle.</h2>
+        <p class="reading-note">Deletion removes this plan, its logs, readiness, body metrics and journals from the server. Step 1 downloads a complete forced export — keep it, because it becomes your only remaining copy. This cannot be undone here.</p>
+        <div class="actions">
+          <button type="button" data-testid="delete-prepare" :disabled="deleteBusy" @click="prepareDeletion">{{ deleteToken ? 'Download a fresh forced export' : 'Step 1 · Download forced export' }}</button>
+        </div>
+        <template v-if="deleteToken">
+          <label class="week-control delete-confirm-label">
+            <span>Step 2 · Type the cycle ID to confirm: <code>{{ selectedCycleId }}</code></span>
+            <input type="text" v-model="deleteConfirm" data-testid="delete-confirm" autocomplete="off" spellcheck="false" :placeholder="selectedCycleId">
+          </label>
+          <div class="actions">
+            <button type="button" class="delete-final" data-testid="delete-final" :disabled="deleteBusy || deleteConfirm !== selectedCycleId" @click="confirmDeletion">{{ deleteBusy ? 'Deleting…' : 'Permanently delete this cycle' }}</button>
+          </div>
+        </template>
+        <p v-if="deleteError" class="delete-error" role="alert" data-testid="delete-error">{{ deleteError }}</p>
+      </section>
+      <p class="reading-note report-footnote">Export generated {{ text(review.exported_at) }}. {{ inProgress ? 'This active review is a reading surface; the active cycle cannot be deleted here.' : 'Historical records stay read-only until you complete the forced-export deletion above.' }}</p>
     </article>
   </section>
 </template>
@@ -544,10 +628,14 @@ code { color: var(--ink); font-family: var(--mono); white-space: normal; overflo
 .source-details { margin-top: 16px; }
 summary { min-height: 44px; min-width: 44px; padding: 12px 4px; cursor: pointer; font: 12px/1.6 var(--sans); color: var(--ink); }
 summary:hover { background: var(--panel2); }
-summary:focus-visible, .week-control select:focus-visible, .actions button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+summary:focus-visible, .week-control select:focus-visible, .delete-confirm-label input:focus-visible, .actions button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .week-control { display: block; min-width: 0; margin-top: 18px; color: var(--muted); font-size: 12px; }
 .week-control select { display: block; min-width: 0; width: 100%; max-width: 100%; min-height: 44px; margin-top: 6px; padding: 10px 8px; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 2px; font: 12px var(--sans); }
 .week-control select:disabled { opacity: 1; background: var(--panel2); color: var(--muted); }
+.delete-confirm-label input { display: block; min-width: 0; width: 100%; max-width: 100%; min-height: 44px; margin-top: 6px; padding: 10px 8px; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 2px; font: 12px var(--mono); }
+.delete-final { border-color: var(--accent); background: var(--accent-soft); }
+.delete-final:disabled { opacity: .6; }
+.delete-error { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--accent); background: var(--accent-soft); font-size: 13px; }
 .week-context { padding: 20px 0 14px; }
 .workout-row { padding: 18px 0; border-top: 1px solid var(--line); }
 .workout-row h3, .log-entry h3 { font-size: 24px; }

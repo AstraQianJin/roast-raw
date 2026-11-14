@@ -1,4 +1,5 @@
 import json
+import secrets
 import sqlite3
 from contextlib import closing, contextmanager
 from datetime import datetime, timezone
@@ -161,6 +162,15 @@ class Store:
                 prompt TEXT NOT NULL, conversation TEXT NOT NULL DEFAULT '[]',
                 response TEXT, error TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)''')
             db.execute('CREATE INDEX ai_calls_day ON ai_calls(day)')
+            db.execute('''CREATE TABLE attempts (
+                cycle_id TEXT NOT NULL REFERENCES cycles(id),
+                lift TEXT NOT NULL CHECK(lift IN ('squat','bench','deadlift')),
+                number INTEGER NOT NULL CHECK(number IN (1,2,3)),
+                load REAL NOT NULL, result TEXT CHECK(result IN ('good','miss')),
+                updated_at TEXT NOT NULL, PRIMARY KEY(cycle_id,lift,number))''')
+            db.execute('''CREATE TABLE deletion_tokens (
+                token TEXT PRIMARY KEY, cycle_id TEXT NOT NULL REFERENCES cycles(id),
+                created_at TEXT NOT NULL)''')
             db.execute('PRAGMA user_version=5')
 
     AI_DAILY_LIMIT = 20
@@ -202,6 +212,64 @@ class Store:
         record = dict(row)
         record['conversation'] = json.loads(record['conversation'])
         return record
+
+    def attempts(self, cycle_id):
+        with self.connect() as db:
+            rows = db.execute('SELECT lift,number,load,result,updated_at FROM attempts WHERE cycle_id=? ORDER BY lift,number',
+                              (cycle_id,)).fetchall()
+        return [dict(row) for row in rows]
+
+    def save_attempt(self, cycle_id, lift, number, load, result):
+        stamp = timestamp()
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            self.require_active(db, cycle_id)
+            if number > 1:
+                previous = db.execute('SELECT result FROM attempts WHERE cycle_id=? AND lift=? AND number=?',
+                                      (cycle_id, lift, number - 1)).fetchone()
+                if previous is None or previous['result'] is None:
+                    raise ReadOnlyError(f'Confirm {lift} attempt {number - 1} before attempt {number}.')
+            db.execute('''INSERT INTO attempts VALUES(?,?,?,?,?,?)
+                ON CONFLICT(cycle_id,lift,number) DO UPDATE SET load=excluded.load,
+                result=excluded.result,updated_at=excluded.updated_at''',
+                (cycle_id, lift, number, load, result, stamp))
+            db.execute('INSERT INTO records_journal(cycle_id,kind,key,payload,created_at) VALUES(?,?,?,?,?)',
+                       (cycle_id, 'attempt', f'{lift}|{number}',
+                        json.dumps({'lift': lift, 'number': number, 'load': load, 'result': result}), stamp))
+        return {'lift': lift, 'number': number, 'load': load, 'result': result, 'updated_at': stamp}
+
+    def prepare_deletion(self, cycle_id):
+        token = secrets.token_urlsafe(24)
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            cycle = db.execute('SELECT status FROM cycles WHERE id=?', (cycle_id,)).fetchone()
+            if cycle is None:
+                raise KeyError(cycle_id)
+            if cycle['status'] == 'active':
+                raise ReadOnlyError('The active cycle cannot be deleted. Import a new plan first.')
+            db.execute('DELETE FROM deletion_tokens WHERE cycle_id=?', (cycle_id,))
+            db.execute('INSERT INTO deletion_tokens VALUES(?,?,?)', (token, cycle_id, timestamp()))
+        return token
+
+    def delete_cycle(self, cycle_id, token):
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            cycle = db.execute('SELECT status FROM cycles WHERE id=?', (cycle_id,)).fetchone()
+            if cycle is None:
+                raise KeyError(cycle_id)
+            if cycle['status'] == 'active':
+                raise ReadOnlyError('The active cycle cannot be deleted. Import a new plan first.')
+            issued = db.execute('SELECT token FROM deletion_tokens WHERE cycle_id=?', (cycle_id,)).fetchone()
+            if issued is None or not secrets.compare_digest(issued['token'], token):
+                raise ReadOnlyError('Export this cycle before deleting it. Request a fresh deletion export first.')
+            # Snapshot only validated deletions, before any row is removed.
+            self.snapshot()
+            for table in ('attempts', 'ai_calls', 'questionnaires', 'prescription_versions', 'body_metrics',
+                          'archives', 'records_journal', 'readiness_v2', 'readiness', 'logs_journal', 'logs',
+                          'plans', 'deletion_tokens'):
+                db.execute(f'DELETE FROM {table} WHERE cycle_id=?', (cycle_id,))
+            db.execute('DELETE FROM cycles WHERE id=?', (cycle_id,))
+        return {'deleted': cycle_id}
 
     def questionnaire(self, cycle_id):
         with self.connect() as db:

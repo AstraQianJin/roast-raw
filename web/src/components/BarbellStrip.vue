@@ -43,7 +43,7 @@ const ariaLabel = computed(() => {
   if (!solved.value.plates.length) return `Empty bar, ${props.load} kg total`;
   const counts = {};
   for (const plate of solved.value.plates) counts[plate.kg] = (counts[plate.kg] || 0) + 1;
-  const side = Object.entries(counts).map(([kg, count]) => `${count}×${kg}`).join(' + ');
+  const side = Object.entries(counts).sort((a, b) => Number(b[0]) - Number(a[0])).map(([kg, count]) => `${count}×${kg}`).join(' + ');
   return `${props.load} kg total: ${props.barKg} kg bar + ${props.collarPair} kg collars + per side ${side} kg`;
 });
 </script>

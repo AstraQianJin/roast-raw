@@ -17,6 +17,7 @@ import ArchiveView from './components/ArchiveView.vue';
 import PlanImport from './components/PlanImport.vue';
 import QuestionnaireView from './components/QuestionnaireView.vue';
 import AiOutlook from './components/AiOutlook.vue';
+import AttemptBoard from './components/AttemptBoard.vue';
 import WelcomeView from './components/WelcomeView.vue';
 import CycleStrip from './components/CycleStrip.vue';
 
@@ -190,6 +191,7 @@ watch([() => route.fullPath, loading], async () => {
               <nav class="week-rail" aria-label="Weeks in selected block"><RouterLink v-for="item in plan.weeks.filter(w => w.blockId === week.blockId)" :key="item.n" :to="`/plan/week/${item.n}`" :class="[item.kind, `ct-${blockType(item.blockId)}`, { active: item.n === currentWeek }]">{{ String(item.n).padStart(2, '0') }}</RouterLink></nav>
               <div class="week-header"><span class="week-number">{{ currentWeek }}</span><div><h2>{{ weekMeta.blockName }}</h2><small>{{ week.kind.toUpperCase() }} WEEK</small></div><div class="week-summary"><strong>{{ display(week.tonnageKg / 1000) }} t</strong><small>{{ week.sessions }} SESSIONS</small></div></div>
               <p v-if="weekMeta.kind === 'deload'" class="notice">{{ DELOAD_NOTE }}</p>
+              <AttemptBoard v-if="weekMeta.kind === 'test'" :cycle-id="plan.meta.planId" :bar-kg="plan.meta.profile.bar_kg || 20" :collar-pair="plan.meta.profile.collars ? 5 : 0" />
               <div class="top-intensity"><span>TOP %1RM <b>{{ display(week.topPct) }}%</b></span><span>S {{ display(week.topPctByLift.S) }} · B {{ display(week.topPctByLift.B) }} · D {{ display(week.topPctByLift.D) }}</span></div>
               <p class="breadcrumb">Plan / {{ week.blockId }} / Week {{ currentWeek }}<template v-if="route.params.day"> / Day {{ route.params.day }}</template></p>
               <div v-for="day in days" :id="day.id ? `day-${currentWeek}-${day.id}` : undefined" :key="day.date" :tabindex="route.params.day === day.id ? -1 : undefined" class="plan-day">

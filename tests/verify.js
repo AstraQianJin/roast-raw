@@ -99,7 +99,7 @@ try {
   if (!sabotage) {
     libraryCheck();
     syntheticCheck();
-    const unit = spawnSync(python, ['-m', 'unittest', 'discover', '-s', 'tests', '-p', 'test_*.py', '-v'], { cwd: root, encoding: 'utf8', env: { ...process.env, PYTHONIOENCODING: 'utf-8' }, timeout: 600000, maxBuffer: 5 * 1024 * 1024 });
+    const unit = spawnSync(python, ['-m', 'unittest', 'discover', '-s', 'tests', '-p', 'test_*.py', '-v'], { cwd: root, encoding: 'utf8', env: { ...process.env, PYTHONIOENCODING: 'utf-8', RR_ACCESS_PASSWORD: '', DEEPSEEK_API_KEY: '' }, timeout: 600000, maxBuffer: 5 * 1024 * 1024 });
     process.stdout.write(unit.stdout || '');
     process.stdout.write(unit.stderr || '');
     assert.equal(unit.status, 0, 'Python import/API/calendar/statistics regression failed');

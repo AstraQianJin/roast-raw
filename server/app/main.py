@@ -234,6 +234,81 @@ def create_app(db_path=None, plan_path=None):
                                'e1rm': selected['e1rm']})
         return {'cycles': historical, 'active_cycle_id': records['active_cycle_id']}
 
+    @app.get('/api/attempts')
+    def attempts_state(cycle_id: str | None = None):
+        from .stats.attempts import LIFTS, competition_info, next_attempt, references, suggested
+        selected = active_plan(cycle_id)
+        selected_id = selected['meta']['planId']
+        questionnaire = store.questionnaire(selected_id)
+        refs = references(questionnaire, selected)
+        saved = {(row['lift'], row['number']): row for row in store.attempts(selected_id)}
+        lifts = {}
+        for lift in LIFTS:
+            reference = refs[lift]['reference']
+            history = [saved.get((lift, n)) for n in (1, 2, 3)]
+            suggestions = []
+            for n in (1, 2, 3):
+                if reference is None:
+                    suggestions.append(None)
+                elif n == 1:
+                    suggestions.append(suggested(reference)[0])
+                else:
+                    previous = history[n - 2]
+                    suggestions.append(next_attempt(reference, previous['load'], previous['result'], n)
+                                       if previous else suggested(reference)[n - 1])
+            lifts[lift] = {'reference': refs[lift], 'suggested': suggested(reference) if reference else None,
+                           'next': suggestions, 'attempts': history}
+        return {'cycle_id': selected_id, 'competition': competition_info(questionnaire, selected), 'lifts': lifts}
+
+    class AttemptInput(BaseModel):
+        model_config = ConfigDict(extra='forbid')
+        cycle_id: str = Field(min_length=1)
+        lift: Literal['squat', 'bench', 'deadlift']
+        number: int = Field(ge=1, le=3)
+        load: float = Field(gt=0, le=500)
+        result: Literal['good', 'miss'] | None = None
+
+    @app.put('/api/attempts')
+    def save_attempt(payload: AttemptInput):
+        if abs(payload.load / 2.5 - round(payload.load / 2.5)) > 1e-6:
+            raise HTTPException(422, 'Attempt load must be a multiple of 2.5 kg')
+        try:
+            return store.save_attempt(payload.cycle_id, payload.lift, payload.number, payload.load, payload.result)
+        except ReadOnlyError as exc:
+            raise HTTPException(409, str(exc)) from exc
+
+    class DeletionPrepareInput(BaseModel):
+        model_config = ConfigDict(extra='forbid')
+        cycle_id: str = Field(min_length=1)
+
+    @app.post('/api/archive/delete/prepare')
+    def prepare_deletion(payload: DeletionPrepareInput):
+        try:
+            token = store.prepare_deletion(payload.cycle_id)
+        except KeyError as exc:
+            raise HTTPException(404, 'Cycle not found') from exc
+        except ReadOnlyError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        return JSONResponse({'token': token, 'cycle_id': payload.cycle_id, 'review': cycle_review(payload.cycle_id)},
+                            headers={'Content-Disposition': f'attachment; filename="RoastRaw-delete-export-{payload.cycle_id}.json"',
+                                     'Cache-Control': 'no-store'})
+
+    class DeletionInput(BaseModel):
+        model_config = ConfigDict(extra='forbid')
+        token: str = Field(min_length=1)
+        confirm: str = Field(min_length=1)
+
+    @app.delete('/api/archive/{cycle_id}')
+    def delete_cycle(cycle_id: str, payload: DeletionInput):
+        if payload.confirm != cycle_id:
+            raise HTTPException(422, 'Type the exact cycle ID to confirm deletion')
+        try:
+            return store.delete_cycle(cycle_id, payload.token)
+        except KeyError as exc:
+            raise HTTPException(404, 'Cycle not found') from exc
+        except ReadOnlyError as exc:
+            raise HTTPException(409, str(exc)) from exc
+
     @app.get('/api/plan')
     def plan(cycle_id: str | None = None):
         return active_plan(cycle_id)
