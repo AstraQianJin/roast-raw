@@ -671,6 +671,53 @@ try {
   }
   console.log('PASS isolated training forms: single editor and drafts, real SQLite actual/skip saves, readiness 66.7 / REC 1.08, independent pain and raw baselines, dated zero-fat body metrics, failed saves and GET retries, expanded four-width/two-theme scrolling and 44px controls');
 
+  await browser.viewport(390);
+  await load(trainingBase, '/today');
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=share-card]"))');
+  const shareSize = '(() => { const c = document.querySelector("[data-testid=share-canvas]"); return [c.width, c.height]; })()';
+  equal(await browser.evaluate(shareSize), [1080, 1440], 'share canvas renders at 1080x1440');
+  equal(await browser.evaluate('Boolean(document.querySelector("[data-testid=share-error]"))'), false, 'share card draws without error');
+  assert.match(await browser.evaluate('document.querySelector("[data-testid=share-summary]").textContent'), /sets logged · volume/, 'share summary reports logged sets and volume'); checks++;
+  const shareLoggedDate = await browser.evaluate('document.querySelector("[data-testid=share-date]").value');
+  const shareOptions = await browser.evaluate('[...document.querySelectorAll("[data-testid=share-date] option")].map(o => o.value)');
+  let shareEmpty = false;
+  for (const option of shareOptions) {
+    await input('[data-testid=share-date]', option);
+    await browser.waitFor(`document.querySelector("[data-testid=share-date]").value === ${JSON.stringify(option)}`);
+    if ((await browser.evaluate('document.querySelector("[data-testid=share-summary]").textContent')).includes('No session log')) { shareEmpty = true; break; }
+  }
+  equal(shareEmpty, true, 'share card empty state reachable by date switch');
+  equal(await browser.evaluate(shareSize), [1080, 1440], 'empty-state canvas keeps 1080x1440');
+  await input('[data-testid=share-date]', shareLoggedDate);
+  await browser.waitFor(`document.querySelector("[data-testid=share-date]").value === ${JSON.stringify(shareLoggedDate)}`);
+  const sharePng = await browser.evaluate(`(async () => { const c = document.querySelector('[data-testid=share-canvas]'); const blob = await new Promise(r => c.toBlob(r, 'image/png')); const head = new Uint8Array(await blob.slice(0, 8).arrayBuffer()); return { type: blob.type, head: [...head], size: blob.size }; })()`);
+  equal(sharePng.type, 'image/png', 'share export blob is PNG');
+  equal(sharePng.head, [137, 80, 78, 71, 13, 10, 26, 10], 'share export carries PNG magic');
+  assert.ok(sharePng.size > 20000, 'share PNG has real content'); checks++;
+  await browser.evaluate('window.__shareDownload = null; const origClick = HTMLAnchorElement.prototype.click; HTMLAnchorElement.prototype.click = function () { if (this.download) { window.__shareDownload = { name: this.download, scheme: this.href.slice(0, 5) }; return; } return origClick.call(this); };');
+  await click('[data-testid=share-download]');
+  await browser.waitFor('Boolean(window.__shareDownload)');
+  equal(await browser.evaluate('window.__shareDownload'), { name: `RoastRaw-share-${shareLoggedDate}.png`, scheme: 'blob:' }, 'download action exports a dated PNG blob');
+  await browser.waitFor('!document.querySelector("[data-testid=share-download]").disabled');
+  equal(await browser.evaluate('Boolean(document.querySelector("[data-testid=share-error]"))'), false, 'download path reports no error');
+  await browser.evaluate(`localStorage.setItem('roastraw-theme', 'dark')`);
+  await load(trainingBase, '/today');
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=share-card]"))');
+  equal(await browser.evaluate('Boolean(document.querySelector("[data-testid=share-error]"))'), false, 'dark theme redraws share card without error');
+  await screenshot('share-390-dark', '[data-testid=share-card]');
+  await browser.evaluate(`localStorage.setItem('roastraw-theme', 'light')`);
+  await load(trainingBase, '/today');
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=share-card]"))');
+  await screenshot('share-390-light', '[data-testid=share-card]');
+  for (const width of [320, 360, 390, 412]) {
+    await browser.viewport(width);
+    await load(trainingBase, '/today');
+    await browser.waitFor('Boolean(document.querySelector("[data-testid=share-card]"))');
+    await noOverflow(`share card ${width}`);
+  }
+  await browser.viewport(390);
+  console.log('PASS share card: 1080x1440 TopSet-style render, logged volume and final-main plates, date switch empty state, PNG magic and dated blob download, dark redraw, four-width overflow');
+
   const prescriptionUrl = `/api/prescription?${new URLSearchParams({ cycle_id: cycleId })}`;
   const originalInfo = await trainingApi(prescriptionUrl);
   const variationLifts = { 'Low-bar Squat': 'S', 'Wide-grip Bench': 'B', 'Sumo Deadlift': 'D', 'Power Clean': 'D', OHP: 'B', 'Pull-Up': 'D', Dip: 'B', 'Bent-Over Barbell Row': 'D' };

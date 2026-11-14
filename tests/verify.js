@@ -94,11 +94,41 @@ function syntheticCheck() {
     console.log(`PASS synthesis: ${count} weeks / ${analysis.cycle.sessions} sessions / ${analysis.cycle.total} sets; schema, calendar, blocks and stats agree`);
   }
 }
+async function shareCheck() {
+  const { solvePlates, dayShareData } = await import('../web/src/share.js');
+  const kg = plates => plates.reduce((sum, plate) => sum + plate.kg, 0);
+  same(solvePlates(155).map(plate => plate.kg), [25, 25, 15], 'share plates for 155 kg include competition collars');
+  near(kg(solvePlates(155)) * 2 + 25, 155, 1e-9, 'share plate sum reconstructs total with bar and collars');
+  same(solvePlates(140).map(plate => plate.kg), [25, 25, 5, 2.5], 'share plates reach micro plates');
+  same(solvePlates(25), [], 'bar plus collars alone draws no plates');
+  same(solvePlates(20), [], 'bar alone draws no plates');
+  const plan = { workouts: [
+    { date: '2026-11-16', week: 1, day: 'A', seq: 1, bucket: 'main', lift: 'S', nameEn: 'High-bar Squat', sets: 3 },
+    { date: '2026-11-16', week: 1, day: 'A', seq: 2, bucket: 'main', lift: 'B', nameEn: 'Mid-grip Bench', sets: 3 },
+    { date: '2026-11-16', week: 1, day: 'A', seq: 3, bucket: 'accessory', lift: null, nameEn: 'Side Plank', sets: 2 },
+    { date: '2026-11-17', week: 1, day: 'B', seq: 1, bucket: 'main', lift: 'D', nameEn: 'Deadlift', sets: 2 },
+  ] };
+  const logs = {
+    '1|A|1': { load: 140, sets: 3, reps: 3, rpe: 8 },
+    '1|A|2': { load: 100, sets: 3, reps: 3, rpe: 8 },
+    '1|A|3': { load: null, sets: 2, reps: 30, rpe: null },
+  };
+  const data = dayShareData(plan, logs, '2026-11-16');
+  same(data.topSet, { name: 'Mid-grip Bench', load: 100, reps: 3, rpe: 8 }, 'share top set is the final logged main lift');
+  near(data.volume, 140 * 9 + 100 * 9, 1e-9, 'null accessory load contributes zero volume, not NaN');
+  same(data.byLift, [['S', 1260], ['B', 900], ['OTHER', 0]], 'volume by lift sorts desc and keeps null-load group');
+  same([data.doneSets, data.plannedSets], [8, 8], 'share counts logged and planned sets');
+  const empty = dayShareData(plan, logs, '2026-11-17');
+  same([empty.volume, empty.topSet, empty.loggedCount], [null, null, 0], 'unlogged date is an explicit empty state');
+  console.log('PASS share math: collar-inclusive plate solve, final-main top set, null-load volume safety, empty state');
+}
+(async () => {
 try {
   fixtureCheck();
   if (!sabotage) {
     libraryCheck();
     syntheticCheck();
+    await shareCheck();
     const unit = spawnSync(python, ['-m', 'unittest', 'discover', '-s', 'tests', '-p', 'test_*.py', '-v'], { cwd: root, encoding: 'utf8', env: { ...process.env, PYTHONIOENCODING: 'utf-8', RR_ACCESS_PASSWORD: '', DEEPSEEK_API_KEY: '' }, timeout: 600000, maxBuffer: 5 * 1024 * 1024 });
     process.stdout.write(unit.stdout || '');
     process.stdout.write(unit.stderr || '');
@@ -114,3 +144,4 @@ try {
   console.error(`FAIL: ${error.message}`);
   process.exitCode = 1;
 }
+})();

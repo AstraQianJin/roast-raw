@@ -20,6 +20,7 @@ import AiOutlook from './components/AiOutlook.vue';
 import AttemptBoard from './components/AttemptBoard.vue';
 import WelcomeView from './components/WelcomeView.vue';
 import CycleStrip from './components/CycleStrip.vue';
+import ShareCard from './components/ShareCard.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -176,6 +177,7 @@ watch([() => route.fullPath, loading], async () => {
               <details class="gear"><summary>GEAR <span class="chip">{{ needsMicroPlates(todayRows) ? 'MICRO PLATES' : 'SESSION SETUP' }}</span><span v-if="plan.meta.profile.bar_kg" class="chip">{{ display(plan.meta.profile.bar_kg) }} KG BAR</span></summary><p>{{ needsMicroPlates(todayRows) ? 'Some prescribed loads need micro plates. Prepare equipment before the session; loads remain unchanged.' : 'Standard plates cover these prescribed loads. Prepare equipment before the session.' }}</p><p v-if="plan.meta.profile.bar_kg">Plan bar reference: {{ display(plan.meta.profile.bar_kg) }} kg. {{ plan.meta.profile.collars ? 'Collars included in the plan setup.' : 'Collars are not included in the plan load reference.' }}</p><p v-if="todayRows.some(row => prescriptionInfo?.systemLoads[row.week + '|' + row.day + '|' + row.seq])">Pull-up and dip loads include bodyweight. Check the dated bodyweight reading before choosing assistance or added weight.</p></details>
               <WarmupSuggestions :entries="plan.warmups?.[todaySession.date] || []" />
               <ExerciseRows :rows="todayRows" :cycle-id="plan.meta.planId" :logs="logs" :system-loads="prescriptionInfo?.systemLoads || {}" @saved="savedLog" />
+              <ShareCard :plan="plan" :logs="logs" :theme="theme" :default-date="todaySession.date" />
             </template>
           </div>
           <aside><MuscleMap compact :geometry="geometry" :leaves="leaves" :heat-scale="analysis.heatScale" :week-number="currentWeek" :week-count="plan.weeks.length" @week="selectWeek" /><WeekCapacity :week="week" :ranges="analysis.ranges" /></aside>
@@ -201,6 +203,7 @@ watch([() => route.fullPath, loading], async () => {
                   <details v-if="route.params.day === day.id" class="gear"><summary>GEAR <span class="chip">{{ needsMicroPlates(day.rows) ? 'MICRO PLATES' : 'SESSION SETUP' }}</span><span v-if="plan.meta.profile.bar_kg" class="chip">{{ display(plan.meta.profile.bar_kg) }} KG BAR</span></summary><p>{{ needsMicroPlates(day.rows) ? 'Prepare micro plates for the prescribed loads.' : 'Standard plates cover these prescribed loads.' }} All loads stay as prescribed; bodyweight movements use dated total system weight when shown.</p></details>
                   <WarmupSuggestions v-if="route.params.day === day.id" :entries="plan.warmups?.[day.date] || []" />
                   <ExerciseRows v-if="route.params.day === day.id" :rows="day.rows" :cycle-id="plan.meta.planId" :logs="logs" :system-loads="prescriptionInfo?.systemLoads || {}" @saved="savedLog" />
+                  <ShareCard v-if="route.params.day === day.id" :plan="plan" :logs="logs" :theme="theme" :default-date="day.date" />
                 </template>
                 <div v-else class="rest-row"><span>{{ day.label }} · {{ day.weekday }}</span><span>REST</span></div>
               </div>
