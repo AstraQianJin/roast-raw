@@ -21,6 +21,10 @@ sys.path.insert(0, str(ROOT))
 from server.app.main import create_app
 
 
+def invite(client, tier='free'):
+    return client.app.state.store.create_invite(tier)['code']
+
+
 def basic(user, pwd):
     return {'Authorization': 'Basic ' + base64.b64encode(f'{user}:{pwd}'.encode()).decode()}
 
@@ -81,7 +85,7 @@ class AccessGateTests(unittest.TestCase):
             with tempfile.TemporaryDirectory() as folder:
                 with TestClient(create_app(db_path=Path(folder) / 'g.sqlite3')) as client:
                     self.assertEqual(client.get('/api/plan').status_code, 401)
-                    reg = client.post('/api/register', json={'username': 'Lifter_2', 'password': 'barbell-2018'})
+                    reg = client.post('/api/register', json={'username': 'Lifter_2', 'password': 'barbell-2018', 'invite_code': invite(client)})
                     self.assertEqual(reg.status_code, 200)
                     self.assertEqual(reg.json()['username'], 'Lifter_2')
                     self.assertTrue(client.get('/api/session').json()['authenticated'])
@@ -99,11 +103,15 @@ class AccessGateTests(unittest.TestCase):
         with patch.dict(os.environ, {'RR_ACCESS_PASSWORD': 'gate-secret-917', 'RR_ACCESS_USERNAME': 'Astra'}):
             with tempfile.TemporaryDirectory() as folder:
                 with TestClient(create_app(db_path=Path(folder) / 'g.sqlite3')) as client:
-                    self.assertEqual(client.post('/api/register', json={'username': 'Astra', 'password': 'another-2018'}).status_code, 409)
-                    self.assertEqual(client.post('/api/register', json={'username': 'astra', 'password': 'another-2018'}).status_code, 409)
-                    self.assertEqual(client.post('/api/register', json={'username': '1bad', 'password': 'barbell-2018'}).status_code, 422)
-                    self.assertEqual(client.post('/api/register', json={'username': 'ok', 'password': 'short'}).status_code, 422)
-                    self.assertEqual(client.post('/api/register', json={'username': 'ok', 'password': 'barbell-2018', 'extra': 1}).status_code, 422)
+                    code = invite(client)
+                    self.assertEqual(client.post('/api/register', json={'username': 'Astra', 'password': 'another-2018', 'invite_code': code}).status_code, 409)
+                    self.assertEqual(client.post('/api/register', json={'username': 'astra', 'password': 'another-2018', 'invite_code': code}).status_code, 409)
+                    self.assertEqual(client.post('/api/register', json={'username': '1bad', 'password': 'barbell-2018', 'invite_code': code}).status_code, 422)
+                    self.assertEqual(client.post('/api/register', json={'username': 'ok', 'password': 'short', 'invite_code': code}).status_code, 422)
+                    self.assertEqual(client.post('/api/register', json={'username': 'ok', 'password': 'barbell-2018', 'invite_code': code, 'extra': 1}).status_code, 422)
+                    self.assertEqual(client.post('/api/register', json={'username': 'ok', 'password': 'barbell-2018'}).status_code, 422)
+                    self.assertEqual(client.post('/api/register', json={'username': 'ok', 'password': 'barbell-2018', 'invite_code': code}).status_code, 200,
+                                     'failed attempts above did not consume the single-use code')
                     self.assertEqual(client.post('/api/login', json={'username': '', 'password': 'x'}).status_code, 422)
 
     def test_session_survives_restart(self):

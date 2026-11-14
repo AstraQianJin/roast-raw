@@ -27,6 +27,7 @@ parser.add_argument('--weeks', type=int)
 parser.add_argument('--date')
 parser.add_argument('--archive', action='store_true')
 parser.add_argument('--gate')
+parser.add_argument('--invite', action='append', default=[], help='TIER=CODE fixture invite, e.g. plus=RR-PLUS-TEST-CODE')
 args = parser.parse_args()
 if args.gate:
     os.environ['RR_ACCESS_PASSWORD'] = args.gate
@@ -41,6 +42,18 @@ with tempfile.TemporaryDirectory(prefix='roastraw-browser-') as directory:
         plan_path = path / 'plan.json'
         plan_path.write_text(json.dumps(build(args.weeks)), encoding='utf-8')
     app = main.create_app(db_path=path / 'test.sqlite3', plan_path=plan_path)
+    if args.invite:
+        # Fixed fixture codes so the browser suite can type them; real codes come from server/tools/invite.py.
+        from server.app.store import Store
+        store = app.state.store
+        store.initialize(json.loads(plan_path.read_text(encoding='utf-8')))
+        for step in (store.upgrade, store.upgrade_prescriptions, store.upgrade_questionnaire, store.upgrade_ai,
+                     store.upgrade_accounts, store.upgrade_membership):
+            step()
+        with store.connect() as db:
+            for tier, _, code in (item.partition('=') for item in args.invite):
+                db.execute('INSERT INTO invites(code_hash, tier, created_at) VALUES(?,?,?)',
+                           (Store._code_hash(code), tier, '2026-11-15T00:00:00+00:00'))
     if args.archive:
         from copy import deepcopy
         from server.app.stats.variations import digest

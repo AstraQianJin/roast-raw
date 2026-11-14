@@ -1441,7 +1441,7 @@ try {
   equal(await browser.evaluate('[...document.querySelectorAll(".wl-cta a")].some(a=>a.getAttribute("href")==="/register")'), true, 'landing Create account link');
   equal(await browser.evaluate('Boolean(document.querySelector(".masthead-cta"))'), true, 'landing masthead CTA present');
   console.log('PASS auth UI (gate off): login/register render, 44px targets, no overflow, validation, eye toggle, switch links, landing CTAs, four widths and two themes');
-  const gated = await startServer(['--gate', 'browser-gate-2018']);
+  const gated = await startServer(['--gate', 'browser-gate-2018', '--invite', 'plus=RR-PLUS-TEST-2026']);
   try {
     const gbase = gated.base;
     await browser.viewport(390);
@@ -1479,9 +1479,20 @@ try {
     await input('.auth-pass input', 'barbell-2018');
     await input('.auth-field input[placeholder="Repeat the password"]', 'barbell-2018');
     await click('.auth-submit');
+    await browser.waitFor('Boolean(document.querySelector(".auth-error"))');
+    equal(await browser.evaluate('document.querySelector(".auth-error").textContent'), 'Enter your invite code. Registration is by invitation.', 'register without an invite code is stopped');
+    await input('input[name=invite_code]', 'RR-PLUS-NOPE-2026');
+    await click('.auth-submit');
+    await browser.waitFor('document.querySelector(".auth-error")?.textContent.startsWith("That invite code cannot be used")');
+    equal(await browser.evaluate('location.pathname'), '/register', 'an unknown invite code keeps the visitor on register');
+    await input('input[name=invite_code]', 'rr-plus-test-2026');
+    await input('.auth-pass input', 'barbell-2018');
+    await input('.auth-field input[placeholder="Repeat the password"]', 'barbell-2018');
+    await click('.auth-submit');
     await browser.waitFor('location.pathname === "/today" && Boolean(document.querySelector("[data-testid=today]"))');
     equal(await browser.evaluate('fetch("/api/session").then(r=>r.json()).then(s=>s.username)'), 'BrowserLifter', 'registered account is signed in');
-    const expected401 = entry => entry.source === 'network' && entry.url.startsWith(`${gbase}/api/`) && entry.text.includes('401');
+    equal(await browser.evaluate('fetch("/api/session").then(r=>r.json()).then(s=>s.tier)'), 'plus', 'invite tier becomes the account tier');
+    const expected401 = entry => entry.source === 'network' && ((entry.url.startsWith(`${gbase}/api/`) && entry.text.includes('401')) || (entry.url === `${gbase}/api/register` && entry.text.includes('422')));
     equal(browser.errors.filter(entry => !expected401(entry)), [], 'auth flow has no unexpected runtime or console errors');
     for (let index = browser.errors.length - 1; index >= 0; index--) if (expected401(browser.errors[index])) browser.errors.splice(index, 1);
     console.log('PASS auth gate-on: public landing, health public / plan 401, guard redirect with next, wrong-password error, case-insensitive sign-in, journal nav, sign-out re-lock, registration');

@@ -1,6 +1,4 @@
 import base64
-import hashlib
-import hmac
 import json
 import os
 import re
@@ -18,28 +16,16 @@ from datetime import date as Date
 from .stats.readiness import score_readiness
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
+from . import membership
 from .calendar import calendar_state
 from .questionnaire import skeleton, validate_questionnaire
 from .stats.engine import analyze, library
 from .stats.performance import performance
-from .store import AiQuotaError, ReadOnlyError, Store, timestamp
+from .store import AiQuotaError, InviteError, ReadOnlyError, Store, timestamp
 from .validation import Reject, validate_plan
 
 ROOT = Path(__file__).resolve().parents[2]
-
-
-def _session_token(username, secret):
-    name = username.strip().lower()
-    signature = hmac.new(secret.encode('utf-8'), name.encode('utf-8'), hashlib.sha256).hexdigest()
-    return f'{name}.{signature}'
-
-
-def _session_username(token, secret):
-    if not token or '.' not in token:
-        return None
-    name, _, signature = token.partition('.')
-    expected = hmac.new(secret.encode('utf-8'), name.encode('utf-8'), hashlib.sha256).hexdigest()
-    return name if hmac.compare_digest(signature, expected) else None
+OPEN_ACCOUNT = {'id': None, 'username': None, 'tier': 'ultra'}
 
 
 class LoginInput(BaseModel):
@@ -52,6 +38,12 @@ class RegisterInput(BaseModel):
     model_config = ConfigDict(extra='forbid')
     username: str = Field(min_length=2, max_length=64)
     password: str = Field(min_length=6, max_length=200)
+    invite_code: str = Field(min_length=1, max_length=64)
+
+
+class RedeemInput(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    code: str = Field(min_length=1, max_length=64)
 
 
 class LogInput(BaseModel):
@@ -178,6 +170,7 @@ def create_app(db_path=None, plan_path=None):
         store.upgrade_questionnaire()
         store.upgrade_ai()
         store.upgrade_accounts()
+        store.upgrade_membership()
         store.seed_owner(access_username, access_password)
         yield
 
@@ -191,25 +184,31 @@ def create_app(db_path=None, plan_path=None):
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
 
     public_api = {'/api/health', '/api/login', '/api/register', '/api/logout', '/api/session'}
-    if access_password:
-        @app.middleware('http')
-        async def access_gate(request, call_next):
-            path = request.url.path
-            if not path.startswith('/api/') or path in public_api:
-                return await call_next(request)
-            if _session_username(request.cookies.get('rr_session'), access_password):
-                return await call_next(request)
-            header = request.headers.get('authorization', '')
-            if header.lower().startswith('basic '):
-                try:
-                    decoded = base64.b64decode(header[6:], validate=True).decode('utf-8')
-                except (ValueError, UnicodeDecodeError):
-                    decoded = ''
-                user, _, pwd = decoded.partition(':')
-                if store.verify_account(user, pwd):
-                    return await call_next(request)
+
+    def basic_account(request):
+        header = request.headers.get('authorization', '')
+        if not header.lower().startswith('basic '):
+            return None
+        try:
+            decoded = base64.b64decode(header[6:], validate=True).decode('utf-8')
+        except (ValueError, UnicodeDecodeError):
+            return None
+        user, _, pwd = decoded.partition(':')
+        verified = store.verify_account(user, pwd)
+        return store.account(verified['id']) if verified else None
+
+    @app.middleware('http')
+    async def access_gate(request, call_next):
+        path = request.url.path
+        request.state.account = None
+        if path.startswith('/api/'):
+            request.state.account = store.session_account(request.cookies.get('rr_session')) or basic_account(request)
+            if request.state.account is None and not access_password:
+                request.state.account = dict(OPEN_ACCOUNT)
+        if path.startswith('/api/') and path not in public_api and request.state.account is None:
             return JSONResponse(status_code=401, content={'error': 'Authentication required.'},
                                 headers={'WWW-Authenticate': 'Basic realm="Roast Raw"'})
+        return await call_next(request)
 
     @app.exception_handler(Reject)
     async def rejected(request, error):
@@ -235,46 +234,82 @@ def create_app(db_path=None, plan_path=None):
     def health():
         return {'status': 'ok', 'version': release_version, 'timezone': 'Asia/Shanghai', 'storage': 'SQLite'}
 
+    def membership_view(account):
+        view = {'tier': account['tier'], 'capabilities': membership.capabilities(account['tier'])}
+        if account.get('id') is not None:
+            view.update({'base_tier': account['base_tier'], 'timed_tier': account['timed_tier'],
+                         'timed_until': account['timed_until'], 'device_limit': membership.DEVICE_LIMIT})
+        return view
+
     @app.get('/api/session')
     def session_status(request: Request):
-        if not access_password:
-            return {'authenticated': True, 'username': None, 'gate': False}
-        name = _session_username(request.cookies.get('rr_session'), access_password)
-        if name:
-            account = store.account_by_username(name)
-            return {'authenticated': True, 'username': account['username'] if account else name, 'gate': True}
-        return {'authenticated': False, 'username': None, 'gate': True}
+        account = request.state.account
+        if account is None:
+            return {'authenticated': False, 'username': None, 'gate': True}
+        return {'authenticated': True, 'username': account['username'], 'gate': bool(access_password), **membership_view(account)}
 
-    def _session_response(username):
-        response = JSONResponse(content={'ok': True, 'username': username})
-        if access_password:
-            response.set_cookie('rr_session', _session_token(username, access_password),
-                                max_age=2592000, httponly=True, samesite='lax', path='/')
+    def _session_response(account, request):
+        response = JSONResponse(content={'ok': True, 'username': account['username'], **membership_view(account)})
+        response.set_cookie('rr_session', store.create_session(account['id'], request.headers.get('user-agent', '')),
+                            max_age=store.SESSION_DAYS * 86400, httponly=True, samesite='lax', path='/')
         return response
 
     @app.post('/api/login')
-    def login(payload: LoginInput):
-        account = store.verify_account(payload.username, payload.password)
-        if account is None:
+    def login(payload: LoginInput, request: Request):
+        verified = store.verify_account(payload.username, payload.password)
+        if verified is None:
             return JSONResponse(status_code=401, content={'error': 'Invalid username or password.'})
-        return _session_response(account['username'])
+        return _session_response(store.account(verified['id']), request)
 
     @app.post('/api/register')
-    def register(payload: RegisterInput):
+    def register(payload: RegisterInput, request: Request):
         username = payload.username.strip()
         if not re.fullmatch(r'[A-Za-z][A-Za-z0-9_-]{1,63}', username):
             return JSONResponse(status_code=422, content={'error': 'Username must start with a letter and use only letters, numbers, underscores or hyphens (2–64 characters).'})
         try:
-            account = store.create_account(username, payload.password)
+            account = store.register_with_invite(username, payload.password, payload.invite_code)
+        except InviteError as exc:
+            return JSONResponse(status_code=422, content={'error': str(exc)})
         except ValueError as exc:
             return JSONResponse(status_code=409, content={'error': str(exc)})
-        return _session_response(account['username'])
+        return _session_response(account, request)
 
     @app.post('/api/logout')
-    def logout():
+    def logout(request: Request):
+        store.delete_session(request.cookies.get('rr_session'))
         response = JSONResponse(content={'ok': True})
         response.delete_cookie('rr_session', path='/')
         return response
+
+    def signed_in(request):
+        account = request.state.account
+        if account is None or account.get('id') is None:
+            raise HTTPException(409, 'Sign-in is off on this server, so there is no account to change.')
+        return account
+
+    @app.post('/api/membership/redeem')
+    def redeem(payload: RedeemInput, request: Request):
+        account = signed_in(request)
+        try:
+            result = store.redeem(account['id'], payload.code)
+        except InviteError as exc:
+            return JSONResponse(status_code=422, content={'error': str(exc)})
+        message = ('Code redeemed. Your membership is updated.' if result['changed']
+                   else 'This account already has that tier or higher. The code was not used.')
+        return {'changed': result['changed'], 'message': message, **membership_view(result['account'])}
+
+    @app.get('/api/membership/sessions')
+    def membership_sessions(request: Request):
+        account = signed_in(request)
+        return {'limit': membership.DEVICE_LIMIT, 'current': account.get('session_id'),
+                'sessions': store.sessions(account['id'])}
+
+    @app.delete('/api/membership/sessions/{session_id}')
+    def revoke_membership_session(session_id: int, request: Request):
+        account = signed_in(request)
+        if not store.revoke_session(account['id'], session_id):
+            raise HTTPException(404, 'Session not found')
+        return {'ok': True}
 
     @app.get('/api/cycle')
     def cycles():

@@ -6,6 +6,130 @@
 
 - 已批准顺序（2026-11-14改）：本地每0.01新提交、跳过push；0.09–0.12审美回炉、0.13–0.14 AI+待办、0.15–0.19综合审查打磨、0.20才部署新服务器并推私有远程；0.20部署后用户真环境验收，问题回本地修再更新。0.09–0.12每节点给用户简洁预览（截图/清单），减少打扰、不反复问。
 - 2026-11-14追加裁定：0.13起一次连续推进到0.20；0.15–0.19全自主（独立审查+修复不逐轮等用户反馈），用户只在0.20部署后真环境验收一次性给反馈。共享口令已由用户指定并设为本机用户环境变量 RR_ACCESS_PASSWORD（值不入仓/不入文档/不入bundle）。
+- **2026-11-15 用户裁定（本轮，覆盖上两条中冲突部分）**：执行下方「本轮路线 0.27–0.34」。①注册开放但必须持邀请码，邀请码分档（Free/Lite/Plus/Pro/Ultra），成员权限与定价照老站 ExDark（http://49.233.196.202/ ，本地参照 Ref/06_Publish_Reference/hub_index.html #license）；②首页做老站同款会员对比（规格见 R6）；③Android、iOS 均显示 Coming Soon；④完成率按审查推荐口径（R5）；⑤**发布与部署推迟到本轮全部修完**：本轮内不 push、不正式部署、**也暂停 AGENTS「停即部署预览」**，每次停止仍须本地提交，证据改用本地构建+本地截图，BOUNDARY 写明“未部署”；全部完成后由用户另行下令才进入 0.34 发布。
+
+## 本轮路线 0.27–0.34（2026-11-15 用户裁定，按序执行）
+
+> 依据：老站线上 http://49.233.196.202/ `#license`（2026-11-15 抓取）与本地 `Ref/06_Publish_Reference/hub_index.html`，两者冲突以线上为准。本节写的是范围与验收，实现细节在已确认目标内可自决；标「ASK」的点没定，按括号里的默认值做，在回执 BOUNDARY 里写明。每版 = 本地提交 + 本地构建 + 本地截图，不 push、不部署。
+
+| 版次 | 条目 | 范围 | 验收 |
+|---|---|---|---|
+| 0.27 | R1 会员档位 + 邀请码（服务端） | 见 R1 | 单测：五档兑换 / 过期降档 / 重复使用 / 吊销 / 无码注册拒绝；`node tests/verify.js` 退出码 0 |
+| 0.28 | R2 每账户独立账本 + R3 档位门控 | 见 R2、R3 | 两账户互相看不到对方数据；每个门控接口都有「低档 403 / 达标 200」成对用例；迁移前快照存在，旧库升级往返零差 |
+| 0.29 | R4 补 L3 欠账 | GEAR 小片与单侧配片、Sheiko 热身（只给主项）、比赛三盏裁判灯、测试周四组 UI（`RR/RoastRaw-UI改版决策.md` W9/W10/T1–T6；T6 5km 字段沿用默认） | 四宽截图 + 每个交互一次实点（灯 2 白=GOOD、2 红=MISS） |
+| 0.30 | R5 完成率口径 + 重写 `tests/browser.mjs` | 见 R5；browser.mjs 按单主题、四柱路由、新首页重写，不删能红的断言，只替换已失效的旧契约 | `verify.js` 与 `browser.mjs` 都退出码 0；对每个改写断言做一次故意破坏，证明能变红 |
+| 0.31 | R6 首页会员对比 + 老站效果补齐 | 见 R6、R7 | 320/360/390/412/1280 无横向溢出；折叠/展开、粘性表头、CNY/USD 切换、减少动效模式各截一张 |
+| 0.32 | R8 账户内会员面板 | 见 R8 | 兑换升档、Pro 续期、过期回落都在界面上走通并截图 |
+| 0.33 | 独立审查 + 修复 | 由没写代码的会话审 0.27–0.32；问题要写「哪页 · 哪个元素 · 什么问题」；修完全量回归 | 审查清单逐条关闭；verify + browser + build 全部退出码 0 |
+| 0.34 | 发布（只在用户另行下令后） | 部署新服务器 + 推送私有远程；部署前从服务器取回 `DEEPSEEK_API_KEY` 放进进程环境，部署后 `/api/ai/status` 必须 `configured: true`；首页友链指回老站 | `deploy.py` 访问契约全 PASS + 公网探测 |
+
+### R1 · 会员档位与邀请码（服务端，0.27）
+
+- **五档**：`free < lite < plus < pro < ultra`，高档包含低档全部能力。价格只做展示，**本轮不接支付**（首页写 “Pricing is published. Checkout opens soon.”）。
+
+| 档位 | 价格（照老站） | 计费 | 拿到的方式 |
+|---|---|---|---|
+| Free | $0 | 永久免费 | 任何有效邀请码注册时的最低档 |
+| Lite | US$19.9 · ¥68 | 一次性，永久 | Lite 码 |
+| Plus | US$69.9 · ¥198 | 一次性，永久 | Plus 码 |
+| Pro | US$19.9/mo · ¥98/mo | 按月 | Pro 码，每个码默认 30 天（ASK：天数，默认 30） |
+| Ultra | 不标价 | 仅邀请 | Ultra 码；owner 播种时固定为 Ultra |
+
+- **注册必须带邀请码**：`/api/register` 加必填 `invite_code`；码无效、已用尽、已吊销、已过有效期一律 422，提示文案不能泄露码是否存在。保留现有用户名规则与 PBKDF2。
+- **邀请码分档**：每个码带 `tier`、`max_uses`（默认 1）、`expires_at`（码本身的有效期，可空）、`grant_days`（只对 Pro 有意义）、`revoked_at`、`note`。数据库只存码的 sha256，明文只在生成时打印一次。格式 `RR-{TIER}-XXXX-XXXX`，去掉 0/O/1/I 这类易混字符。
+- **发码工具**：新建 `server/tools/invite.py`（create / list / revoke），只在本机或经 SSH 由 owner 运行，**不做网页管理后台**（ASK：要不要后台，默认不要）。
+- **永久档与限时档分开存**：账户存 `base_tier`（永久，取历次 Lite/Plus/Ultra 兑换的最高档）和 `timed_tier` + `timed_until`（Pro）。实际档位 = 两者取高，限时档过期就自动回落到 `base_tier`。照老站：「过期掉的是档位，不是数据」——**降档绝不删除、不隐藏已有记录，只锁住新的操作入口**。
+- **已登录账户兑换**：新增 `POST /api/membership/redeem`。高档码升档；Pro 码在当前 `timed_until` 基础上顺延；低档码不会降档（返回 200 并说明“已是更高档位”，同时不消耗这个码）。
+- **设备上限 5**（老站四档都是 5）：新增会话表，每账户最多 5 个有效会话，第 6 次登录淘汰最早的；改密码仍然让该账户全部会话失效。
+- **迁移**：`accounts` 加列走附加迁移，迁移前先快照；老账户默认 `base_tier=free`，owner 播种后为 `ultra`。
+
+### R2 · 每账户独立账本（0.28）
+
+- 取代旧口径「注册账户共用同一本训记」。所有 journal 数据表（周期、计划版本、logs、readiness、body metrics、attempts、AI 调用记录与配额、deletion tokens 等，以 `store.py` 实际表为准）加 `account_id`，**所有查询都按会话里的账户过滤**。
+- 迁移：先整库快照 → 现有数据全部归 owner → 加索引。旧快照用新代码打开，数据零丢失。
+- 新账户首次登录是空账本，走现有导入流程；首页演示数据不受影响。
+- AI 每日 20 次配额改成按账户算（北京日不变）。
+
+### R3 · 档位门控（服务端为准，前端只做展示，0.28）
+
+照老站能力矩阵映射到 Roast Raw 现有功能（ASK：映射可调，默认如下）：
+
+| 能力（首页对比表用的英文行名） | Free | Lite | Plus | Pro | Ultra |
+|---|---|---|---|---|---|
+| Logging & daily prescription（Day 记录 + 处方） | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Cycle, block & week views（四层计划视图） | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Plan import & export（导入 / 导出 / 归档删除三件套） | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Basic stats（ASSAY Overview） | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Share card（日分享卡） | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Gear & Sheiko warm-ups（配片 + 热身） | — | ✓ | ✓ | ✓ | ✓ |
+| Test week & meet attempts（测试周 + 三盏灯） | — | ✓ | ✓ | ✓ | ✓ |
+| Muscle-group map（肌群图与肌群贡献） | — | — | ✓ | ✓ | ✓ |
+| Lift register & trends（ASSAY By lift / Trend：逐动作完成率、e1RM） | — | — | ✓ | ✓ | ✓ |
+| Recovery & body metrics（readiness、体重/身体趋势） | — | — | ✓ | ✓ | ✓ |
+| ORACLE AI brief（20 次/北京日） | — | — | — | ✓ | ✓ |
+| VAULT cloud ledger（云账本状态与备份） | — | — | — | ✓ | ✓ |
+| Devices per account | 5 | 5 | 5 | 5 | 5 |
+
+- 服务端：门控接口低档返回 403 `{"error":"…","required_tier":"plus"}`；前端统一用一个锁定态组件：显示所需档位 + “Redeem a code” 链接到账户会员面板，不弹窗、不遮挡已有数据。
+- 已有数据在降档后仍可**只读查看和导出**（ASK：默认可读可导出、不可新增）。
+- 档位判断只有一处来源（服务端一个函数 + 一张能力表），前端从 `/api/session` 拿 `tier` 与能力列表，不在前端再抄一份矩阵。首页对比表也从这张能力表生成（构建时导出为静态 JSON），避免两份副本漂移。
+
+### R5 · 完成率口径（0.30，审查推荐，用户已同意）
+
+- 分母只算**到今天为止（Asia/Shanghai）已经到期的计划组**，未来的计划不进分母。
+- 每个计划组：有实际记录就算完成；超出计划的组不把完成率推过 100%（每个动作取 `min(实际组, 计划组)`）。
+- 显式记 0 组 = 有意跳过：计入分母、不计完成，但这一场标为“已回顾”，与“没打开”区分显示。
+- 主项 / 变式 / 辅项三类分开报，**不合成一个加权总数**；计划外加练单独列成 “extra”，不进完成率。
+- 这一口径只在一个统计函数里实现，ASSAY Overview、动作 register、周卡共用；单测覆盖：未来日、超额组、显式零、计划外动作。
+
+### R6 · 首页会员对比（0.31，重点）
+
+位置：`WelcomeView.vue` 里放在截图 deck / 三类用户之后、下载段之前，编号顺延（`09 / Membership`，下载改 `10 / Download`，最后加 `11 / Friends`）。单主题（ex 暖纸），颜色、字体、阴影只用 `tokens.css` 现有令牌，手写 CSS，不引新 UI 库。
+
+**文案（英文为准）**
+- 小标：`09 / Membership`
+- 标题：`Five tiers, with Free as the base.`
+- 导语：`An invite code sets your tier. Higher tiers include everything below them. When a tier lapses you drop a tier, not your data.`
+- 表下说明：`Pricing is published. Checkout opens soon. Registration needs an invite code.`
+
+**桌面（≥861px）：对比矩阵**
+1. 表头四列 Free / Lite / Plus / Pro，Ultra 不占列（照老站）。每列表头三层：档名（展示衬线大字）、主价格（大号等宽数字）、计费说明（小号等宽大写，如 `ONE-TIME` / `MONTHLY`）。档名上方用 `BeanMark` 咖啡豆的个数表示档位高低（Free 0 颗，Lite 1，Plus 2，Pro 3），这是本项目自己的品牌元素，不另画图标。
+2. **币种切换**：表头右上一个小的 `CNY | USD` 分段开关，默认 CNY；切换时价格数字做 180ms 上下翻牌（旧数字上移淡出、新数字下方淡入），表格高度不跳。
+3. **推荐列**：Plus 列表头上方一枚小胶囊 `RECOMMENDED`（ASK：要不要、放哪一列，默认 Plus），整列底色比纸色深半档，列两侧 1px 墨线，表头加项目现有的硬投影令牌。
+4. **列聚焦**：鼠标移到某一列任意格子，整列高亮（底色加深 + 表头上浮 2px），其余列不变暗；键盘 Tab 到表头时同样生效。
+5. **粘性表头**：向下滚时表头贴在顶栏下面，顶栏高度用 `ResizeObserver` 实测写入 `--topH`（照老站），不写死像素。
+6. **能力行**：前 6 行（价格、计费、设备数、记录与处方、计划视图、导入导出）默认展开，其余行折叠。表底一个文字按钮 `Show every row ↓` / `Show fewer rows ↑`，带 `aria-expanded`；展开用 `grid-template-rows: 0fr → 1fr` 动画 240ms，不用固定 max-height。没有 JS 时所有行直接显示。
+7. **对勾入场**：表格第一次滚进视口时，✓ 用 SVG 描边从左到右逐行画出（每行错开 30ms，总时长不超过 600ms）；— 只淡入。只播一次。
+8. 档位分组标记：能力行左侧用一条细竖线标出从哪一档开始包含（Lite 起 / Plus 起 / Pro 起），让读者一眼看出“阶梯”。
+
+**Ultra 横条**（表格正下方，紧贴）
+- 整条墨色底、纸色字：左边 `ULTRA` 等宽小字 + 一颗金色描边咖啡豆，中间 `Invite only · includes every Pro capability`，右边 `Have a code? Register →` 链到 `/register`。
+- 进入视口时横条上沿有一道细光从左扫到右，只扫一次，时长 900ms。
+
+**手机（<861px）：不横向滚动**
+- 顶部四档改成一排可左右拖动的档位卡（复用首页截图 deck 的跟手拖拽 + 吸附逻辑），每张卡：豆子、档名、价格、计费、该档“新增”的 2–3 项能力；Plus 卡带 `RECOMMENDED`。
+- 卡片下面是能力清单：每项能力一块，块内一行四个档位小标（`Free ✓ Lite ✓ Plus — Pro —`）。320px 下不换出边框、不横滚。
+- 当前拖到哪张档位卡，下面清单里该档那一列加粗高亮，两者联动。
+- 同样默认折叠深层能力，按钮同桌面。
+
+**统一要求**
+- `prefers-reduced-motion: reduce` 时关闭翻牌、描边、扫光、拖拽惯性，内容全部直接可见。
+- 能力行名和每格内容来自 R3 那张能力表（构建时导出的静态 JSON），不在 Vue 里手抄。
+- 可访问性：表格用真正的 `<table>`、`<th scope>`；✓ / — 带 `aria-label="Included"` / `"Not included"`；切换开关可键盘操作。
+- 截图验收：1280 折叠 / 展开 / 列聚焦 / USD；390 档位卡拖到 Plus 并联动清单；320 无溢出；减少动效模式一张。
+
+### R7 · 老站首页效果补齐（0.31）
+
+- 先逐条对比老站 `hub_index.html` 与当前 `WelcomeView.vue`，列一张「老站有 / 新站有没有 / 处理」清单放进 `docs/审美回炉清单.md`，再补缺的。
+- 已知要核对的老站效果：滚动驱动的截图 tour（滚动位置决定当前图层，已过的图层抬起变暗形成层叠，底部细进度线 `--tour-p`，圆点可点跳转）；分享按钮（有系统分享面板就用，否则复制链接 + `Link copied` toast）；`--topH` 实测顶栏高度；`.rv` 滚动入场；Friends 段（Roast Raw 新站与老站互链）。
+- **不搬**：中英切换（界面只用英文）、暗色主题、Mini/Max 密度切换（ASK：默认不搬）、Android APK 下载（Android、iOS 都显示 Coming Soon）。
+
+### R8 · 账户内会员面板（0.32）
+
+- 位置：VAULT 账户区（`#account`）。显示当前档位（豆子 + 档名）、永久档、Pro 到期日（北京时间）、本账户已登录设备数（x / 5，可逐个登出）。
+- `Redeem a code` 输入框：成功后档位即时刷新、对应锁定态解除；失败提示与注册页一致。
+- `/register` 支持 `?code=` 预填（首页 Ultra 横条和分享出去的邀请链接用），码输入框在用户名之上。
+- 首页右上 `MyPlan` 旁不加档位徽章（避免首页拥挤）；进入应用后顶栏右侧可显示一个很小的档位字样（ASK：默认显示）。
 
 ## 已确认路线（尚未做）
 
@@ -45,7 +169,7 @@
 ## 已批准交付边界（完成后移除）
 
 - GitHub：AstraQianJin/roast-raw，私有；同名存在先检查、不覆盖。每0.10整倍数推送，其间本地新提交。推送坑：本机 git credential.helper=helper-selector 会弹 GUI 劫持认证并报 "User cancelled dialog"，需禁用弹窗 + GIT_ASKPASS 注入 GH_TOKEN。允许必要的合规开发工具（MIT/Apache/BSD、报告体积），不允许新运行时UI框架或MPL例外。
-- 新服务器82.157.146.30，SSH ubuntu（roast-raw alias）、sudo；旧49.233.196.202用户2026-11-14授权完全自由（覆盖前带时间戳备份）；0.20后保留老站+首页友链指向新站。仅本地0.20验证后部署；先公网HTTP，域名/TLS后续。访问口径2026-11-14再更新（用户裁定，效仿老站）：落地/发布页公开无登录，新增注册/登录页与 MyPlan 入口；仅 journal API（/api/* 除 health/login/register/logout/session）需账户会话。owner 由环境变量 RR_ACCESS_USERNAME（默认 Astra）/RR_ACCESS_PASSWORD 注入播种（值不入仓/文档/bundle）；用户名不区分大小写、密码区分大小写（PBKDF2-SHA256），HttpOnly SameSite=Lax 会话 cookie 30 天，改密码即全员登出；注册开放额外账户共用同一本训记。这是访问控制非传输加密，不宣称 HTTPS。
+- 新服务器82.157.146.30，SSH ubuntu（roast-raw alias）、sudo；旧49.233.196.202用户2026-11-14授权完全自由（覆盖前带时间戳备份）；0.20后保留老站+首页友链指向新站。仅本地0.20验证后部署；先公网HTTP，域名/TLS后续。访问口径2026-11-14再更新（用户裁定，效仿老站）：落地/发布页公开无登录，新增注册/登录页与 MyPlan 入口；仅 journal API（/api/* 除 health/login/register/logout/session）需账户会话。owner 由环境变量 RR_ACCESS_USERNAME（默认 Astra）/RR_ACCESS_PASSWORD 注入播种（值不入仓/文档/bundle）；用户名不区分大小写、密码区分大小写（PBKDF2-SHA256），HttpOnly SameSite=Lax 会话 cookie 30 天，改密码即全员登出；~~注册开放额外账户共用同一本训记~~（2026-11-15 作废：改为邀请码分档注册+每账户独立账本，见本轮路线 R1–R3）。这是访问控制非传输加密，不宣称 HTTPS。
 - AI/GitHub仅进程环境 DEEPSEEK_API_KEY/GH_TOKEN；部署AI放 /etc/roastraw.env，经systemd EnvironmentFile读取，不进源码或前端。凭据存在与用户报告不替代实际验证；不重复ACL修复。
 - 部署前整库一致快照、每日备份保留30份、恢复演练；不覆盖未知服务。Agent.skill只含Skill源和脚本，不含Ref/凭据/数据/截图。
 

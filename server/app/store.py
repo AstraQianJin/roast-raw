@@ -4,8 +4,10 @@ import json
 import secrets
 import sqlite3
 from contextlib import closing, contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+from . import membership
 
 
 def timestamp():
@@ -14,6 +16,11 @@ def timestamp():
 
 class ReadOnlyError(ValueError):
     pass
+
+
+class InviteError(ValueError):
+    def __init__(self):
+        super().__init__('That invite code cannot be used. Check the code or ask for a new one.')
 
 
 class AiQuotaError(ValueError):
@@ -196,23 +203,76 @@ class Store:
         with self.connect() as db:
             return db.execute('SELECT COUNT(*) FROM accounts').fetchone()[0]
 
-    def seed_owner(self, username, password):
-        if not password or self.account_count():
+    def upgrade_membership(self):
+        with self.connect() as db:
+            columns = {row['name'] for row in db.execute('PRAGMA table_info(accounts)')}
+            sessions = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='sessions'").fetchone()
+        if 'base_tier' in columns and sessions:
             return
-        self.create_account(username or 'Astra', password)
+        self.snapshot()
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            if 'base_tier' not in columns:
+                db.execute("ALTER TABLE accounts ADD COLUMN base_tier TEXT NOT NULL DEFAULT 'free'")
+                db.execute('ALTER TABLE accounts ADD COLUMN timed_tier TEXT')
+                db.execute('ALTER TABLE accounts ADD COLUMN timed_until TEXT')
+            db.executescript('''
+                CREATE TABLE IF NOT EXISTS invites (
+                    id INTEGER PRIMARY KEY, code_hash TEXT NOT NULL UNIQUE,
+                    tier TEXT NOT NULL CHECK(tier IN ('free','lite','plus','pro','ultra')),
+                    max_uses INTEGER NOT NULL DEFAULT 1 CHECK(max_uses>=1), uses INTEGER NOT NULL DEFAULT 0,
+                    expires_at TEXT, grant_days INTEGER, revoked_at TEXT, note TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS invite_redemptions (
+                    id INTEGER PRIMARY KEY, invite_id INTEGER NOT NULL REFERENCES invites(id),
+                    account_id INTEGER NOT NULL REFERENCES accounts(id),
+                    kind TEXT NOT NULL CHECK(kind IN ('register','redeem')), created_at TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS sessions (
+                    id INTEGER PRIMARY KEY, token_hash TEXT NOT NULL UNIQUE,
+                    account_id INTEGER NOT NULL REFERENCES accounts(id),
+                    created_at TEXT NOT NULL, last_seen_at TEXT NOT NULL, user_agent TEXT NOT NULL DEFAULT '');
+                CREATE INDEX IF NOT EXISTS sessions_account ON sessions(account_id);
+            ''')
+
+    def seed_owner(self, username, password):
+        if not password:
+            return
+        username = (username or 'Astra').strip()
+        if not self.account_by_username(username):
+            self.create_account(username, password)
+        salt = secrets.token_hex(16)
+        with self.connect() as db:
+            row = db.execute('SELECT id, password_hash, salt FROM accounts WHERE username_lower=?', (username.lower(),)).fetchone()
+            db.execute("UPDATE accounts SET base_tier='ultra' WHERE id=?", (row['id'],))
+            if not hmac.compare_digest(self._hash_password(password, row['salt']), row['password_hash']):
+                db.execute('UPDATE accounts SET password_hash=?, salt=? WHERE id=?',
+                           (self._hash_password(password, salt), salt, row['id']))
+                db.execute('DELETE FROM sessions WHERE account_id=?', (row['id'],))
+
+    def owner_id(self, username):
+        with self.connect() as db:
+            row = db.execute('SELECT id FROM accounts WHERE username_lower=?', ((username or 'Astra').strip().lower(),)).fetchone() \
+                or db.execute('SELECT id FROM accounts ORDER BY id LIMIT 1').fetchone()
+        return row['id'] if row else None
+
+    @staticmethod
+    def _insert_account(db, username, password, base_tier='free', timed_tier=None, timed_until=None):
+        if db.execute('SELECT 1 FROM accounts WHERE username_lower=?', (username.lower(),)).fetchone():
+            raise ValueError('That username is already taken.')
+        salt = secrets.token_hex(16)
+        try:
+            cursor = db.execute('''INSERT INTO accounts(username, username_lower, password_hash, salt, created_at,
+                                   base_tier, timed_tier, timed_until) VALUES(?,?,?,?,?,?,?,?)''',
+                                (username, username.lower(), Store._hash_password(password, salt), salt, timestamp(),
+                                 base_tier, timed_tier, timed_until))
+        except sqlite3.IntegrityError:
+            raise ValueError('That username is already taken.')
+        return cursor.lastrowid
 
     def create_account(self, username, password):
         username = username.strip()
-        salt = secrets.token_hex(16)
-        password_hash = self._hash_password(password, salt)
         with self.connect() as db:
-            if db.execute('SELECT 1 FROM accounts WHERE username_lower=?', (username.lower(),)).fetchone():
-                raise ValueError('That username is already taken.')
-            try:
-                db.execute('INSERT INTO accounts(username, username_lower, password_hash, salt, created_at) VALUES(?,?,?,?,?)',
-                           (username, username.lower(), password_hash, salt, timestamp()))
-            except sqlite3.IntegrityError:
-                raise ValueError('That username is already taken.')
+            self._insert_account(db, username, password)
         return self.account_by_username(username)
 
     def account_by_username(self, username):
@@ -222,12 +282,161 @@ class Store:
 
     def verify_account(self, username, password):
         with self.connect() as db:
-            row = db.execute('SELECT username, password_hash, salt FROM accounts WHERE username_lower=?', (username.strip().lower(),)).fetchone()
+            row = db.execute('SELECT id, username, password_hash, salt FROM accounts WHERE username_lower=?', (username.strip().lower(),)).fetchone()
         if row is None:
             return None
         if hmac.compare_digest(self._hash_password(password, row['salt']), row['password_hash']):
-            return {'username': row['username']}
+            return {'id': row['id'], 'username': row['username']}
         return None
+
+    def account(self, account_id):
+        with self.connect() as db:
+            row = db.execute('SELECT id, username, created_at, base_tier, timed_tier, timed_until FROM accounts WHERE id=?',
+                             (account_id,)).fetchone()
+        if row is None:
+            return None
+        result = dict(row)
+        result['tier'] = membership.effective_tier(row['base_tier'], row['timed_tier'], row['timed_until'])
+        return result
+
+    INVITE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    SESSION_DAYS = 30
+
+    @staticmethod
+    def _code_hash(code):
+        return hashlib.sha256(str(code).strip().upper().encode('utf-8')).hexdigest()
+
+    def create_invite(self, tier, max_uses=1, expires_at=None, grant_days=None, note=''):
+        if tier not in membership.RANK:
+            raise ValueError(f'Unknown tier {tier!r}')
+        if max_uses < 1:
+            raise ValueError('max_uses must be at least 1')
+        if tier == 'pro':
+            grant_days = grant_days or membership.PRO_GRANT_DAYS
+            if grant_days < 1:
+                raise ValueError('grant_days must be at least 1')
+        else:
+            grant_days = None
+        if expires_at:
+            expires_at = datetime.fromisoformat(expires_at).astimezone(timezone.utc).isoformat()
+        group = lambda: ''.join(secrets.choice(self.INVITE_ALPHABET) for _ in range(4))
+        code = f'RR-{tier.upper()}-{group()}-{group()}'
+        with self.connect() as db:
+            cursor = db.execute('''INSERT INTO invites(code_hash, tier, max_uses, expires_at, grant_days, note, created_at)
+                                   VALUES(?,?,?,?,?,?,?)''',
+                                (self._code_hash(code), tier, max_uses, expires_at, grant_days, note or '', timestamp()))
+        return {'id': cursor.lastrowid, 'code': code, 'tier': tier, 'max_uses': max_uses,
+                'expires_at': expires_at, 'grant_days': grant_days}
+
+    def list_invites(self):
+        with self.connect() as db:
+            rows = db.execute('''SELECT id, tier, max_uses, uses, expires_at, grant_days, revoked_at, note, created_at
+                                 FROM invites ORDER BY id''').fetchall()
+        return [dict(row) for row in rows]
+
+    def revoke_invite(self, invite_id):
+        with self.connect() as db:
+            changed = db.execute('UPDATE invites SET revoked_at=? WHERE id=? AND revoked_at IS NULL',
+                                 (timestamp(), invite_id)).rowcount
+        return bool(changed)
+
+    @classmethod
+    def _claim(cls, db, code, now):
+        row = db.execute('SELECT * FROM invites WHERE code_hash=?', (cls._code_hash(code),)).fetchone()
+        if row is None or row['revoked_at'] or row['uses'] >= row['max_uses']:
+            raise InviteError()
+        if row['expires_at'] and datetime.fromisoformat(row['expires_at']) <= now:
+            raise InviteError()
+        return row
+
+    @staticmethod
+    def _consume(db, invite, account_id, kind):
+        db.execute('UPDATE invites SET uses=uses+1 WHERE id=?', (invite['id'],))
+        db.execute('INSERT INTO invite_redemptions(invite_id, account_id, kind, created_at) VALUES(?,?,?,?)',
+                   (invite['id'], account_id, kind, timestamp()))
+
+    def register_with_invite(self, username, password, code, now=None):
+        now = now or membership.now_utc()
+        username = username.strip()
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            invite = self._claim(db, code, now)
+            base, timed, until = 'free', None, None
+            if invite['tier'] == 'pro':
+                timed, until = 'pro', membership.extend_timed(None, invite['grant_days'] or membership.PRO_GRANT_DAYS, now)
+            else:
+                base = invite['tier']
+            account_id = self._insert_account(db, username, password, base, timed, until)
+            self._consume(db, invite, account_id, 'register')
+        return self.account(account_id)
+
+    def redeem(self, account_id, code, now=None):
+        now = now or membership.now_utc()
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            invite = self._claim(db, code, now)
+            row = db.execute('SELECT base_tier, timed_tier, timed_until FROM accounts WHERE id=?', (account_id,)).fetchone()
+            rank = membership.RANK
+            if invite['tier'] == 'pro':
+                if rank[row['base_tier']] >= rank['pro']:
+                    return {'changed': False, 'account': self.account(account_id)}
+                current = row['timed_until'] if row['timed_tier'] == 'pro' else None
+                until = membership.extend_timed(current, invite['grant_days'] or membership.PRO_GRANT_DAYS, now)
+                db.execute("UPDATE accounts SET timed_tier='pro', timed_until=? WHERE id=?", (until, account_id))
+            else:
+                if rank[invite['tier']] <= rank[row['base_tier']]:
+                    return {'changed': False, 'account': self.account(account_id)}
+                db.execute('UPDATE accounts SET base_tier=? WHERE id=?', (invite['tier'], account_id))
+            self._consume(db, invite, account_id, 'redeem')
+        return {'changed': True, 'account': self.account(account_id)}
+
+    @staticmethod
+    def _token_hash(token):
+        return hashlib.sha256(token.encode('utf-8')).hexdigest()
+
+    def create_session(self, account_id, user_agent=''):
+        token = secrets.token_urlsafe(32)
+        now = timestamp()
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            db.execute('INSERT INTO sessions(token_hash, account_id, created_at, last_seen_at, user_agent) VALUES(?,?,?,?,?)',
+                       (self._token_hash(token), account_id, now, now, (user_agent or '')[:200]))
+            db.execute('''DELETE FROM sessions WHERE account_id=? AND id NOT IN (
+                              SELECT id FROM sessions WHERE account_id=? ORDER BY created_at DESC, id DESC LIMIT ?)''',
+                       (account_id, account_id, membership.DEVICE_LIMIT))
+        return token
+
+    def session_account(self, token, now=None):
+        if not token:
+            return None
+        now = now or membership.now_utc()
+        with self.connect() as db:
+            row = db.execute('SELECT id, account_id, created_at FROM sessions WHERE token_hash=?', (self._token_hash(token),)).fetchone()
+            if row is None:
+                return None
+            if datetime.fromisoformat(row['created_at']) + timedelta(days=self.SESSION_DAYS) <= now:
+                db.execute('DELETE FROM sessions WHERE id=?', (row['id'],))
+                return None
+            db.execute('UPDATE sessions SET last_seen_at=? WHERE id=?', (now.isoformat(), row['id']))
+        account = self.account(row['account_id'])
+        if account:
+            account['session_id'] = row['id']
+        return account
+
+    def delete_session(self, token):
+        if token:
+            with self.connect() as db:
+                db.execute('DELETE FROM sessions WHERE token_hash=?', (self._token_hash(token),))
+
+    def sessions(self, account_id):
+        with self.connect() as db:
+            rows = db.execute('SELECT id, created_at, last_seen_at, user_agent FROM sessions WHERE account_id=? ORDER BY created_at, id',
+                              (account_id,)).fetchall()
+        return [dict(row) for row in rows]
+
+    def revoke_session(self, account_id, session_id):
+        with self.connect() as db:
+            return bool(db.execute('DELETE FROM sessions WHERE account_id=? AND id=?', (account_id, session_id)).rowcount)
 
     AI_DAILY_LIMIT = 20
 

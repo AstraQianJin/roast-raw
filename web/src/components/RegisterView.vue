@@ -8,6 +8,7 @@ const [major, , patch] = packageInfo.version.split('.');
 const releaseVersion = `${major}.${patch.padStart(2, '0')}`;
 const emit = defineEmits(['authed']);
 
+const code = ref('');
 const username = ref('');
 const password = ref('');
 const confirm = ref('');
@@ -27,6 +28,11 @@ function shake() {
 async function submit() {
   error.value = '';
   const name = username.value.trim();
+  if (!code.value.trim()) {
+    error.value = 'Enter your invite code. Registration is by invitation.';
+    shake();
+    return;
+  }
   if (!/^[A-Za-z][A-Za-z0-9_-]{1,63}$/.test(name)) {
     error.value = 'Username must start with a letter and use only letters, numbers, underscores or hyphens (2–64 characters).';
     shake();
@@ -47,7 +53,7 @@ async function submit() {
     const response = await fetch('/api/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: name, password: password.value }),
+      body: JSON.stringify({ username: name, password: password.value, invite_code: code.value.trim() }),
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -79,8 +85,13 @@ onMounted(() => {
         <span class="auth-kicker">ROAST RAW · PRIVATE RELEASE</span>
       </div>
       <h1>Create your <em>account.</em></h1>
-      <p class="auth-lede">One journal, kept on your server. Choose a username and a password to open the plan and start recording sets.</p>
+      <p class="auth-lede">Registration is by invitation. Enter your invite code, then choose a username and a password to open your own journal.</p>
       <form class="auth-form" novalidate @submit.prevent="submit">
+        <label class="auth-field">
+          <span class="auth-label">INVITE CODE</span>
+          <input v-model="code" type="text" name="invite_code" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="RR-PLUS-XXXX-XXXX" :disabled="busy" />
+          <span class="auth-hint">The code sets your starting tier. Not case-sensitive.</span>
+        </label>
         <label class="auth-field">
           <span class="auth-label">USERNAME</span>
           <input v-model="username" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="e.g. Astra" :disabled="busy" />
@@ -110,6 +121,6 @@ onMounted(() => {
       <p class="auth-switch">Already have an account? <RouterLink to="/login">Sign in</RouterLink></p>
       <div class="auth-strip" aria-hidden="true"><i v-for="(phase, index) in demoWeeks" :key="index" :class="['ct', phase]"></i></div>
     </div>
-    <p class="auth-fine">Single-user release {{ releaseVersion }} · Accounts open this one journal · No offline cache, no sync service.</p>
+    <p class="auth-fine">Release {{ releaseVersion }} · Registration needs an invite code · No offline cache, no sync service.</p>
   </div>
 </template>
