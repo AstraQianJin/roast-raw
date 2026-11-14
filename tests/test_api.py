@@ -64,6 +64,19 @@ def open_db(path):
             yield db
 
 
+def seed_historical_log(path, cycle_id, row, payload):
+    # Historical fixtures precede the read-only boundary; they are not live saves.
+    key = log_key(row)
+    stamp = '2026-11-01T00:00:00+00:00'
+    with open_db(path) as db:
+        db.execute('INSERT INTO logs_journal(cycle_id,key,payload,created_at) VALUES(?,?,?,?)',
+                   (cycle_id, key, json.dumps(payload), stamp))
+        db.execute('INSERT INTO logs VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+                   (cycle_id, key, row['date'], f"{row['week']}|{row['day']}", row['movementId'],
+                    payload['load'], payload['reps'], payload['rpe'], payload['sets'], payload['note'], stamp))
+    return {'key': key, **payload, 'updated_at': stamp}
+
+
 def database_rows(path):
     """Compare logical data, not WAL/checkpoint bookkeeping or file timestamps."""
     with open_db(path) as db:
@@ -454,7 +467,7 @@ class APITests(GeneratedPlanCase):
         archived = self.archive_fixture()
         archive_id = archived['meta']['planId']
         archive_fields = fields_only(actual_payload(archived, self.row, sets=1, load=80.0, note='Historical'))
-        saved_archive = self.app.state.store.save_log(archive_id, self.row, archive_fields)
+        saved_archive = seed_historical_log(self.db_path, archive_id, self.row, archive_fields)
         archive_logs = {'cycle_id': archive_id, 'logs': {
             saved_archive['key']: {key: value for key, value in saved_archive.items() if key != 'key'},
         }}
@@ -637,7 +650,7 @@ class APITests(GeneratedPlanCase):
                     db.execute('UPDATE plans SET json=? WHERE cycle_id=?', (json.dumps(archived), archive_id))
                 archive_row = next(row for row in archived['workouts'] if log_key(row) == log_key(self.row))
                 historical = actual_payload(archived, archive_row, load=101.25, reps=1, rpe=9)
-                self.app.state.store.save_log(archive_id, archive_row, fields_only(historical))
+                seed_historical_log(self.db_path, archive_id, archive_row, fields_only(historical))
                 if status == 'archived':
                     self.assert_performance_week(self.performance_entries()[self.row['movementId']], self.row)
                 current = actual_payload(self.seed, self.row, load=100, reps=3, rpe=None)
@@ -932,6 +945,33 @@ class UvicornRestartTests(GeneratedPlanCase):
             self.assertEqual(len(cycles['cycles']), 1)
         self.assertIsNotNone(second_process.poll())
         self.assertEqual(database_rows(self.db_path), persisted)
+
+    def test_import_and_frozen_archive_survive_real_uvicorn_restart(self):
+        candidate = copy.deepcopy(self.seed)
+        candidate['meta']['planId'] = 'restart-import-cycle'
+        candidate['meta']['name'] = 'Restart import cycle'
+        row = self.main_row()
+        with self.running_server() as (base, first):
+            payload = actual_payload(self.seed, row, load=101.25, reps=1, note='Archived actual')
+            saved = self.request_json(base, '/api/log', method='PUT', payload=payload)
+            upload = {'plan_json': json.dumps(candidate), 'filename': 'restart.json'}
+            preview = self.request_json(base, '/api/plan/import/preview', method='POST', payload=upload)
+            result = self.request_json(base, '/api/plan/import/confirm', method='POST', payload={
+                **upload, 'current_id': preview['currentId'], 'candidate_id': preview['candidateId'], 'confirm': True})
+            self.assertEqual(result, {'saved': True, 'active_cycle_id': 'restart-import-cycle',
+                                      'archived_cycle_id': self.seed['meta']['planId']})
+            archived = self.request_json(base, '/api/review/export?cycle_id=' + self.seed['meta']['planId'])
+            self.assertEqual(archived['logs'][0]['load'], 101.25)
+            self.assertEqual(archived['logs'][0]['updated_at'], saved['updated_at'])
+            self.assertEqual(archived['cycle']['status'], 'archived')
+        before = database_rows(self.db_path)
+        with self.running_server() as (base, second):
+            self.assertIsNot(first, second)
+            self.assertEqual(self.request_json(base, '/api/plan'), candidate)
+            self.assertEqual(self.request_json(base, '/api/log'), {'cycle_id': 'restart-import-cycle', 'logs': {}})
+            self.assertEqual(self.request_json(base, '/api/review/export?cycle_id=' + self.seed['meta']['planId']), archived)
+            self.assertEqual(self.request_json(base, '/api/plan?cycle_id=' + self.seed['meta']['planId']), self.seed)
+        self.assertEqual(database_rows(self.db_path), before)
 
 
 if __name__ == '__main__':

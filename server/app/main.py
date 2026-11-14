@@ -88,6 +88,36 @@ class ApplyPrescription(PrescriptionInput):
     preview_id: str = Field(pattern=r'^[a-f0-9]{64}$')
 
 
+class PlanImportInput(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+    plan_json: str = Field(min_length=1, max_length=2_000_000)
+    filename: str = Field(min_length=1, max_length=255)
+
+    @field_validator('plan_json')
+    @classmethod
+    def upload_size(cls, value):
+        try:
+            size = len(value.encode('utf-8'))
+        except UnicodeEncodeError as exc:
+            raise ValueError('Plan file must be valid UTF-8 text') from exc
+        if size > 2_000_000:
+            raise ValueError('Plan file must be at most 2 MB')
+        return value
+
+
+class ConfirmPlanImport(PlanImportInput):
+    current_id: str = Field(pattern=r'^[a-f0-9]{64}$')
+    candidate_id: str = Field(pattern=r'^[a-f0-9]{64}$')
+    confirm: bool
+
+    @field_validator('confirm')
+    @classmethod
+    def explicit_confirmation(cls, value):
+        if value is not True:
+            raise ValueError('Explicit confirmation is required')
+        return value
+
+
 class RestorePrescription(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
     cycle_id: str = Field(min_length=1)
@@ -121,7 +151,7 @@ def create_app(db_path=None, plan_path=None):
     @app.exception_handler(RequestValidationError)
     async def invalid_request(request, error):
         body = error.body if isinstance(error.body, dict) else {}
-        errors = [{'file': 'request', 'week': body.get('week') if type(body.get('week')) is int else None,
+        errors = [{'file': body.get('filename', 'request'), 'week': body.get('week') if type(body.get('week')) is int else None,
                    'day': body.get('day') if isinstance(body.get('day'), str) else None,
                    'movement': body.get('seq') if type(body.get('seq')) is int else None,
                    'field': '.'.join(map(str, item['loc'])),
@@ -341,6 +371,34 @@ def create_app(db_path=None, plan_path=None):
     @app.get('/api/geometry')
     def geometry():
         return json.loads((ROOT / 'data' / 'muscle_geo.json').read_text(encoding='utf-8'))
+
+    def import_preview(payload):
+        from hashlib import sha256
+        from .plan_import import parse_plan, summary
+        from .stats.variations import digest
+        candidate = parse_plan(payload.plan_json, payload.filename)
+        records = store.cycles()
+        source = store.review_source(records['active_cycle_id'])
+        if source is None or source['cycle']['status'] != 'active':
+            raise ReadOnlyError('Current cycle changed. Refresh before importing.')
+        if any(cycle['id'] == candidate['meta']['planId'] for cycle in records['cycles']):
+            raise ReadOnlyError('Cycle ID already exists. Existing cycles cannot be overwritten.')
+        return candidate, {
+            'currentId': digest(source), 'candidateId': digest(candidate),
+            'current': summary(source['plan']), 'candidate': summary(candidate),
+            'currentPlan': source['plan'], 'candidatePlan': candidate,
+            'sourceSha256': sha256(payload.plan_json.encode('utf-8')).hexdigest()}
+
+    @app.post('/api/plan/import/preview')
+    def preview_plan_import(payload: PlanImportInput):
+        return import_preview(payload)[1]
+
+    @app.post('/api/plan/import/confirm')
+    def confirm_plan_import(payload: ConfirmPlanImport):
+        candidate, preview = import_preview(payload)
+        if preview['candidateId'] != payload.candidate_id or preview['currentId'] != payload.current_id:
+            raise ReadOnlyError('Preview or current records changed. Preview again before importing.')
+        return store.activate_plan(candidate, payload.current_id, package_version)
 
     @app.post('/api/plan/validate')
     async def validate(request: Request):

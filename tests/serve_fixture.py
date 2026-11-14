@@ -54,5 +54,6 @@ with tempfile.TemporaryDirectory(prefix='roastraw-browser-') as directory:
                        (meta['planId'], meta['endDate'], 'daily', 6, 'Original fatigue, not recovery'))
         row = next(row for row in active['workouts'] if row['bucket'] == 'main')
         store.save_log(active['meta']['planId'], row, {'load': 100.0, 'sets': 2, 'reps': 3, 'rpe': 8.0, 'note': 'Active fixture'})
-        store.save_log(meta['planId'], row, {'load': 70.0, 'sets': 2, 'reps': 1, 'rpe': 9.0, 'note': 'Historical <script> data, not HTML'})
+        from test_api import seed_historical_log
+        seed_historical_log(store.path, meta['planId'], row, {'load': 70.0, 'sets': 2, 'reps': 1, 'rpe': 9.0, 'note': 'Historical <script> data, not HTML'})
     uvicorn.run(app, host='127.0.0.1', port=args.port, log_level='warning')

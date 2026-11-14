@@ -859,6 +859,108 @@ try {
   equal(await archiveApi('/api/log'), activeLogsBeforeReview, 'archive navigation and exports do not modify active logs');
   equal((await archiveApi('/api/cycle')).active_cycle_id, plan.meta.planId, 'export retains active cycle');
   console.log('PASS review/archive: cycle-isolated read-only deep links, 50-percent bodyweight progress, null test scores, complete Blob export, legacy fatigue, all widths/themes and failure retry');
+  async function uploadPlan(text, filename = 'candidate.json') {
+    await browser.evaluate(`(() => { const input=document.querySelector('[data-testid=import-file]'); const transfer=new DataTransfer(); transfer.items.add(new File([${JSON.stringify(text)}],${JSON.stringify(filename)},{type:'application/json'})); input.files=transfer.files; input.dispatchEvent(new Event('change',{bubbles:true})); })()`);
+    await browser.waitFor('!document.querySelector("[data-testid=import-preview]")?.disabled');
+  }
+  async function expectedImportRejection(path, status, action) {
+    equal(browser.errors, [], 'import rejection starts with clean console');
+    const first = browser.networkFailures.length;
+    await action();
+    const expected = entry => entry.source === 'network' && entry.url === `${archiveBase}${path}` && entry.text.includes(String(status));
+    equal(browser.errors.filter(entry => !expected(entry)), [], 'import rejection has no unexpected runtime or network error');
+    equal(browser.networkFailures.slice(first), [], 'HTTP rejection is not an unexpected failed transport');
+    for (let index = browser.errors.length - 1; index >= 0; index--) if (expected(browser.errors[index])) browser.errors.splice(index, 1);
+  }
+  const candidatePlan = structuredClone(activeBeforeReview);
+  candidatePlan.meta.planId = 'browser-import-new-cycle-with-a-long-identity';
+  candidatePlan.meta.name = 'Imported <script> text stays data';
+  const candidateText = JSON.stringify(candidatePlan);
+  for (const width of [320, 360, 390, 412]) {
+    await browser.viewport(width);
+    for (const theme of ['light', 'dark']) {
+      await load(archiveBase, '/settings');
+      await browser.evaluate(`localStorage.setItem('roastraw-theme', '${theme}')`);
+      await load(archiveBase, '/settings');
+      equal(await browser.evaluate('Boolean(document.querySelector("[data-testid=plan-import]"))'), true, 'Settings has strict import entry');
+      await noOverflow(`import empty ${width} ${theme}`);
+      await uploadPlan(candidateText);
+      await click('[data-testid=import-preview]');
+      await browser.waitFor('Boolean(document.querySelector("[data-testid=import-comparison]"))');
+      equal(await browser.evaluate('document.querySelector("[data-testid=import-current-id]").textContent'), activeBeforeReview.meta.planId, 'preview names exact old cycle');
+      equal(await browser.evaluate('document.querySelector("[data-testid=import-candidate-id]").textContent'), candidatePlan.meta.planId, 'preview names exact new cycle');
+      equal(await browser.evaluate('document.querySelector("[data-testid=import-confirm]").disabled'), true, 'explicit acknowledgement required');
+      equal(await browser.evaluate('document.querySelectorAll("[data-testid=plan-import] script").length'), 0, 'uploaded plan text cannot execute markup');
+      equal((await archiveApi('/api/cycle')).active_cycle_id, activeBeforeReview.meta.planId, 'preview does not activate');
+      await noOverflow(`import preview ${width} ${theme}`);
+      await screenshot(`import-${width}-${theme}`);
+      await browser.evaluate('[...document.querySelectorAll("[data-testid=import-comparison] details")].forEach(e=>e.open=true)');
+      await noOverflow(`import expanded ${width} ${theme}`);
+      equal(await browser.evaluate('[...document.querySelectorAll("[data-testid=plan-import] button, [data-testid=plan-import] summary, [data-testid=plan-import] input[type=file], [data-testid=plan-import] label")].filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0&&(r.width<44||r.height<44)}).map(e=>e.className)'), [], 'import expanded controls meet 44px');
+      equal(await browser.evaluate('(()=>{const y=scrollY;scrollTo(innerWidth,y);const r=scrollX;scrollTo(-innerWidth,y);const l=scrollX;scrollTo(0,y);return[r,l]})()'), [0, 0], 'import no actual horizontal scroll');
+      await click('[data-testid=import-cancel]');
+      equal(await browser.evaluate('Boolean(document.querySelector("[data-testid=import-comparison]"))'), false, 'cancel discards preview without activation');
+    }
+  }
+  await uploadPlan(candidateText);
+  await blockedTrainingRequests(['/api/plan/import/preview'], async () => {
+    await click('[data-testid=import-preview]');
+    await browser.waitFor('Boolean(document.querySelector("[data-testid=import-error]"))');
+    equal(await browser.evaluate('Boolean(document.querySelector("[data-testid=import-comparison]"))'), false, 'failed preview has no stale confirm');
+  }, 'import preview network failure', archiveBase);
+  await click('[data-testid=import-preview]');
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=import-comparison]"))');
+  await input('[data-testid=import-confirm-check]', true);
+  await blockedTrainingRequests(['/api/plan/import/confirm'], async () => {
+    await click('[data-testid=import-confirm]');
+    await browser.waitFor('Boolean(document.querySelector("[data-testid=import-error]"))');
+    equal(await browser.evaluate('Boolean(document.querySelector("[data-testid=import-comparison]"))'), false, 'failed confirmation requires new preview, not automatic retry');
+    equal((await archiveApi('/api/cycle')).active_cycle_id, activeBeforeReview.meta.planId, 'blocked confirmation never changes cycle');
+  }, 'import confirm network failure', archiveBase);
+  await uploadPlan('{"schemaVersion":"RPL-Raw-v1","schemaVersion":"RPL-Raw-v1"}');
+  await expectedImportRejection('/api/plan/import/preview', 422, async () => {
+    await click('[data-testid=import-preview]');
+    await browser.waitFor('Boolean(document.querySelector("[data-testid=import-error]"))');
+    assert.match(await browser.evaluate('document.querySelector("[data-testid=import-error]").textContent'), /schemaVersion.*unique|unique.*schemaVersion/s); checks++;
+  });
+  await uploadPlan(JSON.stringify(activeBeforeReview));
+  await expectedImportRejection('/api/plan/import/preview', 409, async () => {
+    await click('[data-testid=import-preview]');
+    await browser.waitFor('Boolean(document.querySelector("[data-testid=import-error]"))');
+    assert.match(await browser.evaluate('document.querySelector("[data-testid=import-error]").textContent'), /Cycle ID already exists/); checks++;
+  });
+  await uploadPlan(candidateText);
+  await click('[data-testid=import-preview]');
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=import-comparison]"))');
+  const importRow = activeBeforeReview.workouts.find(row => row.bucket === 'main');
+  const staleSave = await fetch(`${archiveBase}/api/log`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({cycle_id:activeBeforeReview.meta.planId,week:importRow.week,day:importRow.day,seq:importRow.seq,load:102.5,sets:2,reps:1,rpe:9,note:'Saved after import preview'}) });
+  equal(staleSave.status, 200, 'concurrent valid log creates stale preview');
+  await input('[data-testid=import-confirm-check]', true);
+  await expectedImportRejection('/api/plan/import/confirm', 409, async () => {
+    await click('[data-testid=import-confirm]');
+    await browser.waitFor('Boolean(document.querySelector("[data-testid=import-error]"))');
+    equal(await browser.evaluate('Boolean(document.querySelector("[data-testid=import-comparison]"))'), false, 'stale confirmation clears preview');
+  });
+  await click('[data-testid=import-preview]');
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=import-comparison]"))');
+  await input('[data-testid=import-confirm-check]', true);
+  await click('[data-testid=import-confirm]');
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=import-success]"))');
+  equal((await archiveApi('/api/cycle')).active_cycle_id, candidatePlan.meta.planId, 'explicit confirm activates new cycle');
+  equal(await archiveApi('/api/plan'), candidatePlan, 'new plan exactly matches uploaded prescriptions');
+  equal((await archiveApi('/api/log')).logs, {}, 'new cycle never inherits old logs');
+  const frozenReview = await archiveApi(`/api/review?cycle_id=${encodeURIComponent(activeBeforeReview.meta.planId)}`);
+  equal(frozenReview.cycle.status, 'archived', 'old review frozen as archive');
+  equal(frozenReview.logs[0].load, 102.5, 'archive includes last pre-confirm actual save');
+  equal(frozenReview.prescription_versions[0].plan, activeBeforeReview, 'original prescription preserved');
+  await click('[data-testid=import-open-plan]');
+  await browser.waitFor('document.querySelector("main")?.getAttribute("aria-busy") === "false" && Boolean(document.querySelector(".plan-metrics"))');
+  equal((await archiveApi('/api/plan')).meta.planId, candidatePlan.meta.planId, 'open reload reads new active plan');
+  await load(archiveBase, `/archive/${encodeURIComponent(activeBeforeReview.meta.planId)}`);
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=review-view]"))');
+  equal(await browser.evaluate('document.querySelector("[data-testid=review-status]").textContent'), 'READ-ONLY', 'old plan is readable after real import');
+  equal(await browser.evaluate('document.querySelectorAll(".record-form, .exercise-editor").length'), 0, 'old cycle never mounts editors after import');
+  console.log('PASS atomic import: strict errors, preview/cancel, explicit confirm, stale logs, network failure, complete readonly archive, new-cycle reload and four-width/two-theme controls');
   equal(browser.errors, [], 'no browser runtime or console errors');
   console.log(`PASS browser.mjs: ${checks} assertions; ${screenshots} delivery screenshots; CDP device metrics at 320/360/390/412`);
 } finally {

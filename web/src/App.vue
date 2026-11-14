@@ -14,6 +14,7 @@ import DailyRecord from './components/DailyRecord.vue';
 import PrescriptionSettings from './components/PrescriptionSettings.vue';
 import TrendView from './components/TrendView.vue';
 import ArchiveView from './components/ArchiveView.vue';
+import PlanImport from './components/PlanImport.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -211,7 +212,7 @@ watch([() => route.fullPath, loading], async () => {
           <TrendView :analysis="analysis" :performance="performance" />
         </template>
         <ArchiveView v-else-if="page === 'archive'" :active-cycle-id="plan.meta.planId" />
-        <template v-else-if="page === 'settings'"><div class="eyebrow">PREFERENCES / SYSTEM</div><h1>The essentials.</h1><div class="empty-state"><h2>Appearance</h2><p>Light by default. Choose the contrast that suits your session.</p><button class="inline-link" @click="theme = theme === 'light' ? 'dark' : 'light'">Use {{ theme === 'light' ? 'dark' : 'light' }} theme</button></div><div class="empty-state"><h2>Server storage</h2><p>Connected · SQLite · Asia/Shanghai</p><p>{{ plan.schemaVersion }} · {{ plan.meta.weeks }} weeks · {{ plan.meta.sessions }} sessions</p><p>Single-user release {{ releaseVersion }}. Records are saved on the server; prescribed and actual sets stay separate.</p></div><PrescriptionSettings :cycle-id="plan.meta.planId" @changed="refresh" /></template>
+        <template v-else-if="page === 'settings'"><div class="eyebrow">PREFERENCES / SYSTEM</div><h1>The essentials.</h1><div class="empty-state"><h2>Appearance</h2><p>Light by default. Choose the contrast that suits your session.</p><button class="inline-link" @click="theme = theme === 'light' ? 'dark' : 'light'">Use {{ theme === 'light' ? 'dark' : 'light' }} theme</button></div><div class="empty-state"><h2>Server storage</h2><p>Connected · SQLite · Asia/Shanghai</p><p>{{ plan.schemaVersion }} · {{ plan.meta.weeks }} weeks · {{ plan.meta.sessions }} sessions</p><p>Single-user release {{ releaseVersion }}. Records are saved on the server; prescribed and actual sets stay separate.</p></div><PlanImport /><PrescriptionSettings :cycle-id="plan.meta.planId" @changed="refresh" /></template>
       </template>
     </main>
     <footer class="site-footer"><span>ROAST RAW / TRAIN WITH INTENT</span><span>{{ releaseVersion }} · LOCAL PREVIEW</span></footer>

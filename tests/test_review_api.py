@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from test_api import GeneratedPlanCase, PLAN_PATH, actual_payload, database_rows, fields_only, log_key, open_db
+from test_api import GeneratedPlanCase, PLAN_PATH, actual_payload, database_rows, fields_only, log_key, open_db, seed_historical_log
 from server.app.stats.variations import digest
 
 
@@ -104,7 +104,7 @@ class ReviewAPITests(GeneratedPlanCase):
         self.historical('completed-cycle', 'completed')
         row = self.main_row()
         self.store.save_log(self.cycle_id, row, fields_only(actual_payload(self.seed, row, load=100, reps=3)))
-        self.store.save_log('old-cycle', row, fields_only(actual_payload(old_plan, row, load=70, reps=1)))
+        seed_historical_log(self.db_path, 'old-cycle', row, fields_only(actual_payload(old_plan, row, load=70, reps=1)))
         before = database_rows(self.db_path)
         old = self.client.get('/api/review', params={'cycle_id': 'old-cycle'}).json()
         current = self.client.get('/api/review', params=self.params).json()
