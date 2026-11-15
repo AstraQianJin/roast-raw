@@ -21,8 +21,17 @@ class AttemptMathTests(unittest.TestCase):
         self.assertEqual(floor25(141.0625), 140.0)
         self.assertEqual(floor25(156.3125), 155.0)
         self.assertEqual(suggested(152.5), [140.0, 152.5, 155.0])
-        self.assertEqual(suggested(97.5), [90.0, 97.5, 97.5])
+        # 102.5 % of 97.5 floors onto the second attempt; the tie moves up one step.
+        self.assertEqual(suggested(97.5), [90.0, 97.5, 100.0])
         self.assertEqual(suggested(177.5), [162.5, 177.5, 180.0])
+
+    def test_every_ladder_is_strictly_increasing(self):
+        for reference in (60, 85, 91.2, 95, 97.5, 100, 112.5, 125, 135, 137.3, 154.8, 165, 200):
+            ladder = suggested(reference)
+            self.assertGreater(ladder[0], 0, f'{reference}: the opener exists')
+            self.assertGreater(ladder[1], ladder[0], f'{reference}: the second attempt beats the opener')
+            self.assertGreater(ladder[2], ladder[1], f'{reference}: the third attempt beats the second')
+            self.assertTrue(all(value % 2.5 == 0 for value in ladder), f'{reference}: every attempt stays on the 2.5 kg step')
 
     def test_miss_repeats_same_load(self):
         self.assertEqual(next_attempt(152.5, 140.0, 'miss', 2), 140.0)
@@ -71,7 +80,9 @@ class AttemptAPITests(GeneratedPlanCase):
         self.assertEqual(squat['suggested'], [140.0, 152.5, 155.0])
         self.assertEqual(squat['next'], [140.0, 152.5, 155.0])
         self.assertEqual(squat['attempts'], [None, None, None])
-        self.assertEqual(state['lifts']['bench']['suggested'], [90.0, 97.5, 97.5])
+        # Owner ruling 0.43: 102.5 % of 97.5 floors onto 97.5, so the third attempt
+        # steps up to 100.0 instead of tying the second.
+        self.assertEqual(state['lifts']['bench']['suggested'], [90.0, 97.5, 100.0])
         self.assertEqual(state['lifts']['deadlift']['suggested'], [162.5, 177.5, 180.0])
 
     def test_attempts_must_be_confirmed_in_order(self):

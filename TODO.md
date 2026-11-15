@@ -10,13 +10,13 @@
 
 | 项 | 值 |
 |---|---|
-| 版本 | `web/package.json` = **0.0.42**；未部署、未 push（本批 0.45 才发布） |
+| 版本 | `web/package.json` = **0.0.43**；未部署、未 push（本批 0.45 才发布） |
 | 工作树 | 以本节所在提交为准 |
-| 最近提交 | 见 `git log --oneline -3`（0.41 `772d4a9`） |
-| 门禁 | 0.41：`verify.js` exit 0（355 用例 / 6798 检查）；0.42：exit 0（6803 检查）；`npm --prefix web run build` exit 0；`browser.mjs` 18 项 exit 0，`--sabotage` exit 1 |
+| 最近提交 | 见 `git log --oneline -3`（0.41 `772d4a9`、0.42 `b560652`） |
+| 门禁 | 0.41：`verify.js` exit 0（355 用例 / 6798 检查）；0.42：6803；0.43：6807（356 用例）；`build` exit 0；`browser.mjs` 20 项 exit 0，`--sabotage` exit 1 |
 | 红基线 | 无 |
-| 部署 | 线上仍是 0.0.40 `http://82.157.146.30/`。0.42–0.44 **不 push、不部署**（本批裁定） |
-| 证据落点 | `RR\shots\0.41\`（`totals-evidence.json`）、`RR\shots\0.42\`（`determinism-evidence.json`） |
+| 部署 | 线上仍是 0.0.40 `http://82.157.146.30/`。0.43–0.44 **不 push、不部署**（本批裁定） |
+| 证据落点 | `RR\shots\0.41\`、`RR\shots\0.42\`、`RR\shots\0.43\` 各一份 `*-evidence.json` |
 | 老项目 | 两个老项目已迁 `RR\ref-projects\`；`rplref` 瘦身记录见 `RR\ref-projects\rplref\_repo\MIRROR_SLIMMED.md` |
 
 **长期边界**：只做 Web（Vue 3 + Vite + Motion One + FastAPI + SQLite）；界面英文、对话中文；`Ref/` 与两个老项目只读；不手改 `data/plan.json` 与 `web/dist/`；不弱化断言、不中和 sabotage。
@@ -92,7 +92,7 @@
 |---|---|---|---|
 | ~~0.41~~ ✅ | 训练数字单源 | P0-1 | 六处显示同值，且都等于明细逐行展开值 |
 | ~~0.42~~ ✅ | 确定性 Cycle 页 + 块测试日 | P0-3 | 10 次重载结构相同；B1 不出现别的块的测试日 |
-| 0.43 | P1 逻辑 | P1-4/5/6/7 | 日历逐行对拍、试举取整单测、全站无死链、强制失败有错误态 |
+| ~~0.43~~ ✅ | P1 逻辑 | P1-4/5/6/7 | 日历逐行对拍、试举取整单测、全站无死链、强制失败有错误态 |
 | 0.44 | P1 审美 | P1-8/9 | 421/320/1280 三宽无截断缺字、次要标签 WCAG AA |
 | 0.45 | P2 文案与账户 + 发布 | P2-10/11/12 | 文案清单零残留、试举行可区分、能退出登录；部署成功 + 重评分达标 |
 
@@ -143,6 +143,8 @@
 | P1-7 加载与错误态 | Oracle、Calendar、Vault、Week 13、测试日建议：加载给骨架/进度文案，失败给可见错误 + `Retry`（禁止裸 spinner 或静默空） | 强制慢网与强制 500 各截一张，`docs`/证据 JSON 记两端状态；失败后可重试成功 |
 
 **完成判据**：上表四项各自可复测；`verify.js` exit 0；`browser.mjs` 新增断言不计入「只数行数」的凑数检查。
+
+**0.43 已交付**：试举阶梯加 `ceil25`——地板后若 ≤ 前一次则进到下一 2.5 kg 档，卧推 97.5 kg 参考值从 `[90, 97.5, 97.5]` 变为 `[90, 97.5, 100]`（`test_attempts.py` 覆盖 13 个参考值 × 三档，并对旧 fixture 期望注明政策变更理由）。日历详情标题由 `B · S`（只有动作字母）改成 `SESSION D · B · D · S lifts`；`browser.mjs` 抓日详情→点进 `/cycle/week/:week/:day`，逐行按序比对（实测 W13 D 详情 9 行 / 页 12 行，页会把带 `segments` 的行拆开，故比对是「有序包含」而非数量相等）。Oracle 调用历史原来点了无反应（`showCall` 失败只把错误丢进全局 `failure`，成功但无文本时模板什么都不渲染），现在每次点击必有回应：加载中、错误原因 +「只有耗时与用量，正文未存」、或正文本身。日历用 `Network.setBlockedURLs` 强制断供，实测出 `The calendar could not be loaded… Retry`（44 px），放开后重载恢复。Calendar / Vault / Week 13 原本已有错误 + 重试路径，本版只补证据不重写。证据 `RR\shots\0.43\logic-evidence.json`。
 
 ### 0.44 · P1 审美两项
 

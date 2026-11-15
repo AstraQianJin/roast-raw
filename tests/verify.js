@@ -440,6 +440,23 @@ function calendarViewCheck() {
   checks++;
   console.log('PASS calendar projection: /calendar with week/month/agenda, half-open range, read-only');
 }
+function logicAffordanceCheck() {
+  // 0.43: the attempt ladder may not tie, a history row may not be a dead button,
+  // and the calendar detail may not label a session by her lift letters alone.
+  const attempts = readFileSync(join(root, 'server', 'app', 'stats', 'attempts.py'), 'utf8');
+  assert.ok(attempts.includes('def ceil25('), 'the ladder can step up instead of only flooring');
+  assert.ok(attempts.includes('values[index] = ceil25(values[index - 1] + 2.5)'),
+    'a would-be tie moves the third attempt up one 2.5 kg step');
+  const ai = readFileSync(join(root, 'web', 'src', 'components', 'AiOutlook.vue'), 'utf8');
+  assert.ok(ai.includes('This call keeps its timing and usage only'), 'a call with no stored text says so');
+  assert.ok(ai.includes('callState.error'), 'a failed history fetch shows its reason instead of nothing');
+  const calendar = readFileSync(join(root, 'web', 'src', 'components', 'CalendarView.vue'), 'utf8');
+  assert.ok(calendar.includes('SESSION {{ day.day }}'), 'the calendar detail names the session it belongs to');
+  assert.ok(calendar.includes('day.rows'), 'the calendar detail lists the prescribed rows themselves');
+  checks += 4;
+  console.log('PASS logic and affordances: the ladder never ties, a history row always answers, the detail names its session');
+}
+
 function blockTestDateCheck() {
   // One cycle has one test week and one block owns it. The block page passes that
   // block's own date, never the global SBD date to every block (0.42).
@@ -581,6 +598,7 @@ try {
     landingFactsCheck();
     totalsReconcileCheck();
     blockTestDateCheck();
+    logicAffordanceCheck();
     planCalendarCheck();
     testPlanCheck();
     completionCheck();

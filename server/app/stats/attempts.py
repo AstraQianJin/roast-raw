@@ -1,8 +1,10 @@
 """Competition/test-week attempt selection.
 
 Opener 92.5%, second 100%, third 102.5% of the reference 1RM, each floored to
-2.5 kg. A missed attempt repeats the same weight; after a good lift the next
-attempt never decreases (at least +2.5 kg over the previous good attempt).
+2.5 kg. The three suggested weights must be strictly increasing: when flooring
+would put the third attempt on the second, the next 2.5 kg step is used instead
+(owner ruling 2026-11-15: a tie is a bug unless it is labelled). A missed attempt
+repeats the same weight; after a good lift the next attempt never decreases.
 """
 
 import math
@@ -16,8 +18,16 @@ def floor25(value):
     return math.floor(value / 2.5 + 1e-9) * 2.5
 
 
+def ceil25(value):
+    return math.ceil(value / 2.5 - 1e-9) * 2.5
+
+
 def suggested(reference):
-    return [floor25(reference * factor) for factor in FACTORS]
+    values = [floor25(float(reference) * factor) for factor in FACTORS]
+    for index in range(1, len(values)):
+        if values[index] <= values[index - 1]:
+            values[index] = ceil25(values[index - 1] + 2.5)
+    return values
 
 
 def references(questionnaire, plan):

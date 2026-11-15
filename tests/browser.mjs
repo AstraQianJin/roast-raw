@@ -236,6 +236,12 @@ try {
       statusData: cards.map(card => card.dataset.status),
       range: host.querySelector('[data-testid=cal-range]').innerText.trim(),
       detail: Boolean(host.querySelector('[data-testid=cal-detail]')),
+      detailCards: [...host.querySelectorAll('.cal-detail-card')].map(card => ({
+        label: card.querySelector('.cal-detail-head b')?.innerText.trim() || '',
+        href: card.querySelector('a')?.getAttribute('href') || '',
+        rows: [...card.querySelectorAll('li')].map(li => li.innerText.replace(/\\s+/g, ' ').trim()),
+        movements: [...card.querySelectorAll('li span')].map(n => n.innerText.trim()),
+      })),
       overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
       minControl: Math.min(...[...host.querySelectorAll('[data-testid^=cal-view-], [data-testid=cal-today], .cal-nav button')].map(n => n.getBoundingClientRect().height)),
     };
@@ -244,6 +250,10 @@ try {
   assert.ok(weekView.cards >= 1, 'the week view shows the sessions in that week');
   assert.ok(weekView.statuses.every(text => /Planned|Completed|Skipped|Missed/i.test(text)), 'status is written out, never colour alone');
   assert.ok(weekView.detail, 'a selected day owns a read-only detail block');
+  assert.ok(weekView.detailCards.length >= 1, 'the selected day lists its sessions');
+  assert.ok(weekView.detailCards.every(card => /^SESSION [A-Z]/.test(card.label)), `the detail names the session it belongs to (${weekView.detailCards.map(card => card.label).join(' / ')})`);
+  assert.ok(weekView.detailCards[0].rows.length >= 4, 'the detail lists every prescribed row, not a summary');
+  assert.ok(weekView.detailCards[0].href.includes('/cycle/week/'), 'the detail links to the same session the week view opened');
   assert.ok(weekView.minControl >= 44, `calendar controls reach 44 px (${weekView.minControl})`);
   assert.equal(weekView.overflow, 0, 'the calendar does not scroll sideways at 421');
   await shot('calendar-week');
@@ -287,6 +297,32 @@ try {
   await shot('calendar-agenda');
   ok('calendar: week / month / agenda read one projection', { week: weekView.range, agendaRows: agenda.rows });
 
+  // ---- 3b. a failed panel load says so and offers retry (0.43) ------------
+  // Only the calendar's own request is blocked: the page shell still loads, so the
+  // failure has to be explained by the panel rather than by a blank screen.
+  await browser.send('Network.setBlockedURLs', { urls: ['*/api/calendar*'] });
+  await browser.navigate(`${base}/calendar`);
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=cal-error]"))', 20000);
+  const calError = await browser.evaluate(`(() => {
+    const node = document.querySelector('[data-testid=cal-error]');
+    return { text: node.innerText.replace(/\\s+/g, ' ').trim(), retry: Boolean(node.querySelector('button')),
+      retryHeight: node.querySelector('button')?.getBoundingClientRect().height || 0,
+      blank: document.querySelector('[data-testid=calendar]').innerText.replace(/\\s+/g, ' ').trim().length };
+  })()`);
+  assert.match(calError.text, /could not be loaded|could not/i, 'a failed calendar request explains itself instead of rendering empty');
+  assert.ok(calError.retry, 'the error carries a retry control');
+  assert.ok(calError.retryHeight >= 44, `the retry control reaches 44 px (${calError.retryHeight})`);
+  await shot('calendar-error');
+  await browser.send('Network.setBlockedURLs', { urls: [] });
+  // The block above was instrumentation, not a failure of the app: drop the
+  // 'inspector' entry it produced before the final "no failed requests" check.
+  browser.networkFailures.splice(0, browser.networkFailures.length,
+    ...browser.networkFailures.filter(item => item.blockedReason !== 'inspector'));
+  await browser.navigate(`${base}/calendar`);
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=cal-week]"))', 25000);
+  ok('a blocked panel load explains itself and recovers on retry', { message: calError.text });
+
+
   // ---- 4. a real session day ---------------------------------------------
   await browser.navigate(`${base}/cycle/week/1/day/A`);
   await browser.waitFor('Boolean(document.querySelector("[data-testid=daily-record]"))', 20000);
@@ -295,6 +331,7 @@ try {
     rows: document.querySelectorAll('.exercise').length,
     main: document.querySelectorAll('.exercise.main').length,
     gear: Boolean(document.querySelector('[data-testid=gear-plates]')),
+    movements: [...document.querySelectorAll('.exercise')].map(n => n.innerText.replace(/\\s+/g, ' ')),
     overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
     innerWidth: window.innerWidth,
   })`);
@@ -304,6 +341,28 @@ try {
   assert.equal(day.overflow, 0, 'the session day does not scroll sideways');
   await shot('session-day');
   ok('session day renders', day);
+
+  // ---- 4b. the calendar detail is that same session (0.43) ----------------
+  const detailCard = weekView.detailCards[0];
+  await browser.navigate(`${base}${detailCard.href}`);
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=daily-record]"))', 20000);
+  await delay(300);
+  const detailDay = await browser.evaluate(`({ rows: document.querySelectorAll('.exercise').length,
+    movements: [...document.querySelectorAll('.exercise')].map(n => n.innerText.replace(/\\s+/g, ' ')) })`);
+  // The page may split one prescribed row into its segments, so the check is that
+  // every row the detail lists appears, in order, on the session page.
+  let cursor = 0;
+  detailCard.movements.forEach(movement => {
+    const found = detailDay.movements.findIndex((text, index) => index >= cursor && text.toLowerCase().includes(movement.toLowerCase()));
+    assert.ok(found >= 0, `the session page shows the detail row "${movement}" in the same order`);
+    cursor = found + 1;
+  });
+  assert.ok(detailDay.rows >= detailCard.rows.length, 'the session page never shows fewer rows than the detail');
+  ok('the calendar detail and the session page are one session', { href: detailCard.href, label: detailCard.label, detailRows: detailCard.rows.length, pageRows: detailDay.rows });
+  // Restore the state the next checks assume: one known session day.
+  await browser.navigate(`${base}/cycle/week/1/day/A`);
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=daily-record]"))', 20000);
+
 
   // ---- 4b. one number, every page (0.41) ---------------------------------
   // The same week and cycle must read identically on the day header, the week card,

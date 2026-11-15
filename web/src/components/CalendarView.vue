@@ -198,7 +198,7 @@ onBeforeUnmount(() => controller?.abort());
       </header>
       <article v-for="day in selectedDays" :key="`${day.cycleId}-${day.day}`" class="cal-detail-card">
         <div class="cal-detail-head">
-          <b>{{ day.lifts.join(' · ') || day.day }}</b>
+          <b>SESSION {{ day.day }}<template v-if="day.lifts.length"> · {{ day.lifts.join(' · ') }} lifts</template></b>
           <em class="cal-status" :class="day.status">{{ statusLabel(day) }}</em>
         </div>
         <p class="cal-detail-meta">{{ day.title }} · {{ day.block }} · {{ day.prescribedSets }} sets recorded as {{ day.loggedSets }}</p>

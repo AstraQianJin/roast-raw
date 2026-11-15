@@ -18,6 +18,7 @@ const chatOpen = ref(false);
 const chatInput = ref('');
 const conversation = ref([]);
 const openCall = ref(null);
+const callState = ref({ id: '', loading: false, error: '' });
 
 async function getJson(path) {
   const response = await fetch(path, { cache: 'no-store' });
@@ -95,9 +96,17 @@ async function exportBundle() {
 }
 
 async function showCall(id) {
-  if (openCall.value?.id === id) { openCall.value = null; return; }
+  if (openCall.value?.id === id) { openCall.value = null; callState.value = { id: '', loading: false, error: '' }; return; }
+  callState.value = { id, loading: true, error: '' };
   try { openCall.value = await getJson(`/api/ai/call/${id}`); }
-  catch (error) { failure.value = error.message; }
+  catch (error) {
+    // A click must always produce a visible answer: either the stored call or
+    // the reason its detail is missing. Never a dead button (0.43).
+    openCall.value = { id };
+    callState.value = { id, loading: false, error: error.message };
+  } finally {
+    if (callState.value.id === id) callState.value = { ...callState.value, loading: false };
+  }
 }
 
 function callOutlook(call) {
@@ -144,17 +153,21 @@ onMounted(loadStatus);
       <details v-if="status.calls.length" class="ai-history" data-testid="ai-history">
         <summary>CALL HISTORY <span class="badge">{{ status.calls.length }}</span></summary>
         <div v-for="call in status.calls" :key="call.id" class="ai-call">
-          <button class="inline-link" @click="showCall(call.id)">#{{ call.id }} · {{ call.kind.toUpperCase() }} · {{ call.status.toUpperCase() }} · {{ call.created_at.slice(0, 16).replace('T', ' ') }}</button>
+          <button class="inline-link" :disabled="callState.loading && callState.id === call.id" @click="showCall(call.id)">#{{ call.id }} · {{ call.kind.toUpperCase() }} · {{ call.status.toUpperCase() }} · {{ call.created_at.slice(0, 16).replace('T', ' ') }}{{ callState.loading && callState.id === call.id ? ' · loading…' : '' }}</button>
           <p v-if="call.status === 'error'" class="micro-copy">{{ call.error }}</p>
           <template v-if="openCall?.id === call.id">
-            <div v-if="callOutlook(openCall)" class="ai-tiers">
-              <article v-for="tier in TIERS" :key="tier.id" class="ai-tier" :data-tier="tier.id">
-                <span class="section-label">{{ tier.label }}</span>
-                <p>{{ callOutlook(openCall)[tier.id].summary }}</p>
-                <ul><li v-for="(item, index) in callOutlook(openCall)[tier.id].adjustments" :key="index">{{ item }}</li></ul>
-              </article>
-            </div>
-            <p v-else-if="openCall.response" class="ai-record">{{ openCall.response }}</p>
+            <p v-if="callState.error" class="micro-copy ai-failure" role="alert">{{ callState.error }} This call keeps its timing and usage only; its text was not stored.</p>
+            <template v-else>
+              <div v-if="callOutlook(openCall)" class="ai-tiers">
+                <article v-for="tier in TIERS" :key="tier.id" class="ai-tier" :data-tier="tier.id">
+                  <span class="section-label">{{ tier.label }}</span>
+                  <p>{{ callOutlook(openCall)[tier.id].summary }}</p>
+                  <ul><li v-for="(item, index) in callOutlook(openCall)[tier.id].adjustments" :key="index">{{ item }}</li></ul>
+                </article>
+              </div>
+              <p v-else-if="openCall.response" class="ai-record">{{ openCall.response }}</p>
+              <p v-else class="micro-copy">This call stored its timing and usage only; no text was kept for it.</p>
+            </template>
           </template>
         </div>
       </details>
