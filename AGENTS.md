@@ -50,6 +50,8 @@ New requirements that do not belong to the current milestone go into the TODO qu
 
 Commits: `git -c user.name=Astra -c user.email=astra@local commit` (the repo has no configured identity). Never `--amend`, `--no-verify`, or edit git config.
 
+Plan then act in the same turn. When a plan is handed over, check every open question in it against a safe default; if each one has one, execute the plan now and record the defaults used. Waiting for a ruling is only legitimate when no default is safe or the action is destructive and irreversible. On 2026-11-15 a relocation plan was delivered with "execute later" and three open questions that already had defaults, so nothing moved until the owner demanded it — treat that as the failure mode this rule exists to prevent.
+
 ## Bulk filesystem work (measured on this host)
 
 - **Disk questions go through an MFT reader, not a recursive shell walk.** WizTree (`C:\Program Files\WizTree\WizTree64.exe`) scans this 476 GB volume — about 1.85 M files and 689 k folders — in roughly 17 s, because it reads the NTFS master file table instead of opening files. `Get-ChildItem -Recurse | Measure-Object` costs one syscall and one Defender inspection per file and takes minutes; never use it to answer "what is filling the disk".
