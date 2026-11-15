@@ -6,17 +6,17 @@
 
 ---
 
-## 0 · 状态快照（2026-11-15 · 0.30 收工）
+## 0 · 状态快照（2026-11-15 · 0.31 收工）
 
 | 项 | 值 |
 |---|---|
-| 版本 | `web/package.json` = **0.0.30**；0.29、0.30 均已本地提交，未 push、未部署 |
+| 版本 | `web/package.json` = **0.0.31**；0.29–0.31 均已本地提交，未 push、未部署 |
 | 工作树 | 以本节所在提交为准 |
 | 最近提交 | 见 `git log --oneline -3` |
-| 门禁 | `node tests/verify.js` 302 用例 / **6575** 检查、exit 0（sabotage 子进程仍按预期红）；`npm --prefix web run build` exit 0；`check_skill.py --root .` PASS |
+| 门禁 | `node tests/verify.js` **317** 用例 / **6587** 检查、exit 0（sabotage 子进程仍按预期红）；`npm --prefix web run build` exit 0；`check_skill.py --root .` PASS |
 | 红基线 | `tests/browser.mjs` 自 0.21 起失效（删主题切换、注册页改四输入，旧断言过时）；**0.35 重写后才可作绿灯证据** |
 | 部署 | 线上仍是 0.20 版 `http://82.157.146.30/`（公开落地页 + 账户门控 journal）。本轮**不 push、不部署**（用户 2026-11-15 裁定） |
-| 证据落点 | `RR\shots\0.29\`（`p0-01-refresh.json`、`p0-02-landing.json`）、`RR\shots\0.30\`（`prestart-evidence.json` + 320/360/390/412/1280 截图） |
+| 证据落点 | `RR\shots\0.29\`、`RR\shots\0.30\`（`prestart-evidence.json` + 五宽截图）、`RR\shots\0.31\`（`about-evidence.json`、`free-readonly-evidence.json` + 三宽 about / 免费档只读截图） |
 | 老项目 | 两个老项目已迁 `RR\ref-projects\`（`roast-powerlifting`、`rplref`）；`rplref` 2026-11-15 瘦身 2243.6 MB，依据与恢复路径见 `RR\ref-projects\rplref\_repo\MIRROR_SLIMMED.md` |
 
 **长期边界**：只做 Web（Vue 3 + Vite + Motion One + FastAPI + SQLite）；界面英文、对话中文；`Ref/` 与两个老项目只读；不手改 `data/plan.json` 与 `web/dist/`；不弱化断言、不中和 sabotage。
@@ -30,9 +30,9 @@
 
 ---
 
-## 1 · 下一动作：0.31 门控与出口
+## 1 · 下一动作：0.32 复合主键与迁移
 
-**接手指令**：`docs\agent-prompt-0.29-0.39.md` 的 0.31 段（`T6` 读开写关、`T5` 降档主动刷新、`T3` 孤表审计 + 表级隔离单测、`P0-03b` 导出、`P0-04` `/about`）。
+**接手指令**：`docs\agent-prompt-0.29-0.39.md` 的 0.32 行 + 本文件 §4 `T4`。
 
 按序执行，一步一提交。提交前跑门禁，回执按 `AGENTS.md` 五字段。
 
@@ -125,19 +125,19 @@
 
 ## 4 · 后续版本规格（0.31 起，实现细节可自决，口径变动须先问）
 
-### T3 · 孤表审计（0.31）
+### T3 · 孤表审计（已完成 0.31：`server/tools/audit_orphans.py` + `tests/test_isolation.py`，17 条链接、live 库孤儿 0）
 
 以 `store.py` 实际表为准（`cycles` `plans` `logs` `readiness` `readiness_v2` `archives` `body_metrics` `questionnaires` `ai_calls` `attempts` `deletion_tokens` `accounts`，外加处方版本表与会话表），逐表写「孤儿查询」（引用了不存在 `cycle_id` 的行数必须为 0），并写表级隔离单测：A 账户写、B 账户读不到。
 
-### T4 · 主键与迁移（0.32）
+### T4 · 主键与迁移（0.32，下一动作）
 
 `cycles.id TEXT PRIMARY KEY` 全局唯一是缺陷：改成复合主键 `(account_id, id)`，相关表外键随之重建，`user_version` 升位，迁移前快照，导入 409 文案改为「同账号占用 / 另存新 ID」，单测改名 `test_same_cycle_id_allowed_across_accounts`。
 
-### T5 · 降档主动刷新（0.31）
+### T5 · 降档主动刷新（已完成 0.31：403 重取 session、`timed_until` 一次性定时器、`visibilitychange` 补刷新；120 s 静置 0 次，无 `setInterval`）
 
 403 → 立即重取 `/api/session`；`timed_until` 到点用**一次性定时器**；`visibilitychange` 回前台补一次刷新。**禁止轮询**（4C4G / 3M 带宽约束）。验收：静置一小时 `/api/session` ≤ 5 次。
 
-### T6 · 读开写关（0.31）
+### T6 · 读开写关（已完成 0.31：免费档 DailyRecord 可读、写入口锁；`tests/test_gates.py` 逐行成对）
 
 自有数据 GET 放开、写入口锁；派生视图（`performance` / `geometry` / `vault`）整块锁。与 0.28 的差异：free 账号的 DailyRecord **不再整体隐藏**，改为可读、写入口锁。
 

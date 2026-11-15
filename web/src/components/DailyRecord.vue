@@ -6,6 +6,7 @@ const props = defineProps({
   date: { type: String, required: true },
   sessionId: { type: String, default: 'daily' },
   readonly: { type: Boolean, default: false },
+  readonlyNote: { type: String, default: 'Read-only record.' },
 });
 const emit = defineEmits(['saved']);
 
@@ -283,7 +284,7 @@ async function saveBody() {
       </svg>
     </summary>
     <div class="record-content">
-      <p v-if="readonly" class="micro-copy">Read-only record.</p>
+      <p v-if="readonly" class="micro-copy">{{ readonlyNote }}</p>
       <form class="record-form" novalidate :aria-busy="readinessState.loading || readinessState.saving"
         @submit.prevent="saveReadiness" @input="readinessState.saved = false" @change="readinessState.saved = false">
         <header class="form-heading">

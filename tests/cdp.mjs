@@ -73,6 +73,9 @@ export async function openBrowser() {
   await send('Page.enable');
   await send('Runtime.enable');
   await send('Log.enable');
+  // Without this, no requestWillBeSent event arrives and requestLog stays empty — a probe that
+  // claims "no AI request" would be proving nothing.
+  await send('Network.enable');
   return {
     send, evaluate, waitFor, errors, networkFailures, requestLog,
     async viewport(width, height = 844) {

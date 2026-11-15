@@ -9,7 +9,7 @@ from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, StrictInt, field_validator
 from datetime import date as Date
@@ -368,6 +368,39 @@ def create_app(db_path=None, plan_path=None):
     def export_review(cycle_id: str | None = None):
         return JSONResponse(cycle_review(cycle_id), headers={
             'Content-Disposition': 'attachment; filename="RoastRaw-review.json"', 'Cache-Control': 'no-store'})
+
+    def csv_cell(value):
+        if value is None:
+            return ''
+        text = str(value)
+        return '"' + text.replace('"', '""') + '"' if any(ch in text for ch in ',"\n\r') else text
+
+    @app.get('/api/export/logs.csv')
+    def export_logs_csv(cycle_id: str | None = None):
+        """The account's own recorded rows as CSV. Reading your own ledger is not a gated view."""
+        selected = active_plan(cycle_id)
+        rows = store.logs(selected['meta']['planId'])
+        planned = {(row['week'], row['day'], row['seq']): row for row in selected['workouts']}
+        header = ['cycle_id', 'week', 'day', 'date', 'session_id', 'seq', 'movement', 'bucket',
+                  'prescribed_load_kg', 'actual_load_kg', 'sets', 'reps', 'rpe', 'note', 'updated_at']
+        entries = []
+        for key, actual in rows.items():
+            week_text, day, seq_text = key.split('|')
+            week, seq = int(week_text), int(seq_text)
+            row = planned.get((week, day, seq), {})
+            entries.append({'week': week, 'day': day, 'seq': seq, 'date': row.get('date', ''),
+                            'session_id': f'{week}|{day}', 'row': row, 'actual': actual})
+        lines = [','.join(header)]
+        for entry in sorted(entries, key=lambda item: (item['date'], item['week'], item['day'], item['seq'])):
+            actual, row = entry['actual'], entry['row']
+            values = [selected['meta']['planId'], entry['week'], entry['day'], entry['date'], entry['session_id'],
+                      entry['seq'], row.get('nameEn', ''), row.get('bucket', ''), row.get('loadKg'), actual['load'],
+                      actual['sets'], actual['reps'], actual['rpe'], actual['note'], actual['updated_at']]
+            lines.append(','.join(csv_cell(value) for value in values))
+        body = '\r\n'.join(lines) + '\r\n'
+        return Response(content=body, media_type='text/csv; charset=utf-8', headers={
+            'Content-Disposition': f'attachment; filename="RoastRaw-{selected["meta"]["planId"]}-logs.csv"',
+            'Cache-Control': 'no-store'})
 
     @app.get('/api/archive')
     def archive():

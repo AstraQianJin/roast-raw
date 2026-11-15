@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { animate } from '@motionone/dom';
 import packageInfo from '../package.json';
@@ -20,6 +20,7 @@ import QuestionnaireView from './components/QuestionnaireView.vue';
 import AiOutlook from './components/AiOutlook.vue';
 import AttemptBoard from './components/AttemptBoard.vue';
 import WelcomeView from './components/WelcomeView.vue';
+import AboutView from './components/AboutView.vue';
 import LoginView from './components/LoginView.vue';
 import RegisterView from './components/RegisterView.vue';
 import CycleStrip from './components/CycleStrip.vue';
@@ -60,11 +61,17 @@ const session = ref(null);
 const loaded = ref(false);
 const emptyLedger = computed(() => loaded.value && !error.value && cycles.value && !cycles.value.active_cycle_id);
 const can = capability => (session.value?.capabilities || []).includes(capability);
+// Read-open / write-closed: every tier reads its own daily record; only a tier that carries
+// recovery_body writes it. The lock lives on the form, not on the component's existence.
+const recoveryLockNote = computed(() => session.value?.authenticated
+  ? 'Read-only on this tier. Saving recovery and body metrics needs the Plus tier or higher.'
+  : 'Read-only record.');
 const authReady = ref(false);
 const mode = ref('plan');
 const outlookTab = ref('questionnaire');
 const page = computed(() => {
   if (['/', '/welcome'].includes(route.path)) return 'welcome';
+  if (route.path === '/about') return 'about';
   if (route.path === '/login') return 'login';
   if (route.path === '/register') return 'register';
   if (route.path.startsWith('/cycle')) return 'cycle';
@@ -72,7 +79,7 @@ const page = computed(() => {
   if (route.path === '/today') return 'today';
   return route.path.slice(1);
 });
-const isPublic = computed(() => ['welcome', 'login', 'register'].includes(page.value));
+const isPublic = computed(() => ['welcome', 'login', 'register', 'about'].includes(page.value));
 const currentWeek = computed(() => {
   if (!plan.value) return 1;
   if (route.params.blockId) return plan.value.weeks.find(week => week.blockId === route.params.blockId)?.n || 0;
@@ -176,7 +183,12 @@ async function get(path) {
 }
 async function soft(path) {
   const response = await fetch(path, { cache: 'no-store' });
-  if (response.status === 403) return null;
+  if (response.status === 403) {
+    // A 403 means this account's tier no longer covers the view: re-read the session once
+    // so the capability list on screen matches the server, then treat the view as absent.
+    await refreshSessionOnce();
+    return null;
+  }
   if (!response.ok) throw new Error(`Server request failed (${response.status}). Your saved data has not been changed.`);
   return response.json();
 }
@@ -200,6 +212,35 @@ async function refresh() {
   finally { loading.value = false; loaded.value = true; }
 }
 const activated = ref(false);
+let tierTimer = null;
+let sessionFetchAt = 0;
+let sessionFetching = false;
+// One shot per tier boundary, never a poll: 4C4G and a 3M link cannot afford a heartbeat.
+// A timed tier lapses on its own clock, so the page re-reads the session once at expiry.
+function scheduleTierRefresh() {
+  if (tierTimer) { clearTimeout(tierTimer); tierTimer = null; }
+  const until = session.value?.timed_until;
+  if (!until) return;
+  const at = Date.parse(until);
+  if (!Number.isFinite(at)) return;
+  const delay = at - Date.now();
+  if (delay <= 0) return;
+  tierTimer = setTimeout(async () => {
+    tierTimer = null;
+    await loadSession();
+    if (!isPublic.value && !error.value && loaded.value) await refresh();
+  }, Math.min(delay + 2000, 2147483647));
+}
+async function refreshSessionOnce() {
+  if (sessionFetching) return;
+  try { await loadSession(); } finally { /* capability list is already rewritten by loadSession */ }
+}
+function onVisibilityChange() {
+  if (document.visibilityState !== 'visible') return;
+  // A phone tab can sleep for hours; one refresh on return keeps the gate honest without polling.
+  if (Date.now() - sessionFetchAt < 60000) return;
+  loadSession().then(() => { if (!isPublic.value && loaded.value && !error.value) refresh(); });
+}
 async function onActivated() {
   activated.value = true;
 }
@@ -209,9 +250,11 @@ async function changeMode(value) {
   await refresh();
 }
 async function loadSession() {
+  sessionFetchAt = Date.now();
+  sessionFetching = true;
   try { session.value = await get('/api/session'); }
   catch { session.value = { authenticated: false, gate: true }; }
-  finally { authReady.value = true; }
+  finally { sessionFetching = false; authReady.value = true; scheduleTierRefresh(); }
 }
 async function ensureData() {
   if (loaded.value || loading.value) return;
@@ -236,7 +279,14 @@ async function logout() {
   router.replace('/');
   await loadSession();
 }
-onMounted(loadSession);
+onMounted(() => {
+  loadSession();
+  document.addEventListener('visibilitychange', onVisibilityChange);
+});
+onBeforeUnmount(() => {
+  document.removeEventListener('visibilitychange', onVisibilityChange);
+  if (tierTimer) { clearTimeout(tierTimer); tierTimer = null; }
+});
 watch([page, authReady, () => session.value?.authenticated], async () => {
   if (!authReady.value) return;
   const authed = !!session.value?.authenticated;
@@ -272,6 +322,7 @@ watch([() => route.fullPath, loading], async () => {
     <nav v-if="!isPublic" class="primary-nav" aria-label="Primary"><RouterLink to="/cycle" :class="{ 'router-link-active': page === 'cycle' }">CYCLE</RouterLink><RouterLink to="/analysis">ASSAY</RouterLink><RouterLink to="/questionnaire">ORACLE</RouterLink><RouterLink to="/archive">VAULT</RouterLink></nav>
     <main :aria-busy="loading">
       <WelcomeView v-if="page === 'welcome'" />
+      <AboutView v-else-if="page === 'about'" />
       <LoginView v-else-if="page === 'login'" :next="typeof route.query.next === 'string' ? route.query.next : ''" @authed="onAuthed" />
       <RegisterView v-else-if="page === 'register'" @authed="onAuthed" />
       <div v-else-if="loading" class="empty-state" role="status"><h1>Reading the plan.</h1><p>Loading your training data from the server.</p></div>
@@ -297,8 +348,8 @@ watch([() => route.fullPath, loading], async () => {
               <section class="day-capacity" aria-label="Session capacity"><header><span class="section-label">SESSION CAPACITY · PLANNED</span><strong>{{ todaySetCount }} SETS</strong></header><div class="capacity-track"><i v-for="(sets, index) in [todayTotals.main, todayTotals.sbdVar + todayTotals.nonSbdVar, todayTotals.accessory]" :key="index" :style="{ width: `${sets / Math.max(todaySetCount, 1) * 100}%` }"></i></div><div class="capacity-key"><span>MAIN {{ todayTotals.main }}</span><span>VAR {{ todayTotals.sbdVar + todayTotals.nonSbdVar }}</span><span>ACCESSORY {{ todayTotals.accessory }}</span></div></section>
               <CycleStrip :weeks="plan.weeks" :blocks="plan.blocks" :current="todaySession.week" />
               <RouterLink :to="`/cycle/week/${todaySession.week}/day/${todaySession.day}`" class="inline-link">Open the scheduled day →</RouterLink>
-              <DailyRecord v-if="can('recovery_body')" :cycle-id="plan.meta.planId" :date="todaySession.date" :session-id="`${todaySession.week}|${todaySession.day}`" @saved="refreshPrescription" />
-              <LockedFeature v-else compact label="Recovery & body metrics" tier="plus" />
+              <DailyRecord :cycle-id="plan.meta.planId" :date="todaySession.date" :session-id="`${todaySession.week}|${todaySession.day}`" :readonly="!can('recovery_body')" :readonly-note="recoveryLockNote" @saved="refreshPrescription" />
+
               <details v-if="can('gear_warmups')" class="gear"><summary>GEAR <span class="chip">{{ needsMicroPlates(todayRows) ? 'MICRO PLATES' : 'SESSION SETUP' }}</span><span v-if="plan.meta.profile.bar_kg" class="chip">{{ display(plan.meta.profile.bar_kg) }} KG BAR</span></summary><p>{{ needsMicroPlates(todayRows) ? 'Some prescribed loads need micro plates. Prepare equipment before the session; loads remain unchanged.' : 'Standard plates cover these prescribed loads. Prepare equipment before the session.' }}</p><p v-if="plan.meta.profile.bar_kg">Plan bar reference: {{ display(plan.meta.profile.bar_kg) }} kg. {{ plan.meta.profile.collars ? 'Collars included in the plan setup.' : 'Collars are not included in the plan load reference.' }}</p><p v-if="todayRows.some(row => prescriptionInfo?.systemLoads[row.week + '|' + row.day + '|' + row.seq])">Pull-up and dip loads include bodyweight. Check the dated bodyweight reading before choosing assistance or added weight.</p></details>
               <WarmupSuggestions v-if="can('gear_warmups')" :entries="plan.warmups?.[todaySession.date] || []" />
               <LockedFeature v-else compact label="Gear & Sheiko warm-ups" tier="lite" />
@@ -367,8 +418,8 @@ watch([() => route.fullPath, loading], async () => {
                 </RouterLink>
                 <section v-if="route.params.day === day.id" class="day-detail">
                   <div class="day-detail-head"><span>SESSION PLAN</span><span>{{ day.rows.length }} PRESCRIBED ROWS</span></div>
-                  <DailyRecord v-if="can('recovery_body')" :cycle-id="plan.meta.planId" :date="day.date" :session-id="`${currentWeek}|${day.id}`" @saved="refreshPrescription" />
-                  <LockedFeature v-else compact label="Recovery & body metrics" tier="plus" />
+                  <DailyRecord :cycle-id="plan.meta.planId" :date="day.date" :session-id="`${currentWeek}|${day.id}`" :readonly="!can('recovery_body')" :readonly-note="recoveryLockNote" @saved="refreshPrescription" />
+
                   <WarmupSuggestions v-if="can('gear_warmups')" :entries="plan.warmups?.[day.date] || []" />
                   <ExerciseRows :rows="day.rows" :cycle-id="plan.meta.planId" :logs="logs" :system-loads="prescriptionInfo?.systemLoads || {}" @saved="savedLog" />
                   <LockedFeature v-if="!can('gear_warmups')" compact label="Gear & Sheiko warm-ups" tier="lite" />
@@ -398,8 +449,8 @@ watch([() => route.fullPath, loading], async () => {
             <h2>Cycle tools.</h2>
             <details class="account-tools"><summary>Import a cycle</summary><PlanImport /></details>
             <details class="account-tools"><summary>Prescription settings</summary><PrescriptionSettings :cycle-id="plan.meta.planId" @changed="refresh" /></details>
-            <div class="account-actions"><button type="button" class="quiet-button" @click="logout">Sign out on this device</button></div>
-            <p class="annotation">Prescribed and actual sets stay separate. Exporting does not end a cycle.</p>
+            <div class="account-actions"><a class="quiet-button" :href="`/api/export/logs.csv?cycle_id=${encodeURIComponent(plan.meta.planId)}`" download>Export my log (.csv)</a><button type="button" class="quiet-button" @click="logout">Sign out on this device</button></div>
+            <p class="annotation">The CSV carries the rows you recorded for this cycle, with the prescribed load beside the actual one. Prescribed and actual sets stay separate, and exporting does not end a cycle.</p>
           </section>
         </template>
         <template v-else-if="page === 'questionnaire'">
@@ -411,7 +462,7 @@ watch([() => route.fullPath, loading], async () => {
 
       </template>
     </main>
-    <footer class="site-footer"><span>ROAST RAW / TRAIN WITH INTENT</span><RouterLink to="/welcome" class="footer-about">ABOUT</RouterLink><span>{{ releaseVersion }} · LOCAL PREVIEW</span></footer>
+    <footer class="site-footer"><span>ROAST RAW / TRAIN WITH INTENT</span><RouterLink to="/about" class="footer-about">ABOUT</RouterLink><span>{{ releaseVersion }} · LOCAL PREVIEW</span></footer>
   </div>
 </template>
 

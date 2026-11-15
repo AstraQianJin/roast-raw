@@ -181,6 +181,41 @@ function planCalendarCheck() {
   checks++;
   console.log(`PASS plan calendar: start ${start}, end ${meta.endDate}, ${plan.workouts.length} dated rows, test ${testDate} in W${testWeek.n}`);
 }
+function governanceCheck() {
+  // The exits and the refresh policy are promised on the /about page, so they are asserted here.
+  const app = readFileSync(join(root, 'web', 'src', 'App.vue'), 'utf8');
+  const router = readFileSync(join(root, 'web', 'src', 'main.js'), 'utf8');
+  const about = readFileSync(join(root, 'web', 'src', 'components', 'AboutView.vue'), 'utf8');
+  const daily = readFileSync(join(root, 'web', 'src', 'components', 'DailyRecord.vue'), 'utf8');
+  assert.ok(router.includes("'/about'"), '/about is a registered route, not a dead footer link');
+  checks++;
+  assert.ok(app.includes("if (route.path === '/about') return 'about';"), 'App.vue resolves the about page');
+  checks++;
+  assert.ok(app.includes('<RouterLink to="/about" class="footer-about">ABOUT</RouterLink>'), 'the footer ABOUT link points at /about');
+  checks++;
+  assert.ok(about.includes('Export and delete, both explicit'), 'the about page names the exits it promises');
+  checks++;
+  assert.ok(!app.includes('setInterval('), 'no polling: a 3M link and 4C4G cannot afford a heartbeat');
+  checks++;
+  assert.ok(app.includes("document.addEventListener('visibilitychange'"), 'returning to the tab refreshes once');
+  checks++;
+  assert.ok(app.includes('timed_until'), 'a timed tier schedules its own one-shot expiry');
+  checks++;
+  assert.ok(app.includes(":readonly=\"!can('recovery_body')\""), 'free tiers read the daily record with the write locked');
+  checks++;
+  assert.ok(daily.includes('readonlyNote'), 'the locked record explains itself');
+  checks++;
+  const orphans = spawnSync(python, ['server/tools/audit_orphans.py', '--json'], { cwd: root, encoding: 'utf8', env: { ...process.env, PYTHONIOENCODING: 'utf-8' } });
+  assert.equal(orphans.status, 0, `orphan audit failed: ${orphans.stdout}${orphans.stderr}`);
+  const audit = JSON.parse(orphans.stdout);
+  assert.equal(audit.total, 0, `orphan rows present: ${JSON.stringify(audit.orphans)}`);
+  checks++;
+  assert.ok(audit.checked.length >= 17, 'every cycle- and account-scoped link is audited');
+  checks++;
+  assert.equal(audit.skipped.length, 0, `links skipped on the live database: ${JSON.stringify(audit.skipped)}`);
+  checks++;
+  console.log(`PASS governance: /about routed, write gates explained, no polling, ${audit.checked.length} links with 0 orphans`);
+}
 (async () => {
 try {
   fixtureCheck();
@@ -190,6 +225,7 @@ try {
     await shareCheck();
     landingFactsCheck();
     planCalendarCheck();
+    governanceCheck();
     const drift = spawnSync(python, ['server/tools/export_membership.py', '--check'], { cwd: root, encoding: 'utf8', env: { ...process.env, PYTHONIOENCODING: 'utf-8' } });
     assert.equal(drift.status, 0, `web/src/membership.json drifted from server/app/membership.py: ${drift.stdout}${drift.stderr}`);
     console.log('PASS membership table: web/src/membership.json matches the server capability matrix');
