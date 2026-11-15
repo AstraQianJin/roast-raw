@@ -50,6 +50,14 @@ New requirements that do not belong to the current milestone go into the TODO qu
 
 Commits: `git -c user.name=Astra -c user.email=astra@local commit` (the repo has no configured identity). Never `--amend`, `--no-verify`, or edit git config.
 
+## Bulk filesystem work (measured on this host)
+
+- **Disk questions go through an MFT reader, not a recursive shell walk.** WizTree (`C:\Program Files\WizTree\WizTree64.exe`) scans this 476 GB volume — about 1.85 M files and 689 k folders — in roughly 17 s, because it reads the NTFS master file table instead of opening files. `Get-ChildItem -Recurse | Measure-Object` costs one syscall and one Defender inspection per file and takes minutes; never use it to answer "what is filling the disk".
+- **Repo-wide text search uses `git grep` or `rg`, not `Select-String -Recurse`.** Both are index- or parallel-backed. `rg` is present on this host in the DoubaoWork runtime; fall back to `git grep` for tracked files.
+- **A scan's output must never live inside the tree it scans.** On 2026-11-15 an audit wrote its result file into `RR\` while enumerating `RR\`, so every pass copied the previous file into itself, and the file grew to 62 GB of logical size while starving the disk. Write scan output to the system temp directory, bound the walk with `-Depth` or an explicit exclusion, or name exactly the files to read.
+- **Stopping a pipeline is not stopping the writer.** Before deleting a runaway file, read its size twice to confirm it stopped growing, and re-check after the delete.
+- **Match the gate to the change.** Docs-only edits need the bundled Skill checker plus the changed pointers opened. The full `verify.js` takes minutes and is dominated by the Python suite, so reserve it for code, data, contract or migration changes.
+
 ## Receipts
 
 A report is one of two kinds, and the reader must know which without guessing: **completion** (only what already happened and was verified) or **plan** (only what has not been executed). Never mix them in one block; when both are needed, completion first, then a lone `---` line, then the plan.
