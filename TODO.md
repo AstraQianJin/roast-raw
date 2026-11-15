@@ -16,8 +16,8 @@
 | 门禁 | 0.29 partial 时 `node tests/verify.js` 302 用例 / 6290 断言、exit 0（sabotage 子进程仍按预期红）；`npm --prefix web run build` exit 0 |
 | 红基线 | `tests/browser.mjs` 自 0.21 起失效（删主题切换、注册页改四输入，旧断言过时）；**0.35 重写后才可作绿灯证据** |
 | 部署 | 线上仍是 0.20 版 `http://82.157.146.30/`（公开落地页 + 账户门控 journal）。本轮**不 push、不部署**（用户 2026-11-15 裁定） |
-| 证据落点 | `C:\Users\Astra\Desktop\RR\shots-0.2x\`；目录治理执行后改为 `RR\shots\0.2x\` |
-| 老项目 | `RPLRef` 2026-11-15 已瘦身 2243.6 MB（删除 mirror\archive、mirror\ref 重复副本与派生缓存），依据与恢复路径见 `RPLRef\_repo\MIRROR_SLIMMED.md` |
+| 证据落点 | `C:\Users\Astra\Desktop\RR\shots\0.2x\`（2026-11-15 已迁移到位）；新截图落 `RR\shots\0.29\` 起 |
+| 老项目 | 两个老项目已迁 `RR\ref-projects\`（`roast-powerlifting`、`rplref`）；`rplref` 2026-11-15 瘦身 2243.6 MB，依据与恢复路径见 `RR\ref-projects\rplref\_repo\MIRROR_SLIMMED.md` |
 
 **长期边界**：只做 Web（Vue 3 + Vite + Motion One + FastAPI + SQLite）；界面英文、对话中文；`Ref/` 与两个老项目只读；不手改 `data/plan.json` 与 `web/dist/`；不弱化断言、不中和 sabotage。
 
@@ -248,13 +248,16 @@ VAULT 账户区（`#account`）：当前档位（豆子 + 档名）、永久档�
 
 ---
 
-## 7 · 目录治理（方案已定，未执行；执行时按此表逐条改）
+## 7 · 目录治理（2026-11-15 已执行，本节保留为改动记录与回滚依据）
+
+**执行结果**：`RR` 现为 `ref-projects\`（roast-powerlifting 15 项 / rplref 9 项）、`shots\0.21…0.28`、`scratch\36 文件`、`notes\3 份`、`Archive\oneoff\3 补丁`、`skills\`、`builds\`；根级散落文件 36 个全部归位；仓库侧 9 个文件、RR 侧 13 个文件共 32 处指针改为新路径；`Ref\00_README.md` 与 `Ref\01_Current\SPEC.md` 按 7.3 的"不改"保留原样。
 
 ### 7.1 · 已完成的先行项
 
 - `Agent.skill` 已移出仓库 → `RR\builds\Agent.skill`。
 - Skill 库已外迁 → `RR\skills\roast-raw-agent\`（`SKILL.md` + `scripts\check_skill.py`）与 `RR\skills\INDEX.md`；仓库 `.qoder\` 已删；`check_skill.py` 改为按脚本自身位置定位。
-- `RPLRef` 已瘦身（见 §0 表末行）。
+- `rplref` 已瘦身（见 §0 表末行）。
+- 两个老项目与 RR 目录结构已搬迁（见本节执行结果）；指针已全量改写并复查残留。
 
 ### 7.2 · 目标树
 
@@ -270,16 +273,16 @@ C:\Users\Astra\Desktop\RR\
 └─ .workbuddy\ .qoder-credits\   历史记录，不动
 ```
 
-### 7.3 · 逐条改动（全量普查结果，2026-11-15）
+### 7.3 · 逐条改动（2026-11-15 普查并已执行）
 
 **A 组 · 搬 `ref-projects`（19 处）**：`Roast Raw\AGENTS.md` 环境节、`docs\0.01地基_已验证发现.md`、`docs\0.01提示词.md`、`docs\项目交接.md` 三处老项目根 + 一处 `_snapshots`、`docs\审美调研.md`、`RR\skills\roast-raw-agent\SKILL.md` 两处、`RR\RoastRaw-Context-Pack.md` 两处、`RR\RoastRaw-审查策略与预算.md` 四处、`RR\_old_probe.py` / `_old_probe2.py` / `_old_structure.py` / `_old_text.py` 各第 2 行。
 **A 组不改**：`Ref\00_README.md`、`Ref\01_Current\SPEC.md`（只读快照，内文停在迁移前是对的；在 `AGENTS.md` 记一句即可）。
 
-**B 组 · 搬 `shots`（21 处脚本 + 仓库 18 处文本）**：`_shot028.mjs`、`_crop_log.mjs`、`_drag_test.mjs`、`_shot_analysis.mjs`、`_shot_cycle.mjs`、`_shot_cycle2.mjs`、`_shot_fix.mjs`、`_shot_l5.mjs`、`_shot_old.mjs`（2 处）、`_shot_round2/3/4/5/6.mjs`、`_shot_sections.mjs`、`_shot_sections2.mjs`、`_shot_sections3.mjs`、`_shot_zoom.mjs` 的绝对输出路径；`TODO.md` 三处 `shots-0.29` / `shots-0.30` 与七行历史中的 `RR/shots-0.2x`、两处 `shots-archive`；`docs\agent-prompt-*.md` 两处；`RR\RoastRaw-UI改版决策.md` 四处；`RR\skills\INDEX.md`。
+**B 组 · 搬 `shots`（21 处脚本 + 仓库 18 处文本）**：`_shot028.mjs`、`_crop_log.mjs`、`_drag_test.mjs`、`_shot_analysis.mjs`、`_shot_cycle.mjs`、`_shot_cycle2.mjs`、`_shot_fix.mjs`、`_shot_l5.mjs`、`_shot_old.mjs`（2 处）、`_shot_round2/3/4/5/6.mjs`、`_shot_sections.mjs`、`_shot_sections2.mjs`、`_shot_sections3.mjs`、`_shot_zoom.mjs` 的绝对输出路径；`TODO.md` 三处 `shots-0.29` / `shots-0.30` 与七行历史中的 `RR/shots/0.2x`、两处 `shots-archive`；`docs\agent-prompt-*.md` 两处；`RR\RoastRaw-UI改版决策.md` 四处；`RR\skills\INDEX.md`。
 
 **C 组 · 分类（无指针）**：探针脚本 → `scratch\`；3 份 `RoastRaw-*.md` → `notes\`；2 个 review zip → `Archive\reviews\`；3 个 `_apply28_*.py` → `Archive\oneoff\`。
 
-### 7.4 · 执行顺序与校验
+### 7.4 · 执行顺序与校验（已按此顺序执行）
 
 1. 关掉占用两个老目录的编辑器窗口；建 `ref-projects` 并 `Move-Item`（同盘改名，5 GB 预计 1–3 分钟）→ 改 A 组 19 处 → 每个新路径 `Test-Path`。
 2. 建 `shots` 搬 8 个版本目录 → 改 B 组 → 对每个脚本默认输出目录做 `Test-Path`（不存在就建，不实际截图）。

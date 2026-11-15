@@ -55,5 +55,5 @@ node tests/browser.mjs
 
 - Dates are fixed to Asia/Shanghai; missed sessions never shift the calendar. The cycle start moves only by whole weeks, and only through the plan generator.
 - Keys, environment files, databases, virtualenvs and build output are git-ignored. `Ref/07_Permissions/ACCESS.md` is the trackable, secret-free permission pointer.
-- The old app (`Roast PowerLifting`) and its reference index (`RPLRef`) are read-only historical sources; see [AGENTS.md](AGENTS.md) before touching either.
+- The old app (`Roast PowerLifting`) and its reference index (`RPLRef`) are read-only historical sources at `..\RR\ref-projects\`; see [AGENTS.md](AGENTS.md) before touching either.
 - Where to read next: [TODO.md](TODO.md) for what happens next, [AGENTS.md](AGENTS.md) for how work is judged, [docs/项目交接.md](docs/项目交接.md) for product detail.

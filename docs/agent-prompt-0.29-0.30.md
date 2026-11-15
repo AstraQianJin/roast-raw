@@ -41,13 +41,13 @@ node tests/verify.js
 - 0.27（邀请码/五档）与 0.28（每账户账本 + 档位门控）已提交。
 - 0.29 已完成三项：T2 空口令 fail-closed（无口令 `create_app()` 抛错，夹具走 `RR_ALLOW_OPEN_FIXTURE=1`）、T1 `_scoped` 有界 LRU（64 视图 / 1800 秒 TTL / 锁 / 视图不共享字典，`tests/test_cache.py` 8 条）、P0-03a 六处首页假宣传文案。
 - 0.29 **未完成**：P0-01 刷新实测、P0-02 首页数字同源。
-- 补充事实：`RPLRef` 已于 2026-11-15 瘦身 2243.6 MB（删除 mirror 下 archive/ref 重复副本与派生缓存），删除依据与恢复路径在 `RPLRef\_repo\MIRROR_SLIMMED.md`。
+- 补充事实：`rplref` 已于 2026-11-15 瘦身 2243.6 MB（删除 mirror 下 archive/ref 重复副本与派生缓存），删除依据与恢复路径在 `RR\ref-projects\rplref\_repo\MIRROR_SLIMMED.md`。
 
 ## 五、任务一 · P0-01 刷新不闪 404（先实测，再决定改不改）
 
 - 现状：`web/src/App.vue` 模板次序为 `loading` → 请求错误 → 空账本 → `!plan` → `!validRoute`。0.28 调过次序但**从未实测**，所以先测。
 - 判据（用户定稿，不许软化）：3M 带宽（≈375 000 B/s、latency 40ms）连续刷新 10 次；**不判「立即」时点**（SPA 首屏 JS 未到之前空正文正常），判 **200ms、800ms、最终加载完成**；禁词 `NOT IN THIS PLAN`、`404`、`NO SESSION`、`Return to the cycle`；**最终态断言：30 秒内必须出现计划内容，不得停在骨架**；不设单次骨架停留阈值；空白正文判失败。
-- 证据写到 `C:\Users\Astra\Desktop\RR\shots-0.29\p0-01-refresh.json`（10 次 × 3 时点的原文与命中标记）。
+- 证据写到 `C:\Users\Astra\Desktop\RR\shots\0.29\p0-01-refresh.json`（10 次 × 3 时点的原文与命中标记）。
 - 若失败：把缺陷连同实测数据记进 TODO 的 0.38 审查清单，**不要**因此推迟开周日期（起点仍是 2026-11-23）。
 - 若仍闪才动代码：骨架块提到 `!plan` 之前，固定高度、`role="status"`、禁 shimmer；`todayCtaLabel` 在 `plan` 为空时输出 `·`。
 
@@ -77,7 +77,7 @@ npm --prefix web run build    # 必须 exit 0
 server/.venv/Scripts/python.exe C:\Users\Astra\Desktop\RR\skills\roast-raw-agent\scripts\check_skill.py --root .
 ```
 
-- 截图与 JSON 一律落 `C:\Users\Astra\Desktop\RR\shots-0.29\` / `shots-0.30\`（目录治理执行后为 `RR\shots\0.29\`）。
+- 截图与 JSON 一律落 `C:\Users\Astra\Desktop\RR\shots\0.29\`，0.30 落 `RR\shots\0.30\`。
 - 回执五段，一段一行，写完自查：BOUNDARY 不许空；不许把「本地构建成功」说成「已上线」；不许引用记忆里的用例数。
 
 ## 九、禁做清单
@@ -97,8 +97,8 @@ server/.venv/Scripts/python.exe C:\Users\Astra\Desktop\RR\skills\roast-raw-agent
 | Agent 区（技能库/打包件/截图） | `C:\Users\Astra\Desktop\RR`（非 git） |
 | 技能库与自检脚本 | `RR\skills\roast-raw-agent\`（`SKILL.md` + `scripts\check_skill.py`） |
 | 打包件 | `RR\builds\Agent.skill` |
-| 旧 App（原身，只读） | `C:\Users\Astra\Desktop\Roast PowerLifting` |
-| 旧仓索引与快照（只读） | `C:\Users\Astra\Desktop\RPLRef`（`_INDEX.md` / `_MANIFEST.md` / `_snapshots`） |
+| 旧 App（原身，只读） | `C:\Users\Astra\Desktop\RR\ref-projects\roast-powerlifting` |
+| 旧仓索引与快照（只读） | `C:\Users\Astra\Desktop\RR\ref-projects\rplref`（`_INDEX.md` / `_MANIFEST.md` / `_snapshots`） |
 | 权威开发详单（外部 Agent 产出） | `C:\Users\Astra\Downloads\roast-raw-dev-brief-2026-11-15-consolidated.md` |
 | 本轮路线与决策 | `TODO.md` §1–§6 |
 
