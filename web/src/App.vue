@@ -19,6 +19,8 @@ import PlanImport from './components/PlanImport.vue';
 import QuestionnaireView from './components/QuestionnaireView.vue';
 import AiOutlook from './components/AiOutlook.vue';
 import AttemptBoard from './components/AttemptBoard.vue';
+import GearPlates from './components/GearPlates.vue';
+import { collarPairOf, setUseCollars, useCollars } from './gear-settings.js';
 import WelcomeView from './components/WelcomeView.vue';
 import AboutView from './components/AboutView.vue';
 import LoginView from './components/LoginView.vue';
@@ -137,6 +139,16 @@ const leaves = computed(() => analysis.value.leafOrder.map(id => {
 const display = value => value === null || value === undefined ? '—' : Number(value).toLocaleString('en-US', { maximumFractionDigits: 1 });
 const DELOAD_NOTE = 'Deload week: lighter loads, same movements. Nothing is skipped and no date moves.';
 const needsMicroPlates = rows => rows.some(row => row.segments.some(segment => segment.load !== null && segment.load % 2.5 !== 0));
+// Competition collars: off unless the venue switch is turned on in settings.
+const collarPair = computed(() => collarPairOf(useCollars.value));
+// Sheiko warm-ups belong to the main lift only: a variation or an accessory gets
+// no ladder and no reserved height, so the session starts at the movement that
+// actually carries the top load.
+const mainWarmups = (date, rows) => {
+  const mains = new Set((rows || []).filter(row => row.bucket === 'main').map(row => row.nameEn));
+  const entries = (plan.value?.warmups || {})[date] || [];
+  return entries.filter(entry => mains.has(entry.movement));
+};
 const blockType = blockId => (plan.value?.blocks.find(block => block.id === blockId)?.cycleType || 'custom').toLowerCase();
 const BLOCK_COLOR = { hyper: 'var(--ct-hyper)', hypertrophy: 'var(--ct-hyper)', strength: 'var(--ct-strength)', transmute: 'var(--ct-transmute)', peak: 'var(--ct-peak)', deload: 'var(--ct-deload)', custom: 'var(--ct-custom)' };
 const blockColor = blockId => BLOCK_COLOR[blockType(blockId)] || 'var(--accent)';
@@ -350,8 +362,8 @@ watch([() => route.fullPath, loading], async () => {
               <RouterLink :to="`/cycle/week/${todaySession.week}/day/${todaySession.day}`" class="inline-link">Open the scheduled day →</RouterLink>
               <DailyRecord :cycle-id="plan.meta.planId" :date="todaySession.date" :session-id="`${todaySession.week}|${todaySession.day}`" :readonly="!can('recovery_body')" :readonly-note="recoveryLockNote" @saved="refreshPrescription" />
 
-              <details v-if="can('gear_warmups')" class="gear"><summary>GEAR <span class="chip">{{ needsMicroPlates(todayRows) ? 'MICRO PLATES' : 'SESSION SETUP' }}</span><span v-if="plan.meta.profile.bar_kg" class="chip">{{ display(plan.meta.profile.bar_kg) }} KG BAR</span></summary><p>{{ needsMicroPlates(todayRows) ? 'Some prescribed loads need micro plates. Prepare equipment before the session; loads remain unchanged.' : 'Standard plates cover these prescribed loads. Prepare equipment before the session.' }}</p><p v-if="plan.meta.profile.bar_kg">Plan bar reference: {{ display(plan.meta.profile.bar_kg) }} kg. {{ plan.meta.profile.collars ? 'Collars included in the plan setup.' : 'Collars are not included in the plan load reference.' }}</p><p v-if="todayRows.some(row => prescriptionInfo?.systemLoads[row.week + '|' + row.day + '|' + row.seq])">Pull-up and dip loads include bodyweight. Check the dated bodyweight reading before choosing assistance or added weight.</p></details>
-              <WarmupSuggestions v-if="can('gear_warmups')" :entries="plan.warmups?.[todaySession.date] || []" />
+              <details v-if="can('gear_warmups')" class="gear"><summary>GEAR <span class="chip">{{ needsMicroPlates(todayRows) ? 'MICRO PLATES' : 'SESSION SETUP' }}</span><span v-if="plan.meta.profile.bar_kg" class="chip">{{ display(plan.meta.profile.bar_kg) }} KG BAR</span><span class="chip" data-testid="collar-chip">COLLARS {{ useCollars ? '+5 KG' : 'OFF' }}</span></summary><p>{{ needsMicroPlates(todayRows) ? 'Some prescribed loads need micro plates. Prepare equipment before the session; loads remain unchanged.' : 'Standard plates cover these prescribed loads. Prepare equipment before the session.' }}</p><p v-if="plan.meta.profile.bar_kg">Plan bar reference: {{ display(plan.meta.profile.bar_kg) }} kg. {{ useCollars ? 'Competition collars add their 5 kg pair to every plate breakdown.' : 'No collars are counted; the bar is the only fixed weight.' }}</p><p v-if="todayRows.some(row => prescriptionInfo?.systemLoads[row.week + '|' + row.day + '|' + row.seq])">Pull-up and dip loads include bodyweight. Check the dated bodyweight reading before choosing assistance or added weight.</p><GearPlates :rows="todayRows" :bar-kg="plan.meta.profile.bar_kg || 20" :collar-pair="collarPair" /></details>
+              <WarmupSuggestions v-if="can('gear_warmups')" :entries="mainWarmups(todaySession.date, todayRows)" />
               <LockedFeature v-else compact label="Gear & Sheiko warm-ups" tier="lite" />
               <ExerciseRows :rows="todayRows" :cycle-id="plan.meta.planId" :logs="logs" :system-loads="prescriptionInfo?.systemLoads || {}" @saved="savedLog" />
               <ShareButton :plan="plan" :logs="logs" :default-date="todaySession.date" />
@@ -401,7 +413,7 @@ watch([() => route.fullPath, loading], async () => {
             <div class="week-header"><span class="week-number">{{ currentWeek }}</span><div><h2>{{ weekMeta.blockName }}</h2><small>{{ week.kind.toUpperCase() }} WEEK</small></div><div class="week-summary"><strong>{{ display(week.tonnageKg / 1000) }} t</strong><small>{{ week.sessions }} SESSIONS</small></div></div>
             <p v-if="weekMeta.kind === 'deload'" class="notice">{{ DELOAD_NOTE }}</p>
             <LockedFeature v-if="weekMeta.kind === 'test' && !can('test_week')" label="Test week & meet attempts" tier="lite" />
-            <AttemptBoard v-else-if="weekMeta.kind === 'test'" :cycle-id="plan.meta.planId" :bar-kg="plan.meta.profile.bar_kg || 20" :collar-pair="plan.meta.profile.collars ? 5 : 0" />
+            <AttemptBoard v-else-if="weekMeta.kind === 'test'" :cycle-id="plan.meta.planId" :bar-kg="plan.meta.profile.bar_kg || 20" :collar-pair="collarPair" :rows="plan.workouts.filter(row => row.week === currentWeek)" :logs="logs" :system-loads="prescriptionInfo?.systemLoads || {}" @saved="savedLog" />
             <div class="top-intensity"><span>TOP %1RM <b>{{ display(week.topPct) }}%</b></span><span>S {{ display(week.topPctByLift.S) }} · B {{ display(week.topPctByLift.B) }} · D {{ display(week.topPctByLift.D) }}</span></div>
             <div class="day-stack">
             <div v-for="day in days" :id="day.id ? `day-${currentWeek}-${day.id}` : undefined" :key="day.date" :tabindex="route.params.day && route.params.day === day.id ? -1 : undefined" class="day-card" :class="{ open: route.params.day && route.params.day === day.id, rest: !day.rows.length }">
@@ -420,10 +432,10 @@ watch([() => route.fullPath, loading], async () => {
                   <div class="day-detail-head"><span>SESSION PLAN</span><span>{{ day.rows.length }} PRESCRIBED ROWS</span></div>
                   <DailyRecord :cycle-id="plan.meta.planId" :date="day.date" :session-id="`${currentWeek}|${day.id}`" :readonly="!can('recovery_body')" :readonly-note="recoveryLockNote" @saved="refreshPrescription" />
 
-                  <WarmupSuggestions v-if="can('gear_warmups')" :entries="plan.warmups?.[day.date] || []" />
+                  <WarmupSuggestions v-if="can('gear_warmups')" :entries="mainWarmups(day.date, day.rows)" />
                   <ExerciseRows :rows="day.rows" :cycle-id="plan.meta.planId" :logs="logs" :system-loads="prescriptionInfo?.systemLoads || {}" @saved="savedLog" />
                   <LockedFeature v-if="!can('gear_warmups')" compact label="Gear & Sheiko warm-ups" tier="lite" />
-                  <details v-else class="gear"><summary>GEAR <span class="chip">{{ needsMicroPlates(day.rows) ? 'MICRO PLATES' : 'SESSION SETUP' }}</span><span v-if="plan.meta.profile.bar_kg" class="chip">{{ display(plan.meta.profile.bar_kg) }} KG BAR</span></summary><p>{{ needsMicroPlates(day.rows) ? 'Prepare micro plates for the prescribed loads.' : 'Standard plates cover these prescribed loads.' }} All loads stay as prescribed; bodyweight movements use dated total system weight when shown.</p></details>
+                  <details v-else class="gear"><summary>GEAR <span class="chip">{{ needsMicroPlates(day.rows) ? 'MICRO PLATES' : 'SESSION SETUP' }}</span><span v-if="plan.meta.profile.bar_kg" class="chip">{{ display(plan.meta.profile.bar_kg) }} KG BAR</span><span class="chip" data-testid="collar-chip">COLLARS {{ useCollars ? '+5 KG' : 'OFF' }}</span></summary><p>{{ needsMicroPlates(day.rows) ? 'Prepare micro plates for the prescribed loads.' : 'Standard plates cover these prescribed loads.' }} All loads stay as prescribed; bodyweight movements use dated total system weight when shown.</p><GearPlates :rows="day.rows" :bar-kg="plan.meta.profile.bar_kg || 20" :collar-pair="collarPair" /></details>
                   <ShareButton :plan="plan" :logs="logs" :default-date="day.date" />
                 </section>
               </template>
@@ -448,6 +460,7 @@ watch([() => route.fullPath, loading], async () => {
             <div class="eyebrow">RR / 04 · VAULT — TOOLS</div>
             <h2>Cycle tools.</h2>
             <details class="account-tools"><summary>Import a cycle</summary><PlanImport /></details>
+            <details class="account-tools"><summary>Gear setup</summary><div class="gear-setup" data-testid="gear-settings"><label class="gear-toggle"><input type="checkbox" :checked="useCollars" data-testid="collar-toggle" @change="setUseCollars($event.target.checked)"><span><strong>Competition collars</strong><small>Off by default. On: every plate breakdown counts the 5 kg collar pair. Off: the bar is the only fixed weight on the bar. This is a device-level venue fact, kept on this device and never exported with a plan.</small></span></label></div></details>
             <details class="account-tools"><summary>Prescription settings</summary><PrescriptionSettings :cycle-id="plan.meta.planId" @changed="refresh" /></details>
             <div class="account-actions"><a class="quiet-button" :href="`/api/export/logs.csv?cycle_id=${encodeURIComponent(plan.meta.planId)}`" download>Export my log (.csv)</a><button type="button" class="quiet-button" @click="logout">Sign out on this device</button></div>
             <p class="annotation">The CSV carries the rows you recorded for this cycle, with the prescribed load beside the actual one. Prescribed and actual sets stay separate, and exporting does not end a cycle.</p>

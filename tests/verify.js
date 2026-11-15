@@ -96,14 +96,54 @@ function syntheticCheck() {
     console.log(`PASS synthesis: ${count} weeks / ${analysis.cycle.sessions} sessions / ${analysis.cycle.total} sets; schema, calendar, blocks and stats agree`);
   }
 }
+// 0.33 plate arithmetic. Every expectation below is worked out by hand from the
+// bar and collar numbers, not read back from the solver under test.
+async function plateCheck() {
+  const { solveLoad } = await import('../web/src/plate-load.js');
+  const sideKg = side => side.plates.map(plate => plate.kg);
+  // 110.5 − 20 bar = 90.5 → 45.25 per side = 25 + 20 + 0.25.
+  const symmetric = solveLoad(110.5, 20, 0);
+  same(sideKg(symmetric.sideA), [25, 20, 0.25], 'symmetric side A for 110.5 kg without collars');
+  same(sideKg(symmetric.sideB), [25, 20, 0.25], 'symmetric side B matches side A');
+  assert.equal(symmetric.asymmetric, false, 'equal loads are not flagged asymmetric');
+  checks++;
+  same(symmetric.microUsed, [0.25], 'micro plate list names the 0.25 kg plate');
+  // 110.5 − 20 − 5 = 85.5 → 42.75 per side = 25 + 15 + 2.5 + 0.25.
+  const collared = solveLoad(110.5, 20, 5);
+  same(sideKg(collared.sideA), [25, 15, 2.5, 0.25], 'collar-on side A for 110.5 kg');
+  near(collared.plateTotal, 85.5, 1e-9, 'collar pair is subtracted from the plate total');
+  // 22.75 − 20 = 2.75; 1.375 per side cannot be built, so one side takes 1.5 and
+  // the other 1.25. Both sides still sum to 2.75 with no shortfall.
+  const split = solveLoad(22.75, 20, 0);
+  assert.equal(split.asymmetric, true, 'a half that cannot be built is flagged asymmetric');
+  checks++;
+  near(split.sideA.loaded, 1.5, 1e-9, 'heavier side carries 1.5 kg');
+  near(split.sideB.loaded, 1.25, 1e-9, 'lighter side carries 1.25 kg');
+  near(split.sideA.loaded + split.sideB.loaded, 2.75, 1e-9, 'single-side plates still add up to the load');
+  near(split.shortKg, 0, 1e-9, 'single-side split leaves nothing short');
+  // 20.1 − 20 = 0.1, below the smallest plate: report the shortfall, never round it away.
+  const short = solveLoad(20.1, 20, 0);
+  near(short.shortKg, 0.1, 1e-9, 'an unbuildable remainder is reported');
+  same(short.sideA.plates.map(plate => plate.kg), [], 'nothing smaller than 0.25 kg is invented');
+  // A load at or under the bar has no plates on either side.
+  same(sideKg(solveLoad(20, 20, 0).sideA), [], 'bar alone carries no plates');
+  same(sideKg(solveLoad(20, 20, 5).sideA), [], 'bar plus collars is already over the load');
+  console.log('PASS plates: symmetric, collar-on, single-side and shortfall arithmetic agree');
+}
+
 async function shareCheck() {
   const { solvePlates, dayShareData } = await import('../web/src/share.js');
   const kg = plates => plates.reduce((sum, plate) => sum + plate.kg, 0);
-  same(solvePlates(155).map(plate => plate.kg), [25, 25, 15], 'share plates for 155 kg include competition collars');
-  near(kg(solvePlates(155)) * 2 + 25, 155, 1e-9, 'share plate sum reconstructs total with bar and collars');
-  same(solvePlates(140).map(plate => plate.kg), [25, 25, 5, 2.5], 'share plates reach micro plates');
-  same(solvePlates(25), [], 'bar plus collars alone draws no plates');
-  same(solvePlates(20), [], 'bar alone draws no plates');
+  // The collar switch became a venue setting in 0.33: the default is off, and the
+  // same total is solved twice so both policies stay pinned to their own arithmetic.
+  // 155 − 20 bar − 5 collars = 130 → 65 per side = 25+25+15.
+  same(solvePlates(155, 20, 5).map(plate => plate.kg), [25, 25, 15], 'collar-on share plates for 155 kg');
+  near(kg(solvePlates(155, 20, 5)) * 2 + 25, 155, 1e-9, 'collar-on plate sum reconstructs total');
+  // 155 − 20 = 135 → 67.5 per side = 25+25+15+2.5.
+  same(solvePlates(155, 20, 0).map(plate => plate.kg), [25, 25, 15, 2.5], 'collar-off share plates for 155 kg');
+  same(solvePlates(140, 20, 5).map(plate => plate.kg), [25, 25, 5, 2.5], 'share plates reach micro plates');
+  same(solvePlates(25, 20, 5), [], 'bar plus collars alone draws no plates');
+  same(solvePlates(20, 20, 0), [], 'bar alone draws no plates');
   const plan = { workouts: [
     { date: '2026-11-16', week: 1, day: 'A', seq: 1, bucket: 'main', lift: 'S', nameEn: 'High-bar Squat', sets: 3 },
     { date: '2026-11-16', week: 1, day: 'A', seq: 2, bucket: 'main', lift: 'B', nameEn: 'Mid-grip Bench', sets: 3 },
@@ -222,6 +262,7 @@ try {
   if (!sabotage) {
     libraryCheck();
     syntheticCheck();
+    await plateCheck();
     await shareCheck();
     landingFactsCheck();
     planCalendarCheck();

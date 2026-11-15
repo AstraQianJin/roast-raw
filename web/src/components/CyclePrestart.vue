@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { solvePlates } from '../share.js';
+import { collarPairOf, useCollars } from '../gear-settings.js';
 const props = defineProps({ plan: Object, date: String });
 const go = ref(false);
 onMounted(() => {
@@ -48,14 +49,18 @@ const firstRows = computed(() => {
       rx: row.rxEn || `${row.sets}×${row.reps}`,
       load: row.loadKg,
       pct: row.pct === null || row.pct === undefined ? null : Math.round(row.pct * 1000) / 10,
-      plates: solvePlates(row.loadKg, props.plan.meta.profile?.bar_kg ?? 20),
+      plates: solvePlates(row.loadKg, props.plan.meta.profile?.bar_kg ?? 20, collarPairOf(useCollars.value)),
     }));
   return { date: first.date, day: first.day, rows: lines };
 });
 // Block 3 — the warm-up ladder that ships with that date; empty stays visibly empty.
 const warmupLadder = computed(() => {
   const date = firstRows.value.date;
-  const lifts = (date && props.plan.warmups?.[date]) || [];
+  const first = props.plan.workouts.find(row => row.week === 1);
+  const mains = new Set((props.plan.workouts || [])
+    .filter(row => first && row.week === first.week && row.day === first.day && row.bucket === 'main')
+    .map(row => row.nameEn));
+  const lifts = ((date && props.plan.warmups?.[date]) || []).filter(lift => mains.has(lift.movement));
   return lifts.map(lift => ({
     movement: lift.movement,
     steps: lift.steps.map(step => `${fmtKg(step.kg)} kg × ${step.reps}`).join(' · '),

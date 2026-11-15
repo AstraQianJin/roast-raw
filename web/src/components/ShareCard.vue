@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
 import { dayShareData, renderShareCard } from '../share.js';
+import { collarPairOf, useCollars } from '../gear-settings.js';
 
 const props = defineProps({
   plan: { type: Object, required: true },
@@ -16,11 +17,12 @@ const busy = ref(false);
 
 const dates = computed(() => [...new Set(props.plan.workouts.map(row => row.date))].sort());
 const data = computed(() => dayShareData(props.plan, props.logs, date.value));
+const collarPair = computed(() => collarPairOf(useCollars.value));
 
 function draw() {
   if (!canvas.value) return;
   try {
-    renderShareCard(canvas.value, data.value, props.plan, props.theme);
+    renderShareCard(canvas.value, data.value, props.plan, props.theme, collarPair.value);
     error.value = '';
   } catch (cause) {
     error.value = `Share card could not be drawn: ${cause.message}`;
@@ -63,7 +65,7 @@ watch([data, () => props.theme], draw, { deep: true });
         <option v-for="item in dates" :key="item" :value="item">{{ item }}</option>
       </select>
     </label>
-    <p class="micro-copy">Plates are solved from the day’s final logged main lift, including the 20 kg bar and 5 kg competition collars.</p>
+    <p class="micro-copy">Plates are solved from the day’s final logged main lift: the 20 kg bar, plus the 5 kg competition collar pair only when it is switched on in settings.</p>
     <p v-if="error" class="notice" role="alert" data-testid="share-error">{{ error }}</p>
     <figure class="share-preview">
       <canvas ref="canvas" data-testid="share-canvas" aria-label="Share card preview"></canvas>

@@ -1,5 +1,5 @@
 // Daily share card, 1080x1440, ported from the old project's TopSet-style Day renderer.
-// Plates are solved from the day's final main-lift load including competition collars.
+// Plates are solved from the day's final main-lift load; collars count only when the venue switch asks for them.
 
 const W = 1080, H = 1440, M = 72, CW = W - M * 2;
 const PLATES = [
@@ -9,7 +9,7 @@ const PLATES = [
   [0.5, '#B4B6BA', 28, 7], [0.25, '#C8CACE', 26, 6],
 ];
 
-export function solvePlates(total, barKg = 20, collarPair = 5) {
+export function solvePlates(total, barKg = 20, collarPair = 0) {
   let perSide = Math.round(((total - barKg - collarPair) / 2) * 1000) / 1000;
   const plates = [];
   if (!(perSide > 0)) return plates;
@@ -59,8 +59,8 @@ function fitText(g, text, maxWidth, startPx, minPx, weight, family) {
   return size;
 }
 
-function drawBarbell(g, x, y, width, height, load, theme) {
-  const plates = solvePlates(load);
+function drawBarbell(g, x, y, width, height, load, theme, collarPair = 0) {
+  const plates = solvePlates(load, 20, collarPair);
   const shaftY = y + height / 2;
   const grad = g.createLinearGradient(0, shaftY - 5, 0, shaftY + 5);
   grad.addColorStop(0, '#525B69'); grad.addColorStop(.4, '#C7CFDA'); grad.addColorStop(1, '#3B424E');
@@ -94,7 +94,7 @@ function drawBarbell(g, x, y, width, height, load, theme) {
   g.textAlign = 'left'; g.textBaseline = 'alphabetic';
 }
 
-export function renderShareCard(canvas, data, plan, theme = 'light') {
+export function renderShareCard(canvas, data, plan, theme = 'light', collarPair = 0) {
   canvas.width = W; canvas.height = H;
   const g = canvas.getContext('2d');
   const dark = theme === 'dark';
@@ -148,7 +148,7 @@ export function renderShareCard(canvas, data, plan, theme = 'light') {
     g.textAlign = 'right'; g.fillStyle = muted;
     g.fillText(data.topSet.rpe !== null && data.topSet.rpe !== undefined ? `RPE ${data.topSet.rpe}` : 'RPE —', W - M, 680);
     g.textAlign = 'left';
-    drawBarbell(g, M, 700, 300, 110, data.topSet.load, theme);
+    drawBarbell(g, M, 700, 300, 110, data.topSet.load, theme, collarPair);
     g.fillStyle = ink;
     g.font = `800 92px ${mono}`;
     g.fillText(`${data.topSet.load} × ${data.topSet.reps}`, M + 330, 800);
@@ -157,7 +157,7 @@ export function renderShareCard(canvas, data, plan, theme = 'light') {
     g.fillText(data.topSet.name.toUpperCase(), M, 852);
     g.fillStyle = muted;
     g.font = `700 18px ${mono}`;
-    g.fillText('20 KG BAR + 5 KG COMPETITION COLLARS INCLUDED', M, 880);
+    g.fillText(collarPair > 0 ? '20 KG BAR + 5 KG COMPETITION COLLARS INCLUDED' : '20 KG BAR ONLY · NO COLLARS COUNTED', M, 880);
   } else {
     g.fillStyle = muted;
     g.font = `800 64px ${mono}`;
