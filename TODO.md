@@ -347,3 +347,48 @@
 - 用户原意与技术方向分开；拒绝建议不列已确认范围。
 - 不存密钥/测试条数/容差/用量；技术错误先查证，已确认口径不反复问。
 - 完成历史用git，阻塞项写真实依赖，不用「基本完成」替代验收。
+
+## 目录治理（下一版次群待办，2026-11-15 立项，未执行）
+
+**目标**：根目录回到「4 个可见文件 + 5 个可见目录」。现状为 5 个被跟踪文件（`AGENTS.md` `README.md` `TODO.md` `Agent.skill` `.gitignore`）与 8 个目录（`.git` `.qoder` `data` `docs` `Ref` `server` `tests` `web`），其中真正的问题是三类东西混住：文档、截图证据、打包产物。
+
+**结论先定死（已核实，不再讨论）**：
+
+| 对象 | 处置 | 依据 |
+|---|---|---|
+| `docs/` | 留仓库内，只做内部分层 + 搬走截图 | `AGENTS.md:5`、`SKILL.md:10/41`、`check_skill.py:31`、`TODO.md:3` 全指向 `docs/项目交接.md`；移出仓库则 clone 后无产品规格 |
+| `tests/` | 留根目录，不并入 `data/`、不迁 RR | `verify.js` 跑 `unittest discover -s tests`；测试用 `Path(__file__).parents[1]` 推仓库根；`serve_fixture.py`/`browser.mjs`/`cdp.mjs` 是 Python+Vue 共用的证据层 |
+| `.qoder/` | 留原地（隐藏目录） | `AGENTS.md:5` 入口指针、`check_skill.py:8` 硬编码该路径、`SKILL.md:104` 的打包结构以它为源 |
+| `Ref/` | 留（21 文件 / 1.56 MB） | Skill 事实路由表多处指针，迁出收益不抵风险 |
+| `.git` | 不删 | 43 提交 + GitHub 远程；删了丢 0.20 基线、0.27–0.29 回滚点与 diff 复核能力；222.6 MB 主因是历史里的截图 |
+
+### 任务一 · `Agent.skill` 移出仓库
+
+- 动作：`git rm` 根级 `Agent.skill`，文件移到 `C:\Users\Astra\Desktop\RR\builds\Agent.skill`。
+- 改动 3 处：`TODO.md`（交付边界那条“Agent.skill 只含 Skill 源和脚本”改为“打包产物不入仓，见 RR/builds”）、`docs/项目交接.md:38`、`.qoder/skills/roast-raw-agent/SKILL.md:104`（打包输出路径）。
+
+### 任务二 · `docs/shots` 移出仓库（183 张 / 33.9 MB）
+
+- 动作：搬到 `C:\Users\Astra\Desktop\RR\shots-archive\`；**6 张 `old-ref-*.png` 必须留在仓库**（老界面审美对照证据），移到 `docs/ref-shots/`。`.gitignore` 加 `docs/shots/`。
+- 改动 7 处，第 1 条是代码，必须同提交：`tests/browser.mjs:72`（输出目录改为可配置 `SHOTS_DIR`，默认 `RR/shots-<ver>`，不再硬写 `docs/shots`）、`README.md:19`、`README.md:50`、`docs/0.01提示词.md:151`、`docs/审美回炉清单.md:32`、`docs/审美调研.md:5`、`.gitignore`。
+- `web/public/shots/` 的 6 张是落地页资源，**不动**；搬迁前核对两边有无重名，避免覆盖落地页图。
+- 只从 HEAD 移除：历史 blob 仍在（仓库体积不会立刻降），要真瘦需重写历史，另立任务。
+
+### 任务三 · `docs/` 内部分层
+
+- 结构：`docs/spec/`（`项目交接.md`、`审美回炉清单.md`、`审美调研.md`）、`docs/handoffs/`（`agent-prompt-0.29-0.30.md`、`0.01提示词.md`、`0.01地基_已验证发现.md`）、`docs/licenses/`（`body-muscles-LICENSE.txt`）、`docs/ref-shots/`（6 张老样张）。
+- 要改：`AGENTS.md:5`、`SKILL.md:10/41`、`check_skill.py:31` 白名单、`README.md:107`、`docs/项目交接.md:13/58/500`（自述布局）、`docs/0.01提示词.md:3/13/14/40`（或整篇冻结、文件头加“路径已迁移”注记）、`TODO.md:3/276`。
+- **不能改**：`Ref/01_Current/SPEC.md:50`、`Ref/02_Stats/muscle_map.json:5/71`、`Ref/04_Legacy_Code/day_model.py:13/424`（都是老仓 `mobile/docs/...` 路径，Ref 只读）；`docs/审美调研.md:13/14/71`（同为老仓路径）；`TODO.md` 的 0.10 历史行（保留原文，不改写历史）。
+
+### 哈希结论（已核实，搬迁不需要重算任何摘要）
+
+`variations.digest()` 是规范化 plan JSON 的 sha256、`sourceSha256` 是上传原文件字节的 sha256、`gen_data.py:45` 对数据文件字节做 sha256、`store.py` 的口令/会话/邀请码哈希——全是内容摘要，与路径无关。只有 0.30 重新生成 plan 才会变，属预期变化。
+
+### 执行顺序与验收
+
+1. `chore: move Agent.skill out of repo`（3 处）；
+2. `chore: move docs/shots out, keep 6 reference samples`（7 处，含 `browser.mjs`，跑一次 build + `verify.js`）；
+3. `chore: split docs into spec/handoffs/licenses`（12 处，跑 `check_skill.py` + `verify.js`）。
+- 每个提交只做一件事；三条命令都要退出 0；`browser.mjs` 仍是红基线，不作绿灯，但截图路径改动后至少证明它能把文件写到新目录。
+- 可选后续（需单独授权，本轮不做）：`git filter-repo` 重写 43 个提交剥离截图历史，再强推远程——会改全部提交哈希，执行前须完整镜像备份。
+
