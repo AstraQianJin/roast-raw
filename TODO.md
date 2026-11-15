@@ -16,7 +16,7 @@
 | 门禁 | `node tests/verify.js` **325** 用例 / **6615** 检查、exit 0（sabotage 子进程仍按预期红）；`npm --prefix web run build` exit 0（dist `index-CbJFUypE.js` 394.86 kB）；`check_skill.py --root .` PASS |
 | 红基线 | `tests/browser.mjs` 自 0.21 起失效（删主题切换、注册页改四输入，旧断言过时）；**0.35 重写后才可作绿灯证据** |
 | 部署 | 线上仍是 0.20 版 `http://82.157.146.30/`（公开落地页 + 账户门控 journal）。本轮**不 push、不部署**（用户 2026-11-15 裁定） |
-| 证据落点 | `RR\shots\0.29\`、`RR\shots\0.30\`（`prestart-evidence.json` + 五宽截图）、`RR\shots\0.31\`（`about-evidence.json`、`free-readonly-evidence.json` + 三宽 about / 免费档只读截图）、`RR\shots\0.33\`（`r4-evidence.json` + 12 张实机宽截图，脚本 `RR\scratch\shot-033.mjs`）、`RR\shots\0.34\`（`testweek-evidence.json` + 7 张截图，脚本 `RR\scratch\shot-034.mjs`）；0.32/0.34 的迁移证据在 `RR\scratch\migrate-live-032.py` / `migrate-live-034.py` 的输出与 `tests/test_ledger.py`、`tests/test_test_results.py` 的旧库升级用例 |
+| 证据落点 | `RR\shots\0.29\`、`RR\shots\0.30\`（`prestart-evidence.json` + 五宽截图）、`RR\shots\0.31\`（`about-evidence.json`、`free-readonly-evidence.json` + 三宽 about / 免费档只读截图）、`RR\shots\0.33\`（`r4-evidence.json` + 12 张实机宽截图，脚本 `RR\scratch\shot-033.mjs`）、`RR\shots\0.34\`（`testweek-evidence.json` + 7 张截图，脚本 `RR\scratch\shot-034.mjs`；分享卡底行另由 `RR\scratch\share-probe-034.mjs` 量到 1080×1440 画布上 1091 个金色像素）；0.32/0.34 的迁移证据在 `RR\scratch\migrate-live-032.py` / `migrate-live-034.py` 的输出与 `tests/test_ledger.py`、`tests/test_test_results.py` 的旧库升级用例 |
 | 老项目 | 两个老项目已迁 `RR\ref-projects\`（`roast-powerlifting`、`rplref`）；`rplref` 2026-11-15 瘦身 2243.6 MB，依据与恢复路径见 `RR\ref-projects\rplref\_repo\MIRROR_SLIMMED.md` |
 
 **长期边界**：只做 Web（Vue 3 + Vite + Motion One + FastAPI + SQLite）；界面英文、对话中文；`Ref/` 与两个老项目只读；不手改 `data/plan.json` 与 `web/dist/`；不弱化断言、不中和 sabotage。
