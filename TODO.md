@@ -278,7 +278,7 @@ C:\Users\Astra\Desktop\RR\
 **A 组 · 搬 `ref-projects`（19 处）**：`Roast Raw\AGENTS.md` 环境节、`docs\0.01地基_已验证发现.md`、`docs\0.01提示词.md`、`docs\项目交接.md` 三处老项目根 + 一处 `_snapshots`、`docs\审美调研.md`、`RR\skills\roast-raw-agent\SKILL.md` 两处、`RR\RoastRaw-Context-Pack.md` 两处、`RR\RoastRaw-审查策略与预算.md` 四处、`RR\_old_probe.py` / `_old_probe2.py` / `_old_structure.py` / `_old_text.py` 各第 2 行。
 **A 组不改**：`Ref\00_README.md`、`Ref\01_Current\SPEC.md`（只读快照，内文停在迁移前是对的；在 `AGENTS.md` 记一句即可）。
 
-**B 组 · 搬 `shots`（21 处脚本 + 仓库 18 处文本）**：`_shot028.mjs`、`_crop_log.mjs`、`_drag_test.mjs`、`_shot_analysis.mjs`、`_shot_cycle.mjs`、`_shot_cycle2.mjs`、`_shot_fix.mjs`、`_shot_l5.mjs`、`_shot_old.mjs`（2 处）、`_shot_round2/3/4/5/6.mjs`、`_shot_sections.mjs`、`_shot_sections2.mjs`、`_shot_sections3.mjs`、`_shot_zoom.mjs` 的绝对输出路径；`TODO.md` 三处 `shots-0.29` / `shots-0.30`（已改 `shots\0.29` / `shots\0.30`）与历史行中的 `RR/shots/0.2x`、两处 `shots-archive`；`docs\agent-prompt-*.md` 两处；`RR\RoastRaw-UI改版决策.md` 四处；`RR\skills\INDEX.md`。
+**B 组 · 搬 `shots`（21 处脚本 + 仓库 18 处文本）**：`_shot028.mjs`、`_crop_log.mjs`、`_drag_test.mjs`、`_shot_analysis.mjs`、`_shot_cycle.mjs`、`_shot_cycle2.mjs`、`_shot_fix.mjs`、`_shot_l5.mjs`、`_shot_old.mjs`（2 处）、`_shot_round2/3/4/5/6.mjs`、`_shot_sections.mjs`、`_shot_sections2.mjs`、`_shot_sections3.mjs`、`_shot_zoom.mjs` 的绝对输出路径；`TODO.md` 三处新版本截图目录名与历史行中的 RR 截图根、两处 archive 目录（均已改写）；`docs\agent-prompt-*.md` 两处；`RR\RoastRaw-UI改版决策.md` 四处；`RR\skills\INDEX.md`。
 
 **C 组 · 分类（无指针）**：探针脚本 → `scratch\`；3 份 `RoastRaw-*.md` → `notes\`；2 个 review zip → `Archive\reviews\`；3 个 `_apply28_*.py` → `Archive\oneoff\`。
 
