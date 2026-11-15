@@ -1,6 +1,8 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from .stats.totals import session_totals
+
 SHANGHAI = ZoneInfo('Asia/Shanghai')
 
 
@@ -38,7 +40,7 @@ def _session_status(planned, session_logs, date, today):
     A logged set counts only when its actual sets are above zero; an explicit zero is a
     deliberate skip and is kept apart from a day nobody opened.
     """
-    prescribed = sum(row['sets'] for row in planned)
+    prescribed = session_totals(planned)['sets']['total']
     actual = 0
     touched = False
     for row in planned:

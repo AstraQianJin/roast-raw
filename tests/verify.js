@@ -440,6 +440,77 @@ function calendarViewCheck() {
   checks++;
   console.log('PASS calendar projection: /calendar with week/month/agenda, half-open range, read-only');
 }
+function totalsReconcileCheck() {
+  // One calculation (server/app/stats/totals.py) rendered everywhere: cycle page,
+  // week cards, day header, calendar, Assay and the landing chart. The expected
+  // numbers below are hand sums of plan rows, never read back out of the engine.
+  const plan = json('data/plan.json');
+  const rows = plan.workouts;
+  const round1 = value => Number(Number(value).toFixed(1));
+  const handCycleSets = rows.reduce((sum, row) => sum + row.sets, 0);
+  const handCycleKg = rows.reduce((sum, row) => sum + (row.tonnageKg || 0), 0);
+  const handWeek = new Map();
+  plan.weeks.forEach(week => handWeek.set(week.n, { sets: 0, kg: 0 }));
+  const handDay = new Map();
+  rows.forEach(row => {
+    const week = handWeek.get(row.week);
+    week.sets += row.sets;
+    week.kg += row.tonnageKg || 0;
+    const key = `${row.week}|${row.day}`;
+    handDay.set(key, (handDay.get(key) || 0) + row.sets);
+  });
+
+  const sample = runPython(`import json
+from server.app.stats import totals as T
+from server.app.calendar import calendar_days
+p = json.load(open('data/plan.json', encoding='utf-8'))
+head = T.totals(p)
+chain = T.display_chain(p)
+cal = calendar_days([p], {}, p['meta']['startDate'], p['meta']['endDate'])
+print(json.dumps({
+  'cycle': head['cycle'], 'perWeek': head['perWeek'], 'perDay': head['perDay'],
+  'perBlock': head['perBlock'], 'perLift': head['perLift'], 'basis': head['basis'],
+  'chain': chain,
+  'calendar': [{'week': d['week'], 'day': d['day'], 'prescribed': d['prescribedSets']} for d in cal['days']],
+}))`);
+  const cycle = sample.cycle;
+  same(cycle.sets.total, handCycleSets, 'cycle sets are the hand sum of plan rows');
+  same(cycle.sets.main + cycle.sets.variation + cycle.sets.accessory, cycle.sets.total, 'the three classes add to the total');
+  same(cycle.tonnageKg, round1(handCycleKg), 'cycle tonnage is the hand sum of row tonnage');
+  same(cycle.tonnageKg, plan.meta.cycleTonnageKg, 'the cycle headline equals meta.cycleTonnageKg');
+  sample.perWeek.forEach(week => {
+    const hand = handWeek.get(week.n);
+    same(week.sets.total, hand.sets, `W${week.n} sets are the hand sum of its rows`);
+    same(week.tonnageKg, round1(hand.kg), `W${week.n} tonnage is the hand sum of its rows`);
+  });
+  sample.perDay.forEach(entry => {
+    same(entry.sets.total, handDay.get(`${entry.week}|${entry.day}`), `W${entry.week} ${entry.day} sets are the hand sum of its rows`);
+  });
+  assert.ok(sample.chain.blocksReconcile, 'block sub-totals at 0.01 t add to the cycle headline');  assert.ok(sample.chain.weeksReconcile, 'week sub-totals at 0.01 t add to the cycle headline');
+  same(sample.chain.cycleT, round1(handCycleKg / 1000), 'headline tonnes come from the same sum');
+  sample.calendar.forEach(entry => {
+    same(entry.prescribed, handDay.get(`${entry.week}|${entry.day}`), `calendar ${entry.week}|${entry.day} prescribed sets match the rows`);
+  });
+  const first = sample.calendar[0];
+  same(first.prescribed, handDay.get(`${first.week}|${first.day}`), 'calendar and the day header share one count');
+
+  const facts = json('web/src/landing-facts.json');
+  same(facts.set_count, handDay.get(`${facts.week}|${facts.day}`), 'landing day count equals the day header count');
+  same(facts.weeks.map(week => week.sets), sample.perWeek.map(week => week.sets.total), 'landing chart draws the same weekly series as the cycle chart');
+  same(facts.cycle_sets, handCycleSets, 'landing cycle count is the cycle headline');
+  same(facts.sets_by_class, sample.perDay.find(entry => entry.week === facts.week && entry.day === facts.day).sets, 'landing carries the class split it prints');
+
+  // No page may add sets or tonnage a second time; the map component must not type one.
+  const app = readFileSync(join(root, 'web', 'src', 'App.vue'), 'utf8');
+  assert.ok(!app.includes('sum + row.sets'), 'App.vue does not sum row sets itself');
+  assert.ok(!app.includes('sum + row.tonnageKg'), 'App.vue does not sum row tonnage itself');
+  const welcome = readFileSync(join(root, 'web', 'src', 'components', 'WelcomeView.vue'), 'utf8');
+  assert.ok(!/const capSets = \[/.test(welcome), 'the landing chart has no hand-typed set series');
+  assert.ok(!/const capTop = \[/.test(welcome), 'the landing chart has no hand-typed intensity series');
+  checks += 3;
+  console.log(`PASS totals: ${handCycleSets} sets / ${round1(handCycleKg / 1000)} t reconciled across cycle, blocks, weeks, days, calendar, Assay and landing; four blocks at 0.01 t add to the headline`);
+}
+
 function governanceCheck() {
   // The exits and the refresh policy are promised on the /about page, so they are asserted here.
   const app = readFileSync(join(root, 'web', 'src', 'App.vue'), 'utf8');
@@ -485,6 +556,7 @@ try {
     await plateParityCheck();
     await shareCheck();
     landingFactsCheck();
+    totalsReconcileCheck();
     planCalendarCheck();
     testPlanCheck();
     completionCheck();

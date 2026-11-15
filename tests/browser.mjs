@@ -70,6 +70,13 @@ try {
   assert.ok(landing.title.length > 0, 'the landing page renders a headline');
   if (SABOTAGE) assert.match(landing.title, /this sabotage sentence is never on the page/, 'sabotage: intentionally impossible claim');
   assert.equal(landing.overflow, 0, 'the landing page does not scroll sideways at the phone width');
+  // 0.41: the landing chart draws the plan's own weekly series, not a typed-in demo.
+  const facts = JSON.parse(readFileSync(join(root, 'web', 'src', 'landing-facts.json'), 'utf8'));
+  const chart = await browser.evaluate(`({ bars: document.querySelectorAll('.wl-bar').length,
+    first: document.querySelector('.wl-bar')?.getAttribute('title') || '',
+    peak: document.querySelector('.wl-cap-name')?.innerText.trim() || '' })`);
+  assert.equal(chart.bars, facts.weeks.length, 'the landing chart draws one bar per planned week');
+  assert.ok(chart.first.includes(`${facts.weeks[0].sets} sets`), 'the landing bar count is the weekly total the cycle chart uses');
   await shot('landing');
   ok(`landing renders and keeps a ${landing.width} px viewport without horizontal overflow`);
 
@@ -297,6 +304,49 @@ try {
   assert.equal(day.overflow, 0, 'the session day does not scroll sideways');
   await shot('session-day');
   ok('session day renders', day);
+
+  // ---- 4b. one number, every page (0.41) ---------------------------------
+  // The same week and cycle must read identically on the day header, the week card,
+  // the cycle header, the block page and Assay. Expected values are hand sums of
+  // plan rows, so the assertion cannot agree with a wrong page by accident.
+  const plan = JSON.parse(readFileSync(join(root, 'data', 'plan.json'), 'utf8'));
+  const rowsW1 = plan.workouts.filter(row => row.week === 1);
+  const rowsW1A = rowsW1.filter(row => row.day === 'A');
+  const handWeekSets = rowsW1.reduce((sum, row) => sum + row.sets, 0);
+  const handWeekT = (rowsW1.reduce((sum, row) => sum + (row.tonnageKg || 0), 0) / 1000).toFixed(2);
+  const handDaySets = rowsW1A.reduce((sum, row) => sum + row.sets, 0);
+  const handCycleSets = plan.workouts.reduce((sum, row) => sum + row.sets, 0);
+  const handCycleT = (plan.workouts.reduce((sum, row) => sum + (row.tonnageKg || 0), 0) / 1000).toFixed(1);
+  const blockWeeks = plan.weeks.filter(week => week.blockId === plan.blocks[0].id).map(week => week.n);
+  const handBlockT = (plan.workouts.filter(row => blockWeeks.includes(row.week)).reduce((sum, row) => sum + (row.tonnageKg || 0), 0) / 1000).toFixed(2);
+  const dayHead = await browser.evaluate(`document.querySelector('.day-detail-head').innerText.replace(/\\s+/g, ' ').trim()`);
+  assert.ok(dayHead.includes(`${handDaySets} SETS · ${rowsW1A.length} PRESCRIBED ROWS`), 'the day header counts the rows it lists');
+  await browser.navigate(`${base}/cycle`);
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=load-profile]"))', 20000);
+  const cycleHead = await browser.evaluate(`document.querySelector('.eyebrow').innerText.replace(/\\s+/g, ' ').trim()`);
+  assert.match(cycleHead, new RegExp(`\\b${handCycleSets} SETS\\b`), 'the cycle header states the same total as the rows');
+  const cycleT = await browser.evaluate(`document.querySelector('.plan-metrics .metric:nth-child(3) strong').innerText.trim()`);
+  assert.equal(cycleT, `${handCycleT} t`, 'the cycle headline tonnage is rounded once from the row sum');
+  const blockT = await browser.evaluate(`[...document.querySelectorAll('.block-card')][0].querySelector('.block-stats dd').innerText.replace(/\\s+/g, ' ').trim()`);
+  assert.equal(blockT, `${handBlockT} t`, 'the block sub-total carries two decimals');
+  await browser.navigate(`${base}/cycle/block/B1`);
+  await browser.waitFor('Boolean(document.querySelector(".plan-metrics"))', 20000);
+  const blockMetric = await browser.evaluate(`[...document.querySelectorAll('.plan-metrics .metric')].map(n => n.innerText.replace(/\\s+/g, ' ').trim()).find(text => /BLOCK TONNAGE/.test(text))`);
+  assert.ok(blockMetric.includes(`${handBlockT} t`), 'the block page shows the same sub-total as the block card');
+  const weekCard = await browser.evaluate(`[...document.querySelectorAll('.week-card')].find(n => n.innerText.includes('W01')).querySelector('.week-stats').innerText.replace(/\\s+/g, ' ').trim()`);
+  assert.ok(weekCard.includes(`${handWeekT} t`), 'the week card tonnage carries two decimals');
+  assert.ok(new RegExp(`\\b${handWeekSets}\\b`).test(weekCard), 'the week card counts the same sets as its rows');
+  await browser.navigate(`${base}/cycle/week/1`);
+  await browser.waitFor('Boolean(document.querySelector(".week-summary"))', 20000);
+  const weekHead = await browser.evaluate(`document.querySelector('.week-summary').innerText.replace(/\\s+/g, ' ').trim()`);
+  assert.ok(weekHead.includes(`${handWeekT} t`), 'the week header tonnage matches the week card to 0.01 t');
+  await shot('totals-week');
+  ok('one number on every page', { day: `${handDaySets} sets`, week: `${handWeekSets} sets / ${handWeekT} t`, cycle: `${handCycleSets} sets / ${handCycleT} t`, block: `${handBlockT} t` });
+
+  // The logging check below expects the session day again.
+  await browser.navigate(`${base}/cycle/week/1/day/A`);
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=daily-record]"))', 20000);
+  await delay(300);
 
   // ---- 4. logging round-trips through the real server ---------------------
   const saved = await browser.evaluate(`(async () => {

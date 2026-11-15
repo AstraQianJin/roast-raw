@@ -44,7 +44,7 @@ const summary = computed(() => {
 <template>
   <section class="card load" data-testid="load-profile" aria-label="Load profile">
     <div class="load-head"><div><div class="eyebrow">FIG. 1 · LOAD PROFILE</div><h2 class="load-title">Weekly work and top-set intensity across the {{ weeks.length }} weeks</h2></div></div>
-    <p class="load-sub">Bars, weekly working sets. Line, the top set as a share of 1RM (scale at left). Week numbers run along the bottom.</p>
+    <p class="load-sub">Bars, weekly prescribed sets — main, variations and accessories counted together, from the server's one calculation. Line, the top set as a share of 1RM (scale at left). Week numbers run along the bottom.</p>
     <div class="legend">
       <div class="legend-row"><span class="lg hyper"><i></i>Hypertrophy</span><span class="lg strength"><i></i>Strength</span><span class="lg transmute"><i></i>Transmute</span><span class="lg deload"><i></i>Deload</span></div>
       <div class="legend-row"><span class="lg test"><i></i>Test</span><span class="lg line"><i></i>Top set %1RM</span></div>

@@ -10,13 +10,13 @@
 
 | 项 | 值 |
 |---|---|
-| 版本 | `web/package.json` = **0.0.40**；已部署 `http://82.157.146.30/`（0.0.40）、已 push `origin/master`（`9597dc7` 之后含 0.40） |
+| 版本 | `web/package.json` = **0.0.41**；未部署、未 push（本批 0.45 才发布） |
 | 工作树 | 以本节所在提交为准 |
 | 最近提交 | 见 `git log --oneline -3` |
-| 门禁 | `node tests/verify.js` exit 0（334 Python 用例 / 6637 检查）；`npm --prefix web run build` exit 0；`node tests/browser.mjs` exit 0（15 项断言、8 张截图），`--sabotage` exit 1；`check_skill.py --root .` PASS |
+| 门禁 | `node tests/verify.js` exit 0（355 Python 用例 / 6798 检查）；`npm --prefix web run build` exit 0；`node tests/browser.mjs` exit 0（17 项、7 张图 × 421/1280），`--sabotage` exit 1 |
 | 红基线 | 无 |
-| 部署 | 线上仍是 0.20 版 `http://82.157.146.30/`。本轮**不 push、不部署**（用户 2026-11-15 裁定） |
-| 证据落点 | `RR\shots\0.36\`（会员矩阵 9 张 + tour 3 张 + `membership-evidence.json`）、`RR\shots\0.37\`（`account-panel-421.png` 及套件 8 张） |
+| 部署 | 线上仍是 0.0.40 `http://82.157.146.30/`。0.41–0.44 **不 push、不部署**（本批裁定） |
+| 证据落点 | `RR\shots\0.41\`（`totals-evidence.json` + 7 张 421 px + 7 张 1280 px） |
 | 老项目 | 两个老项目已迁 `RR\ref-projects\`；`rplref` 瘦身记录见 `RR\ref-projects\rplref\_repo\MIRROR_SLIMMED.md` |
 
 **长期边界**：只做 Web（Vue 3 + Vite + Motion One + FastAPI + SQLite）；界面英文、对话中文；`Ref/` 与两个老项目只读；不手改 `data/plan.json` 与 `web/dist/`；不弱化断言、不中和 sabotage。
@@ -34,7 +34,11 @@
 
 ---
 
-## 1 · 下一动作：0.40 已上线并 push；下一版待用户派单（0.41 候选：D-10 剩余展示位核对、线上 0.20 计划是否换成 RPL-Raw 正式周期）
+## 1 · 下一动作：执行审查修复批次 0.41 → 0.45（规格见 §2A，本批只在 0.45 部署 + push 并交用户真人验收）
+
+入口是 `C:\Users\Astra\Desktop\roast-raw-review-report-implementation-plan.pdf`（0.40 本地预览的只读审查，总评 6.3/10：美学 7、逻辑 5、UX 6、文案 7）。用户 2026-11-15 已定：切五版、统计按明细逐行展开、HTTPS 暂不做、末版含 P2 全部并部署 + push + 真人验收。按 §2A 从 0.41 起逐版执行，每版一步到底。
+
+**0.40 收工口径**：已部署 `http://82.157.146.30/`（0.0.40）、已 push `origin/master`（`6c0c595..9597dc7`）。
 
 **接手指令**：0.38 已由独立会话审查并收口（`ed2380c`）；0.39 日历 `9597dc7`；0.40 已部署与 push。历史口径：0.38 = 一个**未写过本轮代码**的会话审查 0.29–0.37，逐条实测 §4 `P1` 清单与 `docs/项目交接.md` §12 推断项，清单逐条关闭后交用户。0.39 发布（push + 部署）**只在用户另行下令后**执行。
 
@@ -69,6 +73,102 @@
 | ~~0.38~~ ✅ | 审查收口 | `RR/review-0.38.md` 的 D-01～D-09、U-01/U-02 逐条关闭；版本 0.0.38 | 已交付 `ed2380c`；339 用例 / 6661 检查 exit 0、`--sabotage` exit 1、browser 16 项 exit 0 |
 | ~~0.39~~ ✅ | R9 健身日历 | 独立 `/calendar`、周/月/议程、只读、全部历史 + 未来空档、区间内 REST / 区间外留白、`/cycle` 内链入口 | 已交付 `9597dc7`；日历 6 用例、browser 16 项 exit 0（证据 `RR\shots\0.39`） |
 | ~~0.40~~ ✅ | 发布 | 备份 → Store v6→v7 → `deploy.py` 部署 → push `origin/master` | 备份 `roast-raw-20261115-223521.tar.gz` 13M；线上 `user_version=7` / 20 表；ACCESS-CONTRACT-OK；AI `configured: true`；公网 200；push `6c0c595..9597dc7` |
+
+---
+
+## 2A · 审查修复批次（0.41 → 0.45，依据 `roast-raw-review-report-implementation-plan.pdf`）
+
+**批次运行规则（用户 2026-11-15 裁定，覆盖 §5 里的旧运行方式）**
+
+- **一步到底**：每版一次做完本版全部项，收尾一次门禁（`verify.js` + `npm --prefix web run build` + `browser.mjs` + 三宽截图）、一次本地提交，然后直接进下一版。中途不停、不做预览部署、不为默认值已有答案的问题请示（`AGENTS.md`「Plan then act」）。
+- **只有 0.45 部署 + push**，并在部署后交用户真人验收；0.41–0.44 的 `BOUNDARY` 一律写「未部署」，提交必须存在。
+- **停的条件只有两个**：某项出现没有安全默认值的口径/范围问题，或操作不可逆且未被授权。
+- **版本号**：`web/package.json` 逐版 patch +1（0.0.41 → 0.0.45），`App.vue` `releaseVersion` 同步；版本唯一来源仍是 `package.json`。
+- **口径裁定（用户 2026-11-15）**：训练数字一律**按计划明细逐行展开**为准，main / variation / accessory 三类分报。报告里的 730 vs 732 只在「展开后是多少」这一个意义上被采信，报告值本身不是目标值。
+- **HTTPS（报告 P0-2）不进本批**：用户裁定「暂时不需要」。因此报告 P0 三项实际落两项；0.45 重评分时该项不计分、不得声称已解决，降级记录写进 §9。
+- **不许**：放宽容差、删断言、中和 sabotage、手改 `data/plan.json` 或 `web/dist`、为对齐报告数字反改处方结构。
+
+| 版本 | 主题 | 报告项 | 关键判据（一句话） |
+|---|---|---|---|
+| ~~0.41~~ ✅ | 训练数字单源 | P0-1 | 六处显示同值，且都等于明细逐行展开值 |
+| 0.42 | 确定性 Cycle 页 + 块测试日 | P0-3 | 10 次重载结构相同；B1 不出现别的块的测试日 |
+| 0.43 | P1 逻辑 | P1-4/5/6/7 | 日历逐行对拍、试举取整单测、全站无死链、强制失败有错误态 |
+| 0.44 | P1 审美 | P1-8/9 | 421/320/1280 三宽无截断缺字、次要标签 WCAG AA |
+| 0.45 | P2 文案与账户 + 发布 | P2-10/11/12 | 文案清单零残留、试举行可区分、能退出登录；部署成功 + 重评分达标 |
+
+### 0.41 · P0-1 训练数字单源
+
+**目标**：报告证据表那七行冲突（总组数、吨数、W1 Session A 组数、W1 图、W13 顶值、深蹲组数、Session A 首行）在页面上不可能再出现第二种答案 —— 一个计算，处处渲染。
+
+**落点**
+
+1. `server/app/stats/totals.py`（新）：唯一计数函数。输入 `plan` + `mode`，输出 `cycle{totalSets, mainSets, variationSets, accessorySets, tonnageKg}`、`perWeek[]`（`n / total / main / variation / accessory / tonnageKg / topPct / topLift`）、`perSession[]`（`week / day / total / rows[]`）、`perLift[]`。计数规则写进模块 docstring：**一行×行内 `sets` = 组**；`main` / `sbdVar + nonSbdVar` / `accessory` 三类分报，`total` 为三类之和；组数不做任何「去重」「估计」；吨数 = Σ(`loadKg × reps × sets`)，周期值求和后 `r1`，周值给未舍入原值（沿用 0.35 契约）；`%1RM` 只读 `meta.anchors`，取不到就不给该字段。
+2. `engine.analyze()` 改为调用它，`stats/completion.py`、`prescription.py` 的组数不再各自累加。
+3. `server/tools/landing_facts.py` 改读同一函数，`web/src/landing-facts.json` 重新生成（只重生成一次，之后随源变）。
+4. 前端去掉第二本账：`App.vue` 的 `todaySetCount`、`todayTotals`、`todayRows.reduce(tonnageKg)`、`analysis.cycle.auxSets`、`analysis.perWeek[].total`、`blockTonnage` 全部改为读 API 字段；`Header "N SETS · M ROWS"` 的 N 由函数给，不再来自周合计或手写；`AnalysisView.vue`、`LoadProfile.vue`、`CycleStrip.vue`、`ShareCard.vue` 的同一周/周期读同一字段。
+5. `verify.js` 新增 `totalsReconcileCheck()`：对 W1/W5/W13 与 Session A/D 六个面（Cycle header、ASSAY 三 tab、`/api/calendar` 会话 `prescribedSets`、`landing-facts.json`、周卡、分享卡）同值比对；期望值从 `server/tools/gen_data.py` 的源表**独立手算**，不从 `engine` 取。
+6. `tests/test_totals.py`：三类分报、显式 0 组、空周、变式与辅项计入 total、吨数一位小数与周值原值、`meta.anchors` 缺失时字段消失。
+
+**完成判据**：报告证据表七行逐条复核，每行只剩一个数；`verify.js` exit 0 且新增检查通过；`/cycle`、`/analysis` 三 tab、`/calendar`、落地页 hero 在同一周期上显示同一组数。
+
+**0.41 已交付**：`server/app/stats/totals.py` 是唯一计数实现（一行×行内 `sets`，三类分报；吨数取每行 `tonnageKg`，因为 27 行带 `segments`，`load×reps×sets` 算不出该值）；`engine`、`calendar`、`landing_facts` 全部改读它；前端三处本地求和与落地页手写 13 周序列已删。实测 732 组 / 139.568 t（139.6 t），W1 71 组 / 16.93 t，W1 Day A 17 组 6 行，B1 56.24 t，四块 56.24+52.16+29.12+2.05=139.57→139.6 t。证据 `RR\shots\0.41\totals-evidence.json`。
+
+**证据**：`RR\shots\0.41\`（三宽）、`plan-totals-evidence.json`（七行对照：面 / 值 / 来源函数字段）。
+
+### 0.42 · P0-3 确定性 Cycle 页 + 块测试日
+
+**目标**：`/cycle` 两次刷新长得一样；每个块只显示自己的测试日。
+
+**落点**
+
+1. 确定性：`App.vue` 的 Current Week 卡与 `Review Active Cycle` / `How Do I Read This?` 按钮改为**数据到齐后再定稿**（`await` 后渲染，或先骨架后替换）；禁止「先渲染再 `v-if` 移除」。查明 0.40 里随 `analysis` 到达次序翻转的分支并收成一个。
+2. 重载证据：10 次 `reload`（含 `emulateNetworkConditions` 3M + 40ms latency），逐次对 `#main` 结构做快照哈希，全部相同；任一不同即失败，不写「偶发」。
+3. 块测试日：`App.vue:398` 与 `:415` 现在把 `plan.testPlan?.dates?.sbd` 传给**每个** `LoadProfile`，所以 B1（11–12 月）显示 2027 年 2 月。改为块域映射：由 `plan.weeks[]` 中 `kind === 'test'` 的周定位所属 block，只有该 block 传日期，其余块传 `null` 并渲染 `No test in this block`；`/cycle` 页头的 TEST DAY 仍显示全局 SBD 日。
+4. `tests/test_blocks.py`：每块最多一个测试周；有测试周的块其测试日落在块日期区间内；无测试周的块解析为 `null`。
+5. `browser.mjs`：`/cycle/block/B1` 断言不出现测试日字符串；`/cycle` 断言 Group 参数与重载后一致。
+
+**完成判据**：10 次重载结构哈希相同；B1 页无 2027-02 的日期；`/cycle` 首屏即含 Current Week 卡，无需二次刷新。
+
+**证据**：`RR\shots\0.42\`、`reload-determinism.json`（10 条哈希 + 每次 `window.innerWidth`）。
+
+### 0.43 · P1 逻辑四项
+
+| 项 | 落点 | 完成判据 |
+|---|---|---|
+| P1-4 日历详情映射 | `server/app/calendar.py` 会话 `rows` 与 `App.vue` 日视图共用同一 `week/day` 标识与处方行；`CalendarView.vue` 不再自建「选中日」副本，详情跳 `/cycle/week/:week/day/:day` | Session A 详情与 `/cycle/week/1/day/A` 逐行一致：标签、`3×6 @ 110.5 kg` 首深蹲行、组数 |
+| P1-5 第三次试举取整 | 卧推 102.5% → 100% 地板到 97.5 kg，与第二次并列。规则：地板后若 ≤ 前一次，则**进位到下一 2.5 kg 档**；若仍并列（如封顶重量），页面显式标 `TIE` 并说明。实现落在 `server/app/stats/attempts.py` | `tests/test_attempts.py` 覆盖 95 / 100 / 102.5% 三边界 × 深蹲/卧推/硬拉九组，第三次严格 > 第二次或标 TIE |
+| P1-6 死拒（dead affordance） | Oracle 调用历史条目：有详情就打开详情抽屉，没有就渲染为不可点击文本（无 `cursor:pointer`、无 `role=button`、无 toast）；随后全站逐元素点击审计 | 每个可点元素点击后都有可观察结果；`browser.mjs` 新增 `clickThroughCheck()` 白名单式列出被审计元素 |
+| P1-7 加载与错误态 | Oracle、Calendar、Vault、Week 13、测试日建议：加载给骨架/进度文案，失败给可见错误 + `Retry`（禁止裸 spinner 或静默空） | 强制慢网与强制 500 各截一张，`docs`/证据 JSON 记两端状态；失败后可重试成功 |
+
+**完成判据**：上表四项各自可复测；`verify.js` exit 0；`browser.mjs` 新增断言不计入「只数行数」的凑数检查。
+
+### 0.44 · P1 审美两项
+
+| 项 | 落点 | 完成判据 |
+|---|---|---|
+| P1-8 截断策略 | 一条规则：caption / GPP 卡 / Vault 文本不得词中或句中截断。做法按内容取：换行、展开、`read more`、或**在源文本里缩短**（`gen_data.py` / 组件文案），不使用 `text-overflow` 硬切 | 421 / 320 / 1280 三宽逐面截图，逐个 caption 卡检查无缺字、无「…」半句；`truncation-sweep.json` 记每处元素的 `scrollWidth/clientWidth` |
+| P1-9 对比度与密度 | 次要灰标签提亮到 cream 背景上 WCAG AA（正文 4.5:1，非正文 3:1），实测比值写进证据；`MuscleMap` 图放大；`ExerciseRows` 密集表加斑马纹/分组留白，不改编辑风格（不改 tokens 主色、不加装饰） | 对比度实测表逐元素给比值；桌面与 421 下密集表可读、无横向溢出 |
+
+**完成判据**：三宽无截断；对比度比值全部达标；审美基线（§6.3）不变。审美接受仍归用户，本版只交机械证据。
+
+### 0.45 · P2 三项 + 发布 + 重评分
+
+**P2-10 文案统一**：B3/B4 `1 WEEKS` → `1 WEEK`；B1 补 `W01` 标；`SBD / MEV / MRV / RPE / GPP / t / ses` 首次使用处给定义（Assay 页脚术语表 + 就地首次提示）；舍入统一（一位小数或整数，全站一致）；复数统一（`1,650 tokens`）。
+
+**P2-11 重复行标注 + 容量标尺**：Session 表里同动作两行必须可区分 —— 行首加 `TOP` / `BACK-OFF` 标（来源是处方行 `mode`，不手写）；`WeekCapacity.vue` 的容量条给带刻度标尺，MEV/MRV 标记写明含义。
+
+**P2-12 账户与状态标签**：顶栏加 `Sign out`（+ 最小档案菜单：档位、设备数，复用 `MembershipPanel` 字段，不新建页面）；`0% done · elapsed`、`NEXT NOV 16`、`start date` 改成说人话（如 `Cycle starts 23 Nov 2026 · 89 days to test`）；Vault 设备会话给白话说明与 `Revoke`；Oracle 问卷加时间预估与「可保存稍后继续」；`Generate` / `Use` 按钮在前提不满足时禁用并就地说明原因。
+
+**发布（用户 2026-11-15 授权，仅此一次）**
+
+1. 全量门禁：`verify.js` exit 0、`npm --prefix web run build` exit 0、`browser.mjs` exit 0、`--sabotage` exit 1、`check_skill.py` PASS。
+2. 三宽 × 双主题截图 → `RR\shots\0.45\` + `*-evidence.json`。
+3. 线上备份（时间戳 tar.gz）→ 若 schema 变化走 `Store.upgrade_*` 并验 `user_version` / 表数 / `foreign_key_check`。
+4. `deploy.py` 注入 `RR_ACCESS_USERNAME` / `RR_ACCESS_PASSWORD` / `DEEPSEEK_API_KEY`（三者缺一即中止，禁止删 key 部署）→ `/api/ai/status?cycle_id=…` 必须 `configured: true` → 公网 200 → ACCESS-CONTRACT-OK。
+5. push 走 SSH + 临时 deploy key，推完**当次删除** key。
+6. 交用户真人验收：按报告 §Verification 的八项清单 + 重评分（目标 Logic 8 / Aesthetics 8 / UX 8 / Text 9），HTTPS 项标注「未做，用户裁定暂不需要」。
+
+**完成判据**：报告 12 项里 11 项有可复测证据（P0-2 明确未做），线上版本号 = `web/package.json`，重评分表落 `RR\shots\0.45\`。
 
 ---
 
@@ -193,6 +293,9 @@ VAULT 账户区（`#account`）：当前档位（豆子 + 档名）、永久档�
 - **夹具模式**：`/api/session` 返回 `authenticated: true` 同时带 `fixture: true`；部署环境**永不**设 `RR_ALLOW_OPEN_FIXTURE`。详单 §8.2 原「返回 False」的期望已由用户改掉。
 - **本轮运行方式**：每个 0.01 本地提交 + 本地构建 + 本地截图；**不 push、不正式部署、暂停「停即部署预览」**；BOUNDARY 写「未部署」；发布由用户另行下令。
 - **训练/恢复建议**：纯规则派生，免费开放，不接 AI（详单要求）。
+- **审查修复批次（2026-11-15 裁定）**：报告 `roast-raw-review-report-implementation-plan.pdf` 按五版执行（0.41 P0-1 / 0.42 P0-3 / 0.43 P1 逻辑 / 0.44 P1 审美 / 0.45 P2 全部）；**每版一步执行到位，中途不停、不预览部署、不为有安全默认值的问题请示**；**只有 0.45 部署 + push 并交用户真人验收**。旧的「每版本地提交 + 不 push 不部署」在 0.41–0.44 继续有效，0.45 的发布是用户明确下令。
+- **统计口径（2026-11-15 裁定）**：训练数字以**计划明细逐行展开**为准（一行 × 行内 `sets`），main / variation / accessory 三类分报；报告里的 730 / 732 只作冲突证据，不作目标值。
+- **HTTPS（2026-11-15 裁定）**：**暂时不做**。裸 IP `82.157.146.30` 无法取得公网受信证书；报告 P0-2 移出本批，0.45 重评分时该项不计分，不得声称已解决。
 
 ---
 
@@ -308,6 +411,8 @@ C:\Users\Astra\Desktop\RR\
 **已闭环**：`planId` 已于 0.30 定为 `rpl-raw-2026-11-23`（旧周期已归档）；`pct` 缺失即删字段已按 `meta.anchors` 落地（0.29 verify 覆盖）；§7.5 三点默认值已执行并入 §7；`docs/shots` 183 张已于 0.35 迁出仓库（`RR\shots\archive\`，6 张老参考留 `docs/ref-shots\`）。
 
 仍悬着、且影响后续版本的：
+
+0. **HTTPS 与「not secure」提示（2026-11-15 用户裁定暂不做，0.42 起的批次内不做）**：整站与登录表单仍走明文 HTTP，浏览器会继续显示不安全提示，登录口令在公网明文传输。要做只能三选一：绑域名 + Let's Encrypt、域名反代（Cloudflare Tunnel 等）、或无域名自签 + 强制跳转（警告无法消除）。本批不碰，也不写「已修复」。
 
 1. **线上怎么迁**：`http://82.157.146.30/` 还是 0.20 旧 schema（v1 期），本地库已到 v7。要上线必须整库替换或对线上库跑同一条迁移链，两种都要先停服务 + 备份。需用户推翻 2026-11-15 的「不 push、不部署」裁定才动手。
 2. **`days[3].titleEn` 里的 `(W13 TEST)`**：属源模板文本，0.30 保留了它。若判定为文案回退，需把清理固化进 `gen_data.py` 而不是手改 `plan.json`。

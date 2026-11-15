@@ -1,10 +1,10 @@
 import json
 import math
-from decimal import Decimal, ROUND_HALF_UP
 from functools import lru_cache
 from pathlib import Path
 
 from . import classify as C
+from .totals import round1, row_facts, totals as plan_totals
 
 DATA = Path(__file__).resolve().parents[3] / 'data'
 TIER_PRIMARY = 0.8
@@ -21,9 +21,9 @@ def ranges():
     return json.loads((DATA / 'ranges.json').read_text(encoding='utf-8'))
 
 
-def r1(value):
-    # Four-decimal cleanup preserves legacy half-up boundaries after float summation.
-    return float(Decimal(str(round(float(value), 4))).quantize(Decimal('0.1'), rounding=ROUND_HALF_UP))
+# Headline figures are rounded in one place: stats/totals.py. This alias keeps the
+# public name other modules import (performance.py, review.py) without a second rule.
+r1 = round1
 
 
 def resolve(movement, category):
@@ -76,7 +76,7 @@ def row_volume(row, log=None, policy=None):
     entry, status = resolve(movement, category)
     if entry is None:
         return result, [f'{movement} ({status})']
-    sets = log['sets'] if log is not None else row['sets']
+    sets = int(log['sets']) if log is not None else int(row['sets'])
     result['sets'] = sets
     result['roles'][bucket] = sets
     if bucket in ('main', 'sbdVar'):
@@ -132,6 +132,10 @@ def analyze(plan, logs=None, mode='plan', today=None):
     logs = logs or {}
     policy = plan.get('prescription', {}).get('version')
     from .variations import classification
+    # One calculation for sets and tonnage: stats/totals.py. Muscle, leaf and
+    # equivalent volume stay here because they depend on movement mapping, not rows.
+    headline = plan_totals(plan, logs, mode)
+    week_totals = {entry['n']: entry for entry in headline['perWeek']}
     cycle = _blank()
     per_week = []
     unresolved = set()
@@ -154,12 +158,15 @@ def analyze(plan, logs=None, mode='plan', today=None):
                 actual[bucket] += log['sets']
         _add(cycle, volume)
         planned_peak = max(planned_peak, *planned_volume['leavesWeighted'].values())
+        week_headline = week_totals[meta['n']]
         per_week.append({
             **{key: meta[key] for key in ('n', 'kind', 'blockId', 'dateStart', 'dateEnd', 'days', 'sessions')},
-            'total': volume['sets'], 'roles': volume['roles'], 'lifts': volume['lifts'], 'equivalent': _equivalent(volume),
+            'total': week_headline['sets']['total'], 'roles': week_headline['roles'],
+            'sets': week_headline['sets'],
+            'lifts': volume['lifts'], 'equivalent': _equivalent(volume),
             'groups': {key: {'d': volume['groups'][key], 'w': volume['groupsWeighted'][key]}
                        for key in C.MUSCLE_GROUPS},
-            'leaves': _leaves(volume), 'tonnageKg': volume['kg'],
+            'leaves': _leaves(volume), 'tonnageKg': week_headline['tonnageKg'],
             'topPct': meta.get('topPct'), 'topPctByLift': meta.get('topPctByLift'),
         })
     for week in per_week:
@@ -176,13 +183,17 @@ def analyze(plan, logs=None, mode='plan', today=None):
         'deload': [week['n'] for week in plan['weeks'] if week['kind'] == 'deload'],
         'test': [week['n'] for week in plan['weeks'] if week['kind'] == 'test'],
         'perWeek': per_week,
+        'perDay': headline['perDay'], 'perBlock': headline['perBlock'], 'perLift': headline['perLift'],
+        'totalBasis': headline['basis'],
         'heatScale': {'maximum': planned_peak, 'basis': 'Highest planned weekly muscle-weighted volume across this cycle'},
         'cycle': {
-            'total': cycle['sets'], 'roles': cycle['roles'], 'lifts': cycle['lifts'], 'equivalent': _equivalent(cycle),
+            'total': headline['cycle']['sets']['total'], 'roles': headline['cycle']['roles'],
+            'sets': headline['cycle']['sets'],
+            'lifts': cycle['lifts'], 'equivalent': _equivalent(cycle),
             'groups': {key: {'d': cycle['groups'][key], 'w': r1(cycle['groupsWeighted'][key])}
                        for key in C.MUSCLE_GROUPS},
-            'leaves': _leaves(cycle), 'tonnageKg': r1(cycle['kg']),
-            'auxSets': cycle['roles']['accessory'], 'sessions': plan['meta']['sessions'],
+            'leaves': _leaves(cycle), 'tonnageKg': r1(headline['cycle']['tonnageKg']),
+            'auxSets': headline['cycle']['sets']['accessory'], 'sessions': plan['meta']['sessions'],
         },
         'completion': completion(plan, logs if mode == 'log' else {}, today=today, mode=mode),
         'ranges': ranges(), 'leafOrder': library()['leaf_order'],

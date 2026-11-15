@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -30,6 +31,10 @@ OUT_PATH = ROOT / 'web' / 'src' / 'landing-facts.json'
 SAMPLE_WEEK = 1
 SAMPLE_DAY = 'A'
 LIFT_ORDER = ('S', 'B', 'D')
+
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+from server.app.stats.totals import round1, totals as plan_totals
 
 
 def _number(value):
@@ -68,7 +73,13 @@ def build_facts(plan: dict) -> dict:
         entry['sets'] = int(top['sets'])
         entry['reps'] = int(top['reps'])
         lifts.append(entry)
-    day_total = round(sum(row.get('tonnageKg') or 0 for row in rows), 1)
+    day_total = round1(sum(row.get('tonnageKg') or 0 for row in rows))
+    headline = plan_totals(plan)
+    blocks = {block['id']: block for block in plan.get('blocks', [])}
+    day_entry = next(
+        entry for entry in headline['perDay']
+        if entry['week'] == SAMPLE_WEEK and entry['day'] == SAMPLE_DAY
+    )
     facts = {
         'planId': meta['planId'],
         'startDate': meta['startDate'],
@@ -77,10 +88,24 @@ def build_facts(plan: dict) -> dict:
         'date': rows[0]['date'],
         'label': 'W{0:02d} · DAY {1}'.format(SAMPLE_WEEK, SAMPLE_DAY),
         'lifts': lifts,
-        'set_count': int(sum(row['sets'] for row in rows)),
+        'set_count': int(day_entry['sets']['total']),
+        'sets_by_class': day_entry['sets'],
         'day_total_kg': _number(day_total),
         'cycle_total_kg': float(meta['cycleTonnageKg']),
+        'cycle_sets': int(headline['cycle']['sets']['total']),
         'tonnage_basis': meta['tonnageBasis'],
+        # The landing chart draws the same per-week series the cycle chart draws, so
+        # the two pages cannot tell two stories. Values come from stats/totals.py.
+        'weeks': [
+            {
+                'n': entry['n'],
+                'sets': int(entry['sets']['total']),
+                'main_sets': int(entry['sets']['main']),
+                'top_pct': entry['topPct'],
+                'phase': ((blocks.get(entry['blockId']) or {}).get('cycleType') or 'custom').lower(),
+            }
+            for entry in headline['perWeek']
+        ],
     }
     return facts
 

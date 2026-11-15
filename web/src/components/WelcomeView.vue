@@ -57,27 +57,29 @@ function jumpTo(i) {
   index.value = i; tourP.value = i / shots.length;
 }
 
-const phases = ['hyper', 'hyper', 'hyper', 'deload', 'strength', 'strength', 'strength', 'deload', 'transmute', 'transmute', 'peak', 'deload', 'test'];
-const capSets = [27, 28, 30, 12, 28, 28, 30, 12, 23, 23, 18, 13, 17];
-const capTop = [70, 72, 74, 60, 78, 80, 82, 62, 86, 88, 92, 70, 100];
-const condMin = [60, 60, 60, 20, 60, 25, 40, 20, 45, 50, 55, 30, 20];
-const capMax = 32;
-const capBars = computed(() => capSets.map((sets, i) => ({
-  n: i + 1,
-  sets,
-  phase: phases[i],
-  h: Math.max(4, sets / capMax * 100),
-  x: ((i + .5) / capSets.length * 100),
-  top: capTop[i],
-  y: 100 - (capTop[i] - 50) / 60 * 100,
+// The landing chart draws the same per-week series the cycle page draws: it comes
+// from server/app/stats/totals.py through landing-facts.json. No hand-typed series.
+const weekFacts = computed(() => landingFacts.weeks || []);
+const capSets = computed(() => weekFacts.value.map(week => week.sets));
+const capMax = computed(() => Math.max(1, ...capSets.value));
+const capBars = computed(() => weekFacts.value.map((week, i) => ({
+  n: week.n,
+  sets: week.sets,
+  phase: week.phase,
+  h: Math.max(4, week.sets / capMax.value * 100),
+  x: ((i + .5) / weekFacts.value.length * 100),
+  top: week.top_pct || 0,
+  y: 100 - ((week.top_pct || 0) - 50) / 60 * 100,
 })));
+const condMin = [60, 60, 60, 20, 60, 25, 40, 20, 45, 50, 55, 30, 20];
+const phases = computed(() => weekFacts.value.map(week => week.phase));
 const capPoints = computed(() => capBars.value.map(bar => `${bar.x},${bar.y}`).join(' '));
 const condMax = 90;
 const condBars = computed(() => condMin.map((minutes, i) => ({
   n: i + 1,
   minutes,
   h: Math.max(3, minutes / condMax * 100),
-  phase: phases[i],
+  phase: phases.value[i],
 })));
 const condRange = computed(() => `${Math.min(...condMin)}–${Math.max(...condMin)}`);
 
@@ -103,7 +105,8 @@ const personas = [
   { n: '03', k: 'SELF-COACHED', title: 'Self-coached lifters', d: 'No cloud coach and no vendor lock-in. The ledger lives on your own server and leaves whenever you export it.', tags: ['Own server', 'Open export', 'No vendor lock-in'] },
 ];
 
-const demoWeeks = ['hyper', 'hyper', 'hyper', 'hyper', 'strength', 'strength', 'strength', 'deload', 'transmute', 'transmute', 'peak', 'deload', 'test'];
+// The hero strip is the same thirteen weeks the plan holds, phase-coloured the same way.
+const demoWeeks = computed(() => phases.value);
 
 // Share the landing page: the native sheet where the browser has one, clipboard otherwise.
 // No third-party script, no tracking parameter, no upload.

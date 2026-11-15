@@ -30,6 +30,7 @@ No completed zero exit code means no all-green claim. UI changes also require bu
 - Keep raw sets, SBD equivalent capacity and muscle coefficients distinct. Consult current decisions before policy changes; keep the legacy fixture chain intact.
 - Do not overwrite shared services or repositories, delete source data or run destructive git operations. **Push and deployment happen only when the owner explicitly orders them** (see the running rules below).
 - **Running rules for this round (owner ruling 2026-11-15)**: every 0.01 step ends in a local commit plus local build plus local screenshots; **no push, no formal deploy, and the earlier "stop-and-deploy preview" clause is suspended**. Stop-and-deploy resumes only when the owner says so. A stop without a preview is complete as long as the commit exists and `BOUNDARY` states "未部署".
+- **Review-fix batch 0.41–0.45 (owner ruling 2026-11-15, spec in TODO §2A)**: each version is executed end to end in one pass — no mid-version pause, no preview deploy, no questions whose safe default is already recorded — and **only 0.45 is deployed and pushed**, with the owner's human acceptance after it. The no-push rule above still binds 0.41–0.44; 0.45's release is the owner's explicit order, not an inference.
 
 ## Permissions and environment (read before touching the live service)
 
