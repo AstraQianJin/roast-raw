@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
+import { solvePlates } from '../share.js';
 const props = defineProps({ plan: Object, date: String });
 const go = ref(false);
 onMounted(() => {
@@ -24,6 +25,44 @@ const firstSession = computed(() => {
   return row ? `/cycle/week/1/day/${row.day}` : '/cycle/week/1';
 });
 const openingSessions = computed(() => props.plan.weeks[0]?.sessions ?? Math.round(props.plan.meta.sessions / props.plan.meta.weeks));
+const fmtKg = value => Number(value).toLocaleString('en-US', { maximumFractionDigits: 1 });
+// Block 2 — the first session, read from the plan. Plate chips reuse the share-card
+// solver so preview and real logs cannot disagree about what is on the bar.
+const firstRows = computed(() => {
+  const first = props.plan.workouts.find(row => row.week === 1);
+  if (!first) return { date: null, day: null, rows: [] };
+  const rows = props.plan.workouts
+    .filter(row => row.week === first.week && row.day === first.day && row.loadKg !== null && row.bucket !== 'accessory');
+  // One line per movement: the calibration single and its back-off set read as one lift.
+  const picked = [];
+  rows.forEach(row => {
+    const seen = picked.find(item => item.nameEn === row.nameEn);
+    if (!seen) picked.push(row);
+    else if (row.sets > seen.sets) picked[picked.indexOf(seen)] = row;
+  });
+  const lines = picked
+    .slice(0, 4)
+    .map(row => ({
+      id: `${row.week}-${row.day}-${row.seq}`,
+      movement: row.nameEn,
+      rx: row.rxEn || `${row.sets}×${row.reps}`,
+      load: row.loadKg,
+      pct: row.pct === null || row.pct === undefined ? null : Math.round(row.pct * 1000) / 10,
+      plates: solvePlates(row.loadKg, props.plan.meta.profile?.bar_kg ?? 20),
+    }));
+  return { date: first.date, day: first.day, rows: lines };
+});
+// Block 3 — the warm-up ladder that ships with that date; empty stays visibly empty.
+const warmupLadder = computed(() => {
+  const date = firstRows.value.date;
+  const lifts = (date && props.plan.warmups?.[date]) || [];
+  return lifts.map(lift => ({
+    movement: lift.movement,
+    steps: lift.steps.map(step => `${fmtKg(step.kg)} kg × ${step.reps}`).join(' · '),
+  }));
+});
+// Block 4 — what to record this week. No thresholds before a baseline exists.
+const RECOVERY_ITEMS = ['Morning resting heart rate', 'Sleep hours', 'HRV if tracked', 'Bodyweight', 'Session RPE', 'Joint pain'];
 </script>
 
 <template>
@@ -53,6 +92,32 @@ const openingSessions = computed(() => props.plan.weeks[0]?.sessions ?? Math.rou
         <div class="fact"><div class="k">TEST DAY</div><div class="v">{{ testDate ? shortDate(testDate) : '—' }}</div><div v-if="testDate" class="s">{{ weekday(testDate) }} · {{ testDate.slice(0, 4) }}</div></div>
       </section>
     </div>
+    <section class="card first-session" data-testid="prestart-firstsession" aria-label="First session preview">
+      <div class="sec-head"><span class="eyebrow">FIRST SESSION · DAY {{ firstRows.day || "—" }}</span><span class="sec-meta">{{ firstRows.date ? longDate(firstRows.date) : "Not sampled" }}</span></div>
+      <div v-if="firstRows.rows.length" class="fs-list">
+        <div v-for="row in firstRows.rows" :key="row.id" class="fs-row">
+          <span class="fs-copy"><b>{{ row.movement }}</b><em>{{ row.rx }}<span v-if="row.pct !== null"> · {{ row.pct }}%</span></em></span>
+          <span class="fs-load">{{ fmtKg(row.load) }}<small>kg</small></span>
+          <span class="fs-plates">
+            <i v-for="(plate, index) in row.plates" :key="index" class="plate" :style="{ '--h': `${plate.h}px`, '--w': `${plate.w}px`, background: plate.color }" :title="`${plate.kg} kg`"></i>
+            <em v-if="!row.plates.length">bar only</em>
+          </span>
+        </div>
+      </div>
+      <p v-else class="empty">Not sampled — the plan carries no loaded row for this session.</p>
+    </section>
+    <section class="card warmups" data-testid="prestart-warmups" aria-label="Warm-up ladder">
+      <div class="sec-head"><span class="eyebrow">WARM-UP LADDER</span><span class="sec-meta">As prescribed on that date</span></div>
+      <div v-if="warmupLadder.length" class="wu-list">
+        <div v-for="lift in warmupLadder" :key="lift.movement" class="wu-row"><b>{{ lift.movement }}</b><span>{{ lift.steps }}</span></div>
+      </div>
+      <p v-else class="empty">Not sampled — no warm-up rows are attached to this date.</p>
+    </section>
+    <section class="card recovery" data-testid="prestart-recovery" aria-label="Recovery baseline">
+      <div class="sec-head"><span class="eyebrow">RECOVERY BASELINE</span><span class="sec-meta">Measure this week</span></div>
+      <div class="rb-chips"><span v-for="item in RECOVERY_ITEMS" :key="item">{{ item }}</span></div>
+      <p class="empty rb-note">No baseline yet — thresholds unlock once the first week is logged. Values are not shown before there is data.</p>
+    </section>
   </section>
 </template>
 
@@ -87,6 +152,27 @@ const openingSessions = computed(() => props.plan.weeks[0]?.sessions ?? Math.rou
 .fact .k { font-family: var(--mono); font-size: 8px; letter-spacing: .12em; color: var(--ink); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fact .v { margin-top: 2px; font-family: var(--mono); font-size: 13.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fact .s { margin-top: 1px; font-family: var(--mono); font-size: 8px; color: var(--ink); letter-spacing: .06em; }
+.sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.sec-meta { font-family: var(--mono); font-size: 8.5px; letter-spacing: .1em; color: var(--muted); text-transform: uppercase; }
+.first-session, .warmups, .recovery { margin-top: 12px; }
+.empty { margin: 10px 0 0; font-size: 10.5px; line-height: 1.5; color: var(--muted); }
+.fs-list { display: grid; gap: 6px; margin-top: 10px; }
+.fs-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'copy load' 'plates plates'; gap: 5px 10px; align-items: center; padding: 9px 10px; border: 1px solid var(--line-soft); border-radius: 11px; background: var(--inset); }
+.fs-copy { grid-area: copy; display: grid; gap: 2px; min-width: 0; }
+.fs-copy b { font-family: var(--display); font-size: 12.5px; font-weight: 700; letter-spacing: .01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fs-copy em { font-style: normal; font-family: var(--mono); font-size: 9px; letter-spacing: .04em; color: var(--muted); }
+.fs-load { grid-area: load; font-family: var(--mono); font-size: 14px; font-weight: 700; text-align: right; white-space: nowrap; }
+.fs-load small { font-size: 9px; font-weight: 500; color: var(--muted); margin-left: 2px; }
+.fs-plates { grid-area: plates; display: flex; align-items: center; gap: 3px; height: 16px; min-width: 0; overflow: hidden; }
+.fs-plates .plate { display: block; flex: 0 0 auto; height: var(--h); width: var(--w); border-radius: 2px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); }
+.fs-plates em { font-style: normal; font-family: var(--mono); font-size: 8.5px; color: var(--muted); }
+.wu-list { display: grid; gap: 7px; margin-top: 10px; }
+.wu-row { display: grid; gap: 2px; }
+.wu-row b { font-family: var(--display); font-size: 11.5px; font-weight: 700; letter-spacing: .01em; }
+.wu-row span { font-family: var(--mono); font-size: 9.5px; line-height: 1.5; color: var(--muted); }
+.rb-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.rb-chips span { padding: 4px 9px; border: 1px solid var(--line-soft); border-radius: 999px; background: var(--inset); font-family: var(--mono); font-size: 8.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink); }
+.rb-note { margin-top: 10px; }
 @media (max-width: 359px) {
   .hero-meta .hm-a, .hero-meta .hm-b { display: block; }
   .hero-meta .hm-dot { display: none; }
@@ -104,6 +190,8 @@ const openingSessions = computed(() => props.plan.weeks[0]?.sessions ?? Math.rou
   .facts { grid-template-columns: 1fr; gap: 0; padding: 6px 16px; align-content: center; }
   .fact { background: none; border: 0; border-bottom: 1px solid var(--line-soft); border-radius: 0; padding: 11px 0; }
   .fact:last-child { border-bottom: 0; }
+  .fs-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .wu-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .ring .arc, .btn { transition: none; }

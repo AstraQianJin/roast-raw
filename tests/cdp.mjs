@@ -24,6 +24,7 @@ export async function openBrowser() {
   const events = new Map();
   const errors = [];
   const requests = new Map();
+  const requestLog = [];
   const networkFailures = [];
   function nextEvent(method) {
     return new Promise((resolve, reject) => {
@@ -34,7 +35,10 @@ export async function openBrowser() {
   ws.onmessage = ({ data }) => {
     const message = JSON.parse(data);
     events.get(message.method)?.(message.params);
-    if (message.method === 'Network.requestWillBeSent') requests.set(message.params.requestId, message.params.request.url);
+    if (message.method === 'Network.requestWillBeSent') {
+      requests.set(message.params.requestId, message.params.request.url);
+      requestLog.push(message.params.request.url);
+    }
     if (message.method === 'Network.loadingFailed') {
       networkFailures.push({ ...message.params, url: requests.get(message.params.requestId) });
       requests.delete(message.params.requestId);
@@ -70,7 +74,7 @@ export async function openBrowser() {
   await send('Runtime.enable');
   await send('Log.enable');
   return {
-    send, evaluate, waitFor, errors, networkFailures,
+    send, evaluate, waitFor, errors, networkFailures, requestLog,
     async viewport(width, height = 844) {
       await send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: true });
     },

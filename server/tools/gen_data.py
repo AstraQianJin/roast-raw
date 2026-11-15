@@ -5,12 +5,14 @@ Fail-closed: any field error rejects the whole import with a per-field report.
 Week count is derived from blocks (work + deload), never from a constant.
 Generated files are the only plan/library source the engine and web read.
 """
+import argparse
 import copy
 import csv
 import datetime
 import hashlib
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -31,6 +33,10 @@ ANCHOR_CATEGORY = {
     "B.Main": ("bench", "bp_1rm"),
     "D.Main": ("deadlift", "dl_1rm"),
 }
+
+# Prose in the source profile that must follow the computed calendar, never a literal.
+MOTTO_TEST_DATE = re.compile(r"TEST \d{4}-\d{2}-\d{2}")
+MOTTO_CYCLE_LENGTH = re.compile(r"\d+\.\d+W \(\d+ days to test\)")
 
 def num(value):
     """Optional legacy number, used only after boundary validation."""
@@ -451,6 +457,15 @@ def adapt(envelope, lib, mm, errors=None, source_sha256=None, file="plan.json"):
                                     for x in rows]})
         warmups[date] = lifts
     actual_test_dates = test_dates(workouts)
+    # The source prose carries literal test dates and cycle-length figures. Rewrite
+    # them from the computed calendar so a start-date shift cannot leave a stale
+    # "TEST 2027-02-13" behind; abstain when the test date is not evidenced.
+    test_iso = actual_test_dates.get("sbd")
+    motto = prof.get("motto")
+    if test_iso and isinstance(motto, str):
+        days_to_test = (datetime.date.fromisoformat(test_iso) - start).days
+        prof["motto"] = MOTTO_TEST_DATE.sub("TEST %s" % test_iso, motto)
+        prof["motto"] = MOTTO_CYCLE_LENGTH.sub("%.1fW (%d days to test)" % (days_to_test / 7.0, days_to_test), prof["motto"])
     doc = {
         "schemaVersion": "RPL-Raw-v1",
         "meta": {
@@ -494,18 +509,61 @@ def adapt(envelope, lib, mm, errors=None, source_sha256=None, file="plan.json"):
         raise Reject(errors) from exc
 
 
-def main():
+def _shift_date(value, delta):
+    return (datetime.date.fromisoformat(value) + delta).isoformat()
+
+
+def shift_source_dates(envelope, delta):
+    """Move every calendar literal in the source envelope by delta days.
+
+    The source workbook stores dates twice: once in Profile.start_date and again
+    in RunPlan / Warmups / Goals / TestPaths. Rewriting only the profile makes
+    validate_legacy reject the file because the derived calendar no longer
+    matches those literals, so a scripted start-date move shifts all of them
+    together instead of hand-editing generated output.
+    """
+    plan = envelope["plan"]
+    starts = [row for row in plan["Profile"] if row["field"] == "start_date"]
+    if len(starts) != 1:
+        raise Reject([issue("Plan", "Profile.start_date", "exactly one start_date row", len(starts))])
+    starts[0]["value"] = _shift_date(starts[0]["value"], delta)
+    for row in plan.get("RunPlan", []):
+        if row.get("date"):
+            row["date"] = _shift_date(row["date"], delta)
+    for row in plan.get("Warmups", {}).get("sets", []):
+        if row.get("date"):
+            row["date"] = _shift_date(row["date"], delta)
+    for row in plan.get("Goals", {}).get("entries", []):
+        for key in ("deadline_date", "asof"):
+            if row.get(key):
+                row[key] = _shift_date(row[key], delta)
+    for key in ("backup_date",):
+        if plan.get("TestPaths", {}).get(key):
+            plan["TestPaths"][key] = _shift_date(plan["TestPaths"][key], delta)
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Adapt the legacy plan and write data/plan.json.")
+    parser.add_argument("--start-date", help="ISO date that moves the whole cycle; every source date shifts by the same delta")
+    parser.add_argument("--out", default=str(OUT), help="output directory for plan.json / movements.json / ranges.json")
+    args = parser.parse_args(argv)
     try:
         lib, mm = build_movements()
         envelope, digest = read_json(SAMPLE)
+        if args.start_date:
+            current = next(row["value"] for row in envelope["plan"]["Profile"] if row["field"] == "start_date")
+            delta = datetime.date.fromisoformat(args.start_date) - datetime.date.fromisoformat(current)
+            shift_source_dates(envelope, delta)
         doc = adapt(envelope, lib, mm, source_sha256=digest, file=str(SAMPLE))
         ranges = build_ranges(mm)
         ids = [m["id"] for m in lib["movements"]]
         if len(ids) != len(set(ids)) or len(ids) != 261:
             raise Reject([issue(STATS / "muscle_map.json", "movements", "261 distinct source IDs", len(ids))])
         # Validate the entire batch before opening any generated output file.
+        out = Path(args.out)
+        out.mkdir(parents=True, exist_ok=True)
         for name, payload in (("plan.json", doc), ("movements.json", lib), ("ranges.json", ranges)):
-            with (OUT / name).open("w", encoding="utf-8") as stream:
+            with (out / name).open("w", encoding="utf-8") as stream:
                 json.dump(payload, stream, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
     except Reject as exc:
         print(json.dumps({"error": "IMPORT_REJECTED", "errors": exc.errors}, ensure_ascii=False), file=sys.stderr)

@@ -152,6 +152,35 @@ function landingFactsCheck() {
   checks++;
   console.log(`PASS landing facts: byte-identical regeneration, day ${facts.day_total_kg} kg / ${facts.set_count} sets recomputed, cycle ${facts.cycle_total_kg} kg from meta`);
 }
+function planCalendarCheck() {
+  const plan = json('data/plan.json');
+  const meta = plan.meta;
+  const start = meta.startDate;
+  // Policy anchor: the owner moved the cycle to 2026-11-23 on 2026-11-15.
+  same(start, '2026-11-23', 'plan start date is the approved calendar');
+  same(meta.planId, `rpl-raw-${start}`, 'planId is derived from the start date');
+  const addDays = (iso, days) => new Date(Date.parse(`${iso}T00:00:00Z`) + days * 86400000).toISOString().slice(0, 10);
+  same(meta.endDate, addDays(start, meta.weeks * 7 - 1), 'end date is derived from start + weeks');
+  same(plan.days.map(day => day.weekdayOffset), [0, 2, 4, 5], 'day offsets are the fixed Monday-first template');
+  const offsets = Object.fromEntries(plan.days.map(day => [day.id, day.weekdayOffset]));
+  plan.workouts.forEach(row => {
+    same(row.date, addDays(start, (row.week - 1) * 7 + offsets[row.day]), `W${row.week} ${row.day} date follows the calendar`);
+  });
+  const testWeek = plan.weeks.find(week => week.kind === 'test');
+  assert.ok(testWeek, 'plan has a test week');
+  checks++;
+  const testDate = plan.testPlan.dates.sbd;
+  const inTestWeek = Date.parse(`${testDate}T00:00:00Z`) >= Date.parse(`${testWeek.dateStart}T00:00:00Z`) && Date.parse(`${testDate}T00:00:00Z`) <= Date.parse(`${testWeek.dateEnd}T00:00:00Z`);
+  assert.ok(inTestWeek, `test date ${testDate} falls inside test week W${testWeek.n}`);
+  checks++;
+  const motto = meta.profile.motto;
+  assert.equal(motto.match(/TEST (\d{4}-\d{2}-\d{2})/)[1], testDate, 'motto test date is filled from the calendar');
+  checks++;
+  const daysToTest = Math.round((Date.parse(`${testDate}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / 86400000);
+  assert.equal(motto.match(/(\d+\.\d+W) \((\d+) days to test\)/)[2], String(daysToTest), 'motto counts days to test from the calendar');
+  checks++;
+  console.log(`PASS plan calendar: start ${start}, end ${meta.endDate}, ${plan.workouts.length} dated rows, test ${testDate} in W${testWeek.n}`);
+}
 (async () => {
 try {
   fixtureCheck();
@@ -160,6 +189,7 @@ try {
     syntheticCheck();
     await shareCheck();
     landingFactsCheck();
+    planCalendarCheck();
     const drift = spawnSync(python, ['server/tools/export_membership.py', '--check'], { cwd: root, encoding: 'utf8', env: { ...process.env, PYTHONIOENCODING: 'utf-8' } });
     assert.equal(drift.status, 0, `web/src/membership.json drifted from server/app/membership.py: ${drift.stdout}${drift.stderr}`);
     console.log('PASS membership table: web/src/membership.json matches the server capability matrix');

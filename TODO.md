@@ -6,33 +6,36 @@
 
 ---
 
-## 0 · 状态快照（2026-11-15 收工）
+## 0 · 状态快照（2026-11-15 · 0.30 收工）
 
 | 项 | 值 |
 |---|---|
-| 版本 | `web/package.json` = **0.0.28**；0.29 已落地 3/4，尚未发版 |
-| 工作树 | 干净（`git status --short` 无输出） |
-| 最近提交 | `41c6a00` 技能库外迁 |
-| 门禁 | 0.29 partial 时 `node tests/verify.js` 302 用例 / 6290 断言、exit 0（sabotage 子进程仍按预期红）；`npm --prefix web run build` exit 0 |
+| 版本 | `web/package.json` = **0.0.30**；0.29、0.30 均已本地提交，未 push、未部署 |
+| 工作树 | 以本节所在提交为准 |
+| 最近提交 | 见 `git log --oneline -3` |
+| 门禁 | `node tests/verify.js` 302 用例 / **6575** 检查、exit 0（sabotage 子进程仍按预期红）；`npm --prefix web run build` exit 0；`check_skill.py --root .` PASS |
 | 红基线 | `tests/browser.mjs` 自 0.21 起失效（删主题切换、注册页改四输入，旧断言过时）；**0.35 重写后才可作绿灯证据** |
 | 部署 | 线上仍是 0.20 版 `http://82.157.146.30/`（公开落地页 + 账户门控 journal）。本轮**不 push、不部署**（用户 2026-11-15 裁定） |
-| 证据落点 | `C:\Users\Astra\Desktop\RR\shots\0.2x\`（2026-11-15 已迁移到位）；新截图落 `RR\shots\0.29\` 起 |
+| 证据落点 | `RR\shots\0.29\`（`p0-01-refresh.json`、`p0-02-landing.json`）、`RR\shots\0.30\`（`prestart-evidence.json` + 320/360/390/412/1280 截图） |
 | 老项目 | 两个老项目已迁 `RR\ref-projects\`（`roast-powerlifting`、`rplref`）；`rplref` 2026-11-15 瘦身 2243.6 MB，依据与恢复路径见 `RR\ref-projects\rplref\_repo\MIRROR_SLIMMED.md` |
 
 **长期边界**：只做 Web（Vue 3 + Vite + Motion One + FastAPI + SQLite）；界面英文、对话中文；`Ref/` 与两个老项目只读；不手改 `data/plan.json` 与 `web/dist/`；不弱化断言、不中和 sabotage。
 
+**0.30 留下的既成事实**（后续版本必须遵守，勿重新推导）：
+
+- 计划日历唯一真相是 `data/plan.json` 的 `meta.startDate`（现为 **2026-11-23**，结束 2027-02-21，测试日 2027-02-20）。
+- 移动日历只能 `server/tools/gen_data.py --start-date <ISO>`：它会按同一 delta 平移源里所有日期字面量，并让 `meta.motto` 的 `TEST <iso>` / `<x.x>W (<n> days to test)` 由日历填充。
+- `planId` 变更必须 `server/tools/roll_cycle.py`：先快照，再归档旧周期（保留计划/日志/问卷可回读）、播种新周期；**禁止原地改日期**。本机 `data/roastraw.sqlite3` 已按此完成 `rpl-raw-2026-11-16`（archived）→ `rpl-raw-2026-11-23`（active）。
+- `data/plan.json` 与 `web/src/landing-facts.json` 都是生成物；`day D` 标题里的 `(W13 TEST)` 来自源表，属于源文本，不是手写。
+
 ---
 
-## 1 · 下一动作：0.29 收尾（做完即本地提交）
+## 1 · 下一动作：0.31 门控与出口
 
-**接手指令**：`docs\agent-prompt-0.29-0.39.md`（覆盖 0.29→0.39，路径已按搬迁后更新）。
+**接手指令**：`docs\agent-prompt-0.29-0.39.md` 的 0.31 段（`T6` 读开写关、`T5` 降档主动刷新、`T3` 孤表审计 + 表级隔离单测、`P0-03b` 导出、`P0-04` `/about`）。
 
 按序执行，一步一提交。提交前跑门禁，回执按 `AGENTS.md` 五字段。
 
-1. **P0-01 刷新实测**（判据见 §3.1）。结论只有两种：通过 → 记证据；不通过 → 记缺陷进 0.38 审查清单，**起点仍为 2026-11-23，不因它推迟**。
-2. **P0-02 首页数字同源**（契约见 §3.2）：新增 `server/tools/landing_facts.py` → 产物 `web/src/landing-facts.json` → hero、分享卡、NEXT 药丸三处绑定 → verify 新增复算断言。
-3. **P0-03a 收尾**：全仓 grep `No account|Zero account|CSV|XLSX|Chinese UI|rest timer|Phone app`，命中即改。
-4. **门禁**：`node tests/verify.js` exit 0、`npm --prefix web run build` exit 0；`check_skill.py --root .` PASS。
 
 ---
 
@@ -56,7 +59,7 @@
 
 ## 3 · 施工详单
 
-### 3.1 · 0.29 ① P0-01 刷新不闪 404（未做）
+### 3.1 · 0.29 ① P0-01 刷新不闪 404（已完成，证据 `RR\shots\0.29\p0-01-refresh.json`）
 
 - **现状**（`web/src/App.vue` 模板次序）：`loading` → 请求错误 → 空账本 → `!plan`（`Reading the plan.`）→ `!validRoute`（`NOT IN THIS PLAN`）。0.28 已把 `!plan` 提到 `!validRoute` 之前，**但从未实测**，因此不得宣称已修。
 - **改法**（仅当实测仍闪）：骨架块推进到 `!plan` 之前，固定高度占位，禁用 shimmer；`todayCtaLabel` 在 `plan` 为空时渲染 `·`，不再输出 `NO SESSION`。
@@ -68,7 +71,7 @@
   - 不设单次骨架停留阈值；**空白正文仍判失败**。
 - **证据**：`RR\shots\0.29\p0-01-refresh.json`（10 次 × 3 时点的原文与命中标记）。
 
-### 3.2 · 0.29 ② P0-02 首页数字同源（未做）
+### 3.2 · 0.29 ② P0-02 首页数字同源（已完成，`server/tools/landing_facts.py` + verify 复算）
 
 - **生成器** `server/tools/landing_facts.py`：读 `data/plan.json`，取一个样例课日，写紧凑 JSON 到 `web/src/landing-facts.json`（不许把整份 plan 塞进 bundle）。
 - **字段契约**：
@@ -97,7 +100,7 @@
 
 已删 6 处：休息计时器、CSV/XLSX 导出、`SELF-COACHED` 的 "Zero account"、分享区「英文/中文界面」「no account」、分享卡 `No account required`→`No watermark`、`Every link works on your server`→`Six routes served by one FastAPI process`。收尾见 §1 第 3 条。
 
-### 3.4 · 0.30 ① 日期重算（唯一真相 `plan.meta.startDate`）
+### 3.4 · 0.30 ① 日期重算（已完成：`--start-date 2026-11-23` + `roll_cycle.py`）
 
 - **目标值**：`startDate 2026-11-23`、`endDate 2027-02-21`、测试日 `2027-02-20`；`planId` 若要改则 `rpl-raw-2026-11-23`；`profile.start_date` 同步；`meta.motto` 里写死的 `TEST 2027-02-13`、`12.7W (89 days to test)` 改由生成器模板填充，禁止手写。
 - **三条硬要求（用户定）**：
@@ -106,7 +109,7 @@
   3. **断言强度不降**：锚点日期必须有一条断言直接读 `plan.meta.startDate`；「必须落在测试周」改为按周次相对判断；`tests/browser.mjs` 填问卷的日期也改成从 plan 读，不写死。
 - **只在这一分支做**：+7 天后相对时长不变（到测试 89 天、到结束 90 天），`12.7W (89 days)` 数值不变，只是绝对日期 +7。
 
-### 3.5 · 0.30 ② 未开始态页面（`CyclePrestart.vue` 扩容，挂在 `/today` 顶部）
+### 3.5 · 0.30 ② 未开始态页面（已完成：`CyclePrestart.vue` 四区块，证据 `RR\shots\0.30\`）
 
 | 区块 | 数据来源 | 空态 |
 |---|---|---|
