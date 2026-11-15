@@ -341,12 +341,12 @@ onBeforeUnmount(() => { clearTimeout(shareTimer); cleanup(); });
 
 <style scoped>
 .wl-top { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; padding: 8px 0; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line-soft); }
-.wl-top-brand { display: flex; align-items: baseline; gap: 6px; color: var(--ink); text-decoration: none; }
+.wl-top-brand { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; color: var(--ink); text-decoration: none; }
 .wl-top-brand .wl-bean { width: 12px; height: 12px; }
 .wl-top-brand b { font: 500 14px var(--serif); }
 .wl-top-brand span { font: 8px var(--mono); letter-spacing: .08em; color: var(--muted); text-transform: uppercase; }
 .wl-top-nav { display: flex; gap: 16px; }
-.wl-top-nav a { font: 700 8.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); text-decoration: none; border-bottom: 1px solid transparent; padding-bottom: 2px; }
+.wl-top-nav a { display: inline-flex; align-items: center; min-height: 44px; font: 700 8.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); text-decoration: none; border-bottom: 1px solid transparent; padding-bottom: 2px; }
 .wl-top-nav a:hover { color: var(--ink); border-bottom-color: var(--line); }
 .wl-share { min-height: 44px; padding: 0 14px; border: 1px solid var(--line2); background: transparent; color: var(--ink); font: 700 9px var(--mono); letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
 .wl-share:hover { border-color: var(--ink); }
@@ -532,7 +532,8 @@ onBeforeUnmount(() => { clearTimeout(shareTimer); cleanup(); });
 .wl-foot-brand b { font-family: var(--serif); font-style: italic; font-size: 18px; }
 .wl-foot-brand span { font: 8.5px var(--mono); letter-spacing: .14em; color: var(--muted); text-transform: uppercase; }
 .wl-foot-links { display: flex; flex-wrap: wrap; gap: 16px; font: 9px var(--mono); letter-spacing: .08em; color: var(--muted); }
-.wl-foot-links a { border-bottom: 1px solid var(--soft); }
+.wl-foot-links a { display: inline-flex; align-items: center; min-height: 44px; border-bottom: 1px solid var(--soft); }
+.wl-enter-f a { display: inline-flex; align-items: center; min-height: 44px; }
 .js .rv { opacity: 0; transform: translateY(14px); }
 .js .rv.in { opacity: 1; transform: none; transition: opacity .6s var(--ease), transform .7s var(--ease); }
 @media (max-width: 880px) {

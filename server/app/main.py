@@ -7,7 +7,7 @@ from contextvars import ContextVar
 from pathlib import Path
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -18,7 +18,7 @@ from .stats.readiness import score_readiness
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from . import membership
-from .calendar import calendar_state
+from .calendar import calendar_state, calendar_days
 from .questionnaire import skeleton, validate_questionnaire
 from .stats.engine import analyze, library
 from .stats.performance import performance
@@ -346,6 +346,31 @@ def create_app(db_path=None, plan_path=None):
         if not store.revoke_session(account['id'], session_id):
             raise HTTPException(404, 'Session not found')
         return {'ok': True}
+
+    @app.get('/api/calendar')
+    def calendar(range_from: str | None = Query(None, alias='from'), range_to: str | None = Query(None, alias='to')):
+        """Read-only session projection across every cycle in a half-open date range.
+
+        `from` is inclusive and `to` exclusive, so a month view and a week view never
+        repeat a day. Only the calendar projection changes here: the plan is untouched.
+        """
+        today = calendar_state(active_plan(), store.logs(active_plan()['meta']['planId']))['date']
+        if not range_from or not range_to:
+            raise HTTPException(422, 'from and to are required, as YYYY-MM-DD, to exclusive')
+        try:
+            Date.fromisoformat(range_from)
+            Date.fromisoformat(range_to)
+        except ValueError:
+            raise HTTPException(422, 'from and to must be YYYY-MM-DD dates')
+        records = store.cycles()
+        plans, logs = [], {}
+        for cycle in records['cycles']:
+            try:
+                plans.append(active_plan(cycle['id']))
+            except HTTPException:
+                continue
+            logs[cycle['id']] = store.logs(cycle['id'])
+        return calendar_days(plans, logs, range_from, range_to, today)
 
     @app.get('/api/cycle')
     def cycles():

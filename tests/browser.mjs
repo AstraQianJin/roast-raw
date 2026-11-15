@@ -11,13 +11,16 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { mkdir } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { openBrowser } from './cdp.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const python = process.env.RR_PYTHON || join(root, 'server/.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
 // Screenshots left the repository in 0.35: they land in the agent folder, and SHOTS_DIR
-// decides where. Default is the sibling RR/shots/<release>.
-const SHOTS_DIR = process.env.SHOTS_DIR || join(root, '..', 'RR', 'shots', '0.37');
+// decides where. Default follows package.json's release, so a version bump cannot silently
+// write into the previous release folder.
+const release = JSON.parse(readFileSync(join(root, 'web', 'package.json'), 'utf8')).version.replace(/^0\.0\./, '0.');
+const SHOTS_DIR = process.env.SHOTS_DIR || join(root, '..', 'RR', 'shots', release);
 
 const SABOTAGE = process.argv.includes('--sabotage');
 const PASSWORD = 'browser-gate-035';
@@ -210,6 +213,72 @@ try {
     return { x: box.left + window.scrollX, y: box.top + window.scrollY, width: box.width, height: Math.min(box.height, 900), scale: 1 };
   })()`));
   ok('account membership panel: tier, devices and code refusal', { ...panel, codeAnswer });
+
+  // ---- 3b. the calendar projection: week, month, agenda -------------------
+  await browser.navigate(`${base}/calendar`);
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=calendar]"))', 20000);
+  await delay(600);
+  const weekView = await browser.evaluate(`(() => {
+    const host = document.querySelector('[data-testid=calendar]');
+    const cols = host.querySelectorAll('.cal-col');
+    const cards = [...host.querySelectorAll('.cal-card')];
+    return {
+      cols: cols.length,
+      cards: cards.length,
+      statuses: cards.map(card => card.querySelector('.cal-status').innerText.trim()),
+      statusData: cards.map(card => card.dataset.status),
+      range: host.querySelector('[data-testid=cal-range]').innerText.trim(),
+      detail: Boolean(host.querySelector('[data-testid=cal-detail]')),
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      minControl: Math.min(...[...host.querySelectorAll('[data-testid^=cal-view-], [data-testid=cal-today], .cal-nav button')].map(n => n.getBoundingClientRect().height)),
+    };
+  })()`);
+  assert.equal(weekView.cols, 7, 'the week view arranges seven days');
+  assert.ok(weekView.cards >= 1, 'the week view shows the sessions in that week');
+  assert.ok(weekView.statuses.every(text => /Planned|Completed|Skipped|Missed/i.test(text)), 'status is written out, never colour alone');
+  assert.ok(weekView.detail, 'a selected day owns a read-only detail block');
+  assert.ok(weekView.minControl >= 44, `calendar controls reach 44 px (${weekView.minControl})`);
+  assert.equal(weekView.overflow, 0, 'the calendar does not scroll sideways at 421');
+  await shot('calendar-week');
+
+  await browser.evaluate(`document.querySelector('[data-testid=cal-view-month]').click(); true`);
+  await delay(500);
+  const monthView = await browser.evaluate(`(() => {
+    const host = document.querySelector('[data-testid=calendar]');
+    const cells = [...host.querySelectorAll('.cal-cell')];
+    return {
+      cells: cells.length,
+      numbered: cells.every(cell => /^\\d{2}$/.test(cell.querySelector('.cal-cell-n').innerText.trim())),
+      marked: cells.filter(cell => cell.querySelectorAll('.cal-cell-bar').length).length,
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    };
+  })()`);
+  assert.equal(monthView.cells, 42, 'the month view draws a six-row grid');
+  assert.ok(monthView.numbered, 'every cell carries its date number');
+  assert.ok(monthView.marked >= 1, 'planned sessions appear as markers in the month grid');
+  assert.equal(monthView.overflow, 0, 'the month grid fits 421 without sideways scroll');
+  await shot('calendar-month');
+
+  await browser.evaluate(`document.querySelector('[data-testid=cal-view-agenda]').click(); true`);
+  await delay(500);
+  const agenda = await browser.evaluate(`(() => {
+    const host = document.querySelector('[data-testid=calendar]');
+    const rows = [...host.querySelectorAll('.cal-agenda li')].filter(row => row.querySelector('time'));
+    return {
+      rows: rows.length,
+      first: rows[0]?.querySelector('time')?.innerText.trim() || '',
+      statuses: rows.map(row => row.querySelector('.cal-status').innerText.trim()),
+      links: rows.filter(row => row.querySelector('.cal-open')?.innerText.match(/Open|Archive/)).length,
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    };
+  })()`);
+  assert.ok(agenda.rows >= 1, 'the agenda lists sessions in date order');
+  assert.match(agenda.first, /^\d{4}-\d{2}-\d{2}$/, 'agenda rows are date-first');
+  assert.ok(agenda.statuses.every(text => /Planned|Completed|Skipped|Missed/i.test(text)), 'agenda rows carry the same statuses');
+  assert.ok(agenda.links >= 1, 'each agenda row offers a read-only way into the session');
+  assert.equal(agenda.overflow, 0, 'the agenda does not scroll sideways');
+  await shot('calendar-agenda');
+  ok('calendar: week / month / agenda read one projection', { week: weekView.range, agendaRows: agenda.rows });
 
   // ---- 4. a real session day ---------------------------------------------
   await browser.navigate(`${base}/cycle/week/1/day/A`);

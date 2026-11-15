@@ -7,6 +7,7 @@ const paths = [
   '/', '/welcome', '/login', '/register', '/today',
   '/about',
   '/cycle', '/cycle/block/:blockId', '/cycle/week/:week', '/cycle/week/:week/day/:day', '/cycle/test',
+  '/calendar',
   '/analysis', '/archive', '/archive/:cycleId', '/questionnaire',
   '/:pathMatch(.*)*',
 ];

@@ -87,12 +87,15 @@ const mix = computed(() => [
 ]);
 const mixTotal = computed(() => mix.value.reduce((sum, item) => sum + item.v, 0) || 1);
 const weekNow = computed(() => props.analysis.perWeek.find(week => week.n === props.currentWeek) || props.analysis.perWeek[0]);
-const muscleLeaves = computed(() => props.analysis.leafOrder.map(id => {
+const muscleLeaves = computed(() => {
+  // Geometry can lag one refresh behind a tier change; never let a blank object reach a tab.
+  if (!props.geometry?.leaves) return [];
+  return props.analysis.leafOrder.map(id => {
   const values = weekNow.value?.leaves?.[id] || {};
   const range = props.analysis.ranges.leaf[id];
   return {
     id,
-    name: props.geometry.leaves[id].en,
+    name: props.geometry.leaves[id]?.en || id,
     weighted: values.w || 0,
     raw: values.raw || 0,
     heat: values.heat || { Both: { band: 0 } },
@@ -104,11 +107,14 @@ const muscleLeaves = computed(() => props.analysis.leafOrder.map(id => {
     scope: range?.scope || 'leaf',
     verdict: '',
   };
-}));
+  });
+});
 function blockTone(id) {
   const type = (props.plan.blocks.find(block => block.id === id)?.cycleType || '').toLowerCase();
   return { hyper: 'var(--ct-hyper)', strength: 'var(--ct-strength)', transmute: 'var(--ct-transmute)', peak: 'var(--ct-peak)' }[type] || 'var(--ct-custom)';
 }
+// The completion policy owns the as-of date; the register never invents its own denominator.
+const asOf = computed(() => props.analysis?.completion?.asOf || '9999-12-31');
 const exerciseGroups = computed(() => {
   const map = new Map();
   for (const row of props.plan.workouts || []) {
@@ -119,7 +125,8 @@ const exerciseGroups = computed(() => {
       item = {
         key, name: row.nameEn || row.movement || key, lift: row.lift || '',
         bucket: row.bucket || (row.role === 'variation' ? 'sbdVar' : row.role),
-        sets: 0, planned: 0, actual: 0, tonnage: 0, sessions: new Set(), weeks: new Set(), topLoad: 0, topPct: 0, e1rm: 0,
+        sets: 0, planned: 0, actual: 0, elapsedPlanned: 0, elapsedCredited: 0,
+        tonnage: 0, sessions: new Set(), weeks: new Set(), topLoad: 0, topPct: 0, e1rm: 0,
       };
       map.set(key, item);
     }
@@ -132,6 +139,13 @@ const exerciseGroups = computed(() => {
       const reps = Number(log.reps) || 0;
       if (load > 0 && reps > 0) item.e1rm = Math.max(item.e1rm, load * (1 + reps / 30));
     }
+    // R5: only elapsed planned sets enter the denominator, and credit is min(actual, planned).
+    if (String(row.date || '9999-12-31') <= asOf.value) {
+      const plannedHere = Number(row.sets) || 0;
+      const actualHere = Number(log?.sets) > 0 ? Number(log.sets) : 0;
+      item.elapsedPlanned += plannedHere;
+      item.elapsedCredited += Math.min(actualHere, plannedHere);
+    }
     item.tonnage += Number(row.tonnageKg) || 0;
     item.sessions.add(`${row.week}|${row.day}`);
     item.weeks.add(row.week);
@@ -142,7 +156,7 @@ const exerciseGroups = computed(() => {
     ...item,
     weekCount: item.weeks.size,
     sessionCount: item.sessions.size,
-    completion: item.planned ? item.actual / item.planned * 100 : 0,
+    completion: item.elapsedPlanned ? Math.min(100, item.elapsedCredited / item.elapsedPlanned * 100) : 0,
     topPct: item.topPct * 100,
     e1rm: item.e1rm || 0,
   }));
@@ -267,7 +281,7 @@ const blocks = computed(() => props.plan.blocks.map(block => {
           <div class="ex-list">
             <div v-for="item in group.rows" :key="item.key" class="ex-row" :class="item.lift ? `ex-lift-${item.lift}` : ''">
               <span class="ex-code">{{ item.lift || '·' }}</span>
-              <div class="ex-name"><strong>{{ item.name }}</strong><small>{{ item.weekCount }}w · {{ item.sessionCount }}s · {{ display(item.completion) }}% done<template v-if="item.e1rm"> · e1RM {{ display(item.e1rm) }}</template></small></div>
+              <div class="ex-name"><strong>{{ item.name }}</strong><small>{{ item.weekCount }}w · {{ item.sessionCount }}s · {{ display(item.completion) }}% done · elapsed<template v-if="item.e1rm"> · e1RM {{ display(item.e1rm) }}</template></small></div>
               <div class="ex-cell"><b>{{ display(item.sets) }}</b><small>SETS</small></div>
               <div class="ex-cell"><b>{{ display(item.topLoad) }}</b><small>KG TOP</small></div>
               <div class="ex-cell ex-pct"><b>{{ item.topPct ? display(item.topPct) : "—" }}</b><small>%1RM</small></div>
@@ -280,7 +294,8 @@ const blocks = computed(() => props.plan.blocks.map(block => {
     <template v-else-if="tab === 'muscle'">
       <div class="analysis-filter"><span class="eyebrow">MUSCLE VOLUME</span><div class="map-filters"><button :aria-pressed="mode === 'plan'" @click="emit('mode', 'plan')">Planned</button><button :aria-pressed="mode === 'log'" @click="emit('mode', 'log')">Logged + planned</button></div></div>
       <div class="workspace analysis-workspace">
-        <MuscleMap :geometry="geometry" :leaves="muscleLeaves" :heat-scale="analysis.heatScale" :week-number="currentWeek" :week-count="plan.weeks.length" @week="emit('week', $event)" />
+        <MuscleMap v-if="geometry" :geometry="geometry" :leaves="muscleLeaves" :heat-scale="analysis.heatScale" :week-number="currentWeek" :week-count="plan.weeks.length" @week="emit('week', $event)" />
+        <div v-else class="empty-state" data-testid="muscle-geometry-pending"><h2>Muscle map unavailable.</h2><p>The anatomy geometry has not loaded for this session yet. Reload once; your plan and logs are untouched.</p></div>
         <aside><WeekCapacity :week="weekNow" :ranges="analysis.ranges" /><CapacityBoard :analysis="analysis" :week="weekNow" /></aside>
       </div>
     </template>

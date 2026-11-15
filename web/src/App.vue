@@ -26,6 +26,7 @@ import AboutView from './components/AboutView.vue';
 import LoginView from './components/LoginView.vue';
 import RegisterView from './components/RegisterView.vue';
 import CycleStrip from './components/CycleStrip.vue';
+import CalendarView from './components/CalendarView.vue';
 import ShareButton from './components/ShareButton.vue';
 import BeanMark from './components/BeanMark.vue';
 import CyclePrestart from './components/CyclePrestart.vue';
@@ -78,6 +79,7 @@ const page = computed(() => {
   if (route.path === '/login') return 'login';
   if (route.path === '/register') return 'register';
   if (route.path.startsWith('/cycle')) return 'cycle';
+  if (route.path === '/calendar') return 'calendar';
   if (route.path === '/archive' || route.path.startsWith('/archive/')) return 'archive';
   if (route.path === '/today') return 'today';
   return route.path.slice(1);
@@ -93,7 +95,8 @@ const week = computed(() => analysis.value?.perWeek.find(week => week.n === curr
 const weekMeta = computed(() => plan.value?.weeks.find(week => week.n === currentWeek.value));
 const validRoute = computed(() => {
   if (['welcome', 'login', 'register'].includes(page.value)) return true;
-  if (!['today', 'cycle', 'analysis', 'archive', 'questionnaire'].includes(page.value)) return false;
+  if (!['today', 'cycle', 'analysis', 'archive', 'questionnaire', 'calendar'].includes(page.value)) return false;
+  if (page.value === 'calendar') return true;
   if (!week.value) return false;
   return !route.params.day || plan.value.workouts.some(row => row.week === currentWeek.value && row.day === route.params.day);
 });
@@ -177,8 +180,13 @@ const conditioningBars = computed(() => plan.value ? plan.value.weeks.map(item =
 })) : []);
 function dateLabel(value) { return new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit', timeZone: 'Asia/Shanghai' }).format(new Date(`${value}T00:00:00+08:00`)).toUpperCase(); }
 const ACRONYMS = new Set(['SBD', 'AMRAP', 'RPE', 'GPP', 'SSB', 'RDL', 'EMOM', 'TOP', 'SET', 'W13', '5KM']);
-function titleCase(text) {
-  return String(text || '').split(' ').map(word => {
+// The test-week note lives on the day's test title only: twelve other weeks are not tests.
+function dayTitle(id) {
+  const meta = plan.value?.days?.find(item => item.id === id);
+  if (!meta) return '';
+  return weekMeta.value?.kind === 'test' && meta.testTitleEn ? meta.testTitleEn : meta.titleEn;
+}
+function titleCase(text) {  return String(text || '').split(' ').map(word => {
     const clean = word.replace(/[^A-Za-z0-9]/g, '');
     if (clean && ACRONYMS.has(clean.toUpperCase())) return word;
     return word ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() : word;
@@ -205,8 +213,10 @@ async function soft(path) {
   if (!response.ok) throw new Error(`Server request failed (${response.status}). Your saved data has not been changed.`);
   return response.json();
 }
-async function refresh() {
-  loading.value = true;
+async function refresh(silent = false) {
+  // A silent re-read keeps the current screen mounted; the redeem panel would lose its
+  // confirmation if the global loading state swapped the page out underneath it.
+  if (!silent) loading.value = true;
   error.value = '';
   try {
     cycles.value = await get('/api/cycle');
@@ -222,7 +232,7 @@ async function refresh() {
     try { bodyMetrics.value = await get(`/api/body-metrics?${new URLSearchParams({ cycle_id: plan.value.meta.planId })}`); }
     catch { bodyMetrics.value = null; }
   } catch (failure) { error.value = failure.message || 'The server is unavailable. Reconnect and try again.'; }
-  finally { loading.value = false; loaded.value = true; }
+  finally { if (!silent) loading.value = false; loaded.value = true; }
 }
 const activated = ref(false);
 let tierTimer = null;
@@ -246,7 +256,13 @@ function scheduleTierRefresh() {
 }
 async function refreshSessionOnce() {
   if (sessionFetching) return;
-  try { await loadSession(); } finally { /* capability list is already rewritten by loadSession */ }
+  // A tier change unlocks derived views (muscle map, register, gates). Refreshing only the
+  // session leaves them stale and lets a null geometry reach a tab, so the whole projection
+  // is re-read in one pass.
+  try {
+    await loadSession();
+    if (!isPublic.value && loaded.value && !error.value) await refresh(true);
+  } finally { /* capability list is already rewritten by loadSession */ }
 }
 function onVisibilityChange() {
   if (document.visibilityState !== 'visible') return;
@@ -339,12 +355,13 @@ watch([() => route.fullPath, loading], async () => {
       <LoginView v-else-if="page === 'login'" :next="typeof route.query.next === 'string' ? route.query.next : ''" @authed="onAuthed" />
       <RegisterView v-else-if="page === 'register'" @authed="onAuthed" />
       <div v-else-if="loading" class="empty-state" role="status"><h1>Reading the plan.</h1><p>Loading your training data from the server.</p></div>
-      <div v-else-if="error" class="error-panel" role="alert"><h2>Connection interrupted.</h2><p>{{ error }}</p><p>No offline copy is used for statistics.</p><button @click="refresh">Retry connection</button></div>
+      <div v-else-if="error" class="error-panel" role="alert"><h2>Connection interrupted.</h2><p>{{ error }}</p><p>No offline copy is used for statistics.</p><button @click="refresh()">Retry connection</button></div>
       <div v-else-if="emptyLedger" class="empty-state" :data-testid="activated ? 'ledger-activated' : 'empty-ledger'"><h1>{{ activated ? 'Cycle activated.' : 'No cycle yet.' }}</h1><p>{{ activated ? 'This account now holds its first cycle. Open it to start logging; other accounts are untouched.' : 'Your journal is empty. Import a plan to start your first cycle; nothing is shared with other accounts.' }}</p><PlanImport @activated="onActivated" /></div>
       <div v-else-if="!plan" class="empty-state" role="status"><h1>Reading the plan.</h1><p>Loading your training data from the server.</p></div>
       <div v-else-if="!validRoute" class="empty-state"><h1>Not in this plan.</h1><p>This page, block, week or day does not exist.</p><RouterLink to="/cycle" class="inline-link">Return to the cycle</RouterLink></div>
       <template v-else>
-        <div v-if="page === 'today'" class="workspace" data-testid="today">
+        <CalendarView v-if="page === 'calendar'" />
+        <div v-else-if="page === 'today'" class="workspace" data-testid="today">
           <div>
             <div class="eyebrow">TODAY · {{ dateLabel(calendar.date) }} · BEIJING TIME</div>
             <h1>{{ calendar.status === 'training' ? todayLifts.map(lift => lift.label.charAt(0) + lift.label.slice(1).toLowerCase()).join(' · ') || 'Training day.' : calendar.status === 'ended' ? 'Cycle complete.' : 'Rest & recover.' }}</h1>
@@ -376,6 +393,7 @@ watch([() => route.fullPath, loading], async () => {
           <template v-if="planView === 'cycle'">
             <div class="eyebrow">RR / 01 · CYCLE — {{ plan.meta.weeks }} WEEKS · {{ plan.meta.sessions }} SESSIONS</div><h1 class="plan-title">The cycle.</h1><p class="hero-subtitle">{{ dateLabel(plan.meta.startDate) }} — {{ dateLabel(plan.meta.endDate) }}</p>
             <BlockWeekNav :blocks="plan.blocks" :weeks="plan.weeks" :current-week="Number(calendar?.week || 1)" />
+            <RouterLink to="/calendar" class="inline-link" data-testid="open-calendar">Open the calendar →</RouterLink>
             <div class="plan-metrics"><div class="metric"><span class="section-label">START</span><strong>{{ dateLabel(plan.meta.startDate) }}</strong><small>{{ plan.meta.startDate.slice(0, 4) }} · {{ plan.meta.weeks }} WEEKS</small></div><div class="metric"><span class="section-label">TEST DAY</span><strong>{{ plan.testPlan?.dates?.sbd ? dateLabel(plan.testPlan.dates.sbd) : 'Not set' }}</strong><small>{{ plan.testPlan?.dates?.sbd ? `W${String(plan.weeks.find(w => w.kind === 'test')?.n || 0).padStart(2, '0')} · SBD` : 'Add a date in outlook' }}</small></div><div class="metric"><span class="section-label">CYCLE TONNAGE</span><strong>{{ display(analysis.cycle.tonnageKg / 1000) }} t</strong><small>{{ analysis.cycle.auxSets }} AUX SETS</small></div></div>
             <LoadProfile :weeks="plan.weeks" :blocks="plan.blocks" :per-week="analysis.perWeek" :test-date="plan.testPlan?.dates?.sbd" />
             <div class="section-head"><div class="eyebrow">BLOCKS IN THIS CYCLE</div><p class="annotation">Each block is a phase with its own ceiling. Open a block to see the weeks inside it, then a week, then a day.</p></div>
@@ -423,7 +441,7 @@ watch([() => route.fullPath, loading], async () => {
                   <span class="day-tile"><b>{{ day.label }}</b><small>{{ day.weekday }}</small></span>
                   <span class="day-letter">{{ day.id }}</span>
                   <span class="day-main">
-                    <span class="day-kicker">SESSION {{ day.id }} · {{ titleCase(plan.days.find(item => item.id === day.id)?.titleEn || '') }}</span>
+                    <span class="day-kicker">SESSION {{ day.id }} · {{ titleCase(dayTitle(day.id)) }}</span>
                     <span v-if="topLifts(day.rows).length" class="top-load"><small>TOP</small><b v-for="lift in topLifts(day.rows)" :key="lift.code">{{ lift.code }} {{ display(lift.load) }}</b></span>
                     <span v-else class="day-kicker">ACCESSORY / CONDITIONING</span>
                   </span>
@@ -463,7 +481,7 @@ watch([() => route.fullPath, loading], async () => {
             <MembershipPanel :session="session" @changed="refreshSessionOnce" />
             <details class="account-tools"><summary>Import a cycle</summary><PlanImport /></details>
             <details class="account-tools"><summary>Gear setup</summary><div class="gear-setup" data-testid="gear-settings"><label class="gear-toggle"><input type="checkbox" :checked="useCollars" data-testid="collar-toggle" @change="setUseCollars($event.target.checked)"><span><strong>Competition collars</strong><small>Off by default. On: every plate breakdown counts the 5 kg collar pair. Off: the bar is the only fixed weight on the bar. This is a device-level venue fact, kept on this device and never exported with a plan.</small></span></label></div></details>
-            <details class="account-tools"><summary>Prescription settings</summary><PrescriptionSettings :cycle-id="plan.meta.planId" @changed="refresh" /></details>
+            <details class="account-tools"><summary>Prescription settings</summary><PrescriptionSettings :cycle-id="plan.meta.planId" @changed="refresh()" /></details>
             <div class="account-actions"><a class="quiet-button" :href="`/api/export/logs.csv?cycle_id=${encodeURIComponent(plan.meta.planId)}`" download>Export my log (.csv)</a><a class="quiet-button" :href="`/api/export/tests.csv?cycle_id=${encodeURIComponent(plan.meta.planId)}`" download>Export test results (.csv)</a><button type="button" class="quiet-button" @click="logout">Sign out on this device</button></div>
             <p class="annotation">The CSV carries the rows you recorded for this cycle, with the prescribed load beside the actual one. Prescribed and actual sets stay separate, and exporting does not end a cycle.</p>
           </section>

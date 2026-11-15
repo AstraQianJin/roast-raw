@@ -134,6 +134,7 @@
       "required": ["id", "label", "titleEn", "weekdayOffset", "focusTags"],
       "properties": {
         "id": {"$ref": "#/$defs/text"}, "label": {"$ref": "#/$defs/text"}, "titleEn": {"$ref": "#/$defs/text"},
+        "testTitleEn": {"$ref": "#/$defs/text"},
         "weekdayOffset": {"type": "integer", "minimum": 0, "maximum": 6},
         "focusTags": {"type": "array", "items": {"type": "string"}}
       }

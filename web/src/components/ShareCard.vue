@@ -71,7 +71,9 @@ onMounted(() => {
   loadTests();
   if (document.fonts?.ready) document.fonts.ready.then(draw);
 });
-watch([data, () => props.theme], draw, { deep: true });
+// Collars are a device fact outside this dialog; watching it keeps the canvas honest if
+// the switch is ever reachable while a card is open.
+watch([data, () => props.theme, collarPair], draw, { deep: true });
 </script>
 
 <template>

@@ -1,7 +1,14 @@
 const assert = require('node:assert/strict');
 const { spawnSync } = require('node:child_process');
-const { readFileSync, existsSync } = require('node:fs');
+const { readFileSync: rawReadFileSync, existsSync } = require('node:fs');
 const { rmSync } = require('node:fs');
+// Checks read the same sources repeatedly; the gate holds one copy per file for its run.
+const fileCache = new Map();
+function readFileSync(path, encoding) {
+  if (encoding !== 'utf8') return rawReadFileSync(path, encoding);
+  if (!fileCache.has(path)) fileCache.set(path, rawReadFileSync(path, 'utf8'));
+  return fileCache.get(path);
+}
 const { tmpdir } = require('node:os');
 const { resolve, join } = require('node:path');
 
@@ -129,6 +136,30 @@ async function plateCheck() {
   same(sideKg(solveLoad(20, 20, 0).sideA), [], 'bar alone carries no plates');
   same(sideKg(solveLoad(20, 20, 5).sideA), [], 'bar plus collars is already over the load');
   console.log('PASS plates: symmetric, collar-on, single-side and shortfall arithmetic agree');
+}
+
+async function plateParityCheck() {
+  // The UI cabinet and the share canvas each solve plates. They must agree on every
+  // symmetric, fully buildable load; the UI is allowed to split an odd half, the canvas
+  // is not, so asymmetric or short loads are out of scope by definition.
+  const { solveLoad } = await import('../web/src/plate-load.js');
+  const { solvePlates } = await import('../web/src/share.js');
+  const mismatches = [];
+  let compared = 0;
+  for (let total = 20; total <= 320; total += 0.5) {
+    for (const collar of [0, 5]) {
+      const ui = solveLoad(total, 20, collar);
+      if (ui.asymmetric || ui.shortKg > 0) continue;
+      const side = ui.sideA.plates.map(plate => plate.kg);
+      const share = solvePlates(total, 20, collar).map(plate => plate.kg);
+      compared++;
+      if (JSON.stringify(side) !== JSON.stringify(share)) mismatches.push({ total, collar, side, share });
+    }
+  }
+  assert.equal(mismatches.length, 0, `plate solutions drifted between the UI and the share card: ${JSON.stringify(mismatches.slice(0, 3))}`);
+  assert.ok(compared > 500, `the parity sweep must cover the working range, compared ${compared}`);
+  checks += 2;
+  console.log(`PASS plate parity: ${compared} symmetric loads agree between the cabinet and the share canvas`);
 }
 
 async function shareCheck() {
@@ -338,6 +369,77 @@ function planCalendarCheck() {
   checks++;
   console.log(`PASS plan calendar: start ${start}, end ${meta.endDate}, ${plan.workouts.length} dated rows, test ${testDate} in W${testWeek.n}`);
 }
+function auditFixesCheck() {
+  // Defects from the 0.38 independent review, each pinned to the code that closes it.
+  const app = readFileSync(join(root, 'web', 'src', 'App.vue'), 'utf8');
+  const analysis = readFileSync(join(root, 'web', 'src', 'components', 'AnalysisView.vue'), 'utf8');
+  const matrix = readFileSync(join(root, 'web', 'src', 'components', 'MembershipMatrix.vue'), 'utf8');
+  const strip = readFileSync(join(root, 'web', 'src', 'components', 'BarbellStrip.vue'), 'utf8');
+  const card = readFileSync(join(root, 'web', 'src', 'components', 'ShareCard.vue'), 'utf8');
+  const browser = readFileSync(join(root, 'tests', 'browser.mjs'), 'utf8');
+  const title = readFileSync(join(root, 'server', 'tools', 'gen_data.py'), 'utf8');
+  const landing = readFileSync(join(root, 'web', 'src', 'components', 'WelcomeView.vue'), 'utf8');
+  // D-01: a tier change re-reads the derived projection, not only the session.
+  assert.ok(/async function refreshSessionOnce[\s\S]*await loadSession\(\)[\s\S]*await refresh\(\)/.test(app), 'D-01: redeem refreshes plan/analysis/geometry after the session');
+  checks++;
+  assert.ok(analysis.includes("if (!props.geometry?.leaves) return [];") && analysis.includes('muscle-geometry-pending'), 'D-01: a missing geometry degrades to a placeholder instead of throwing');
+  checks++;
+  // D-02: the register shares the R5 as-of denominator and min(actual, planned) credit.
+  assert.ok(analysis.includes("props.analysis?.completion?.asOf") && analysis.includes('Math.min(actualHere, plannedHere)'), 'D-02: register completion uses the R5 elapsed policy');
+  checks++;
+  assert.ok(!analysis.includes('item.actual / item.planned * 100'), 'D-02: the whole-cycle ratio is gone from the register');
+  checks++;
+  // D-04: toggle buttons expose their state.
+  assert.ok(matrix.includes('aria-expanded="false" aria-controls="mm-extra-rows"'), 'D-04: collapsed toggle announces aria-expanded');
+  checks++;
+  // D-05: an omitted prop must not silently count collars.
+  assert.ok(/collarPair: { type: Number, default: 0 }/.test(strip), 'D-05: BarbellStrip defaults collars off');
+  checks++;
+  // D-06: the canvas redraws when collars change.
+  assert.ok(card.includes('watch([data, () => props.theme, collarPair], draw'), 'D-06: share card watches the collar pair');
+  checks++;
+  // D-07: the screenshot folder follows the release instead of a hard-coded number.
+  assert.ok(browser.includes("JSON.parse(readFileSync(join(root, 'web', 'package.json'), 'utf8')).version"), 'D-07: SHOTS_DIR derives from package.json');
+  assert.ok(!browser.includes("shots', '0.38'"), 'D-07: no hard-coded release folder');
+  checks += 2;
+  // U-01: the test note is split so only the test week shows it.
+  const plan = json('data/plan.json');
+  assert.ok(plan.days.every(day => !/\(W\d+\s+TEST\)/.test(day.titleEn)), 'U-01: day titles no longer carry a test note');
+  assert.ok(plan.days.some(day => /\(W\d+\s+TEST\)/.test(day.testTitleEn || '')), 'U-01: the test note survives on testTitleEn');
+  assert.ok(app.includes('weekMeta.value?.kind === \'test\' && meta.testTitleEn'), 'U-01: the UI shows the note only in the test week');
+  checks += 3;
+  // D-03: landing links reach a 44 px hit area.
+  assert.ok(landing.includes('.wl-top-nav a { display: inline-flex; align-items: center; min-height: 44px;') && landing.includes('.wl-foot-links a { display: inline-flex; align-items: center; min-height: 44px;'), 'D-03: landing nav and footer links reach 44 px');
+  checks++;
+  assert.ok(readFileSync(join(root, 'web', 'src', 'components', 'MembershipMatrix.vue'), 'utf8').includes('min-height: 44px; color: var(--bg)'), 'D-03: the invite link reaches 44 px');
+  checks++;
+  console.log('PASS audit fixes: D-01..D-07, U-01 and D-03 pinned to their code');
+}
+function calendarViewCheck() {
+  // The calendar is a projection, not a second copy of the plan.
+  const view = readFileSync(join(root, 'web', 'src', 'components', 'CalendarView.vue'), 'utf8');
+  const router = readFileSync(join(root, 'web', 'src', 'main.js'), 'utf8');
+  const app = readFileSync(join(root, 'web', 'src', 'App.vue'), 'utf8');
+  const server = readFileSync(join(root, 'server', 'app', 'calendar.py'), 'utf8');
+  const api = readFileSync(join(root, 'server', 'app', 'main.py'), 'utf8');
+  assert.ok(router.includes("'/calendar'") && app.includes("<CalendarView v-if=\"page === 'calendar'\" />"), '/calendar is a registered route with a rendered page');
+  checks++;
+  assert.ok(['week', 'month', 'agenda'].every(id => view.includes(`id: '${id}'`) || view.includes(`'cal-view-${id}'`)), 'the three views exist');
+  checks++;
+  assert.ok(view.includes('/api/calendar') && view.includes('URLSearchParams(range.value)'), 'the page reads the range projection instead of copying plan rows');
+  checks++;
+  assert.ok(!/\bPOST|\bPUT|\bPATCH|\bDELETE\b/.test(view) && !view.includes('method:'), 'the calendar never writes: read-only by construction');
+  checks++;
+  assert.ok(server.includes('def calendar_days(') && server.includes('date_from <= date < date_to'), 'the projection is half-open on the server');
+  checks++;
+  assert.ok(api.includes("alias='from'") && api.includes("alias='to'"), 'the API takes from/to as an explicit half-open range');
+  checks++;
+  assert.ok(server.includes("'skipped'") && server.includes("'missed' if date < today else 'planned'"), 'statuses keep explicit-zero skips apart from missed days');
+  checks++;
+  assert.ok(server.includes("'cycles':") && view.includes('inSpan(date) ? \'Rest\' : \'\''), 'an empty day inside a cycle reads REST; a date no cycle spans stays blank');
+  checks++;
+  console.log('PASS calendar projection: /calendar with week/month/agenda, half-open range, read-only');
+}
 function governanceCheck() {
   // The exits and the refresh policy are promised on the /about page, so they are asserted here.
   const app = readFileSync(join(root, 'web', 'src', 'App.vue'), 'utf8');
@@ -380,6 +482,7 @@ try {
     libraryCheck();
     syntheticCheck();
     await plateCheck();
+    await plateParityCheck();
     await shareCheck();
     landingFactsCheck();
     planCalendarCheck();
@@ -387,6 +490,8 @@ try {
     completionCheck();
     membershipMatrixCheck();
     membershipPanelCheck();
+    calendarViewCheck();
+    auditFixesCheck();
     governanceCheck();
     const drift = spawnSync(python, ['server/tools/export_membership.py', '--check'], { cwd: root, encoding: 'utf8', env: { ...process.env, PYTHONIOENCODING: 'utf-8' } });
     assert.equal(drift.status, 0, `web/src/membership.json drifted from server/app/membership.py: ${drift.stdout}${drift.stderr}`);

@@ -372,10 +372,23 @@ def adapt(envelope, lib, mm, errors=None, source_sha256=None, file="plan.json"):
                "rpeStep": num(b.get("rpe_step")), "deloadRpe": num(b.get("deload_rpe"))}
               for b in plan["Blocks"]]
     total_weeks = sum(b["workWeeks"] + b["deloadWeeks"] for b in blocks)
-    days = {d["day_id"]: {"id": d["day_id"], "label": d["label"], "titleEn": d["title_en"],
-                          "weekdayOffset": int(d["weekday_offset"]),
-                          "focusTags": [t.strip() for t in d.get("focus_tags", "").split(",") if t.strip()]}
-            for d in plan["Days"]}
+    # The source day titles carry a "(W13 TEST)" note that is only true in the test week.
+    # Keep the note on `testTitleEn` so the UI can show it there and stay honest elsewhere.
+    test_note = re.compile(r'\s*\(W\d+\s+TEST\)\s*$', re.IGNORECASE)
+
+    def day_title(text):
+        base = test_note.sub('', text).strip()
+        return base, (text if base != text else '')
+
+    days = {}
+    for d in plan["Days"]:
+        base, test = day_title(d["title_en"])
+        entry = {"id": d["day_id"], "label": d["label"], "titleEn": base,
+                 "weekdayOffset": int(d["weekday_offset"]),
+                 "focusTags": [t.strip() for t in d.get("focus_tags", "").split(",") if t.strip()]}
+        if test:
+            entry["testTitleEn"] = test
+        days[d["day_id"]] = entry
     anchors = {a["id"]: {"value": num(a["value"]), "source": a.get("source", ""),
                          "unit": a.get("unit", ""), "kind": a.get("kind", ""), "movement": a.get("movement", "")}
                for a in plan.get("Anchors", {}).get("entries", [])}

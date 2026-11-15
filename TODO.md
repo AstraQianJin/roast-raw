@@ -10,7 +10,7 @@
 
 | 项 | 值 |
 |---|---|
-| 版本 | `web/package.json` = **0.0.37**；0.29–0.37 均已本地提交，未 push、未部署 |
+| 版本 | `web/package.json` = **0.0.38**；0.29–0.38 本地提交，未 push、未部署（0.39 日历、0.40 上线按用户指令紧随） |
 | 工作树 | 以本节所在提交为准 |
 | 最近提交 | 见 `git log --oneline -3` |
 | 门禁 | `node tests/verify.js` exit 0（334 Python 用例 / 6637 检查）；`npm --prefix web run build` exit 0；`node tests/browser.mjs` exit 0（15 项断言、8 张截图），`--sabotage` exit 1；`check_skill.py --root .` PASS |
@@ -34,9 +34,11 @@
 
 ---
 
-## 1 · 下一动作：0.38 独立审查（用户另开会话）
+## 1 · 下一动作：0.38 审查收口 → 0.39 日历 → 0.40 上线（用户指令，连续执行）
 
-**接手指令**：0.38 = 一个**未写过本轮代码**的会话审查 0.29–0.37，逐条实测 §4 `P1` 与 §12 推断项，清单逐条关闭后交用户。0.39 发布（push + 部署）**只在用户另行下令后**执行。
+**接手指令**：0.38 = 一个**未写过本轮代码**的会话审查 0.29–0.37，逐条实测 §4 `P1` 清单与 `docs/项目交接.md` §12 推断项，清单逐条关闭后交用户。0.39 发布（push + 部署）**只在用户另行下令后**执行。
+
+**0.38 审查基线**：审查报告 `RR\review-0.38.md`（0 FAIL / 5 部分 / 10 PASS，缺陷 D-01～D-09、U-01/U-02）。本轮按报告关闭：D-01 兑换后重取 plan/analysis/geometry 且缺 geometry 时降级占位；D-02 动作 register 改用 R5 已到期口径（`asOf` + `min(actual, planned)`）；D-03 落地页 nav/footer/邀请链接全部 44px 命中区；D-04 `aria-expanded` + `aria-controls`；D-05 `BarbellStrip` 赛扣默认 0；D-06 分享卡 watch 赛扣；D-07 `SHOTS_DIR` 跟随 `package.json` 版本；D-09 UI 与画布片组对拍断言；D-08 文档漂移（§12 指向、31 链接/20 表、`user_version=7`、12 项能力）已改。U-01 按用户裁定：测试周注记拆到 `testTitleEn`，仅测试周显示。版本 0.0.38。
 
 **0.37 已交付（R8）**：`web/src/components/MembershipPanel.vue` 挂在 VAULT 的 `#account` 段：档位豆数 + 档名、永久档 `PERMANENT` / 限时档 `UNTIL <北京时间日期>`、`SIGNED-IN DEVICES x / 5`（`GET /api/membership/sessions`，本机标 `THIS DEVICE`，其他设备可逐个 `DELETE` 登出）、`Redeem a code` 走 `POST /api/membership/redeem` 并 `refreshSessionOnce` 刷新会话能力表；`RegisterView` 支持 `/register?code=` 预填（读 `URLSearchParams`，转大写）。`verify.js` 新增 `membershipPanelCheck()`，`browser.mjs` 新增账户面板断言（档位/设备数/44px/兑换回执）。
 
@@ -58,13 +60,13 @@
 | ~~0.29~~ ✅ | 安全与首屏 | T2 空口令 fail-closed、T1 `_scoped` 有界 LRU、P0-01 刷新不闪、P0-02 首页同源、P0-03a 假宣传 | 已交付 `b0cbc64`；详单见 git |
 | ~~0.30~~ ✅ | 计划未开始态 | 周期推迟到 2026-11-23、`CyclePrestart` 四区块 | 已交付 `6c56b7d` + `aa1cd8b`；重算零差 |
 | ~~0.31~~ ✅ | 门控与出口 | T6 读开写关、T5 降档刷新、T3 孤表审计、P0-03b 导出、P0-04 `/about` | 已交付 `1397e65`；317 用例 / 6587 检查 |
-| ~~0.32~~ ✅ | T4 迁移 | 复合主键 + 14 张表重建 + `user_version=6` | 已交付 `0809155`；旧库行数零差、孤儿 0 |
+| ~~0.32~~ ✅ | T4 迁移 | 复合主键 + 14 张表重建 + `user_version=7`（0.34 再升位） | 已交付 `0809155`；旧库行数零差、孤儿 0 |
 | ~~0.33~~ ✅ | R4 视觉欠账 | GEAR 小片与单侧配片、Sheiko 热身（只给主项）、比赛三盏裁判灯、测试周四组 UI、赛扣开关 | 已交付 `556e88f`；实机 421/320/1280 无横向溢出，四交互各实点一次 |
 | ~~0.34~~ ✅ | R4b 测试周真存 | 新表 `test_results`：八项变式 + 5km 入库；ASSAY 可对比、导出/分享卡带出 | 已交付 `745dba0`；八项 + 5km 写入读回一致（132.5 kg ×1 / 24:30），三档无横向溢出 |
 | ~~0.35~~ ✅ | R5 + P1 | 完成率单函数、重写 `tests/browser.mjs`、P1 复核与清理、`docs/shots` 迁出 | 已交付；`verify.js` 334 用例 / 6633 检查 exit 0，`browser.mjs` 11 项 exit 0、`--sabotage` exit 1 |
 | ~~0.36~~ ✅ | R6 + R7 | 首页会员对比矩阵；老站首页效果补齐（`--topH`、分享、滚动 tour） | 已交付；`verify.js` 334 用例 / 6636 检查 exit 0，`browser.mjs` 13 项 exit 0、`--sabotage` exit 1；1280 四列两币种、390 四卡、320 无溢出 |
 | ~~0.37~~ ✅ | R8 | 账户内会员面板（档位、Pro 到期、设备 5、兑换码） | 已交付；面板实机 421 段实测：`Ultra` + `PERMANENT`、设备 `1 / 5`、控件 44px、`RR-BROWSER-PLUS` 回执；browser 15 项 exit 0 |
-| **0.38** | 独立审查 | 未写代码的会话审 0.29–0.37，含详单 §12 推断项逐条实测 | 审查清单逐条关闭；0.29 遗留的 P0-01 缺陷在此复核 |
+| **0.38** | 独立审查 | 未写代码的会话审 0.29–0.37，含 `docs/项目交接.md` §12 推断项逐条实测 | 审查清单逐条关闭；0.29 遗留的 P0-01 缺陷在此复核 |
 | **0.39** | 发布 | 部署 + push（**只在用户另行下令后**） | `deploy.py` 访问契约全 PASS + 公网探测 + `/api/ai/status` `configured: true` |
 
 ---
@@ -90,11 +92,11 @@
 
 ## 4 · 后续版本规格（0.31 起，实现细节可自决，口径变动须先问）
 
-### T3 · 孤表审计（已完成 0.31：`server/tools/audit_orphans.py` + `tests/test_isolation.py`，17 条链接、live 库孤儿 0）
+### T3 · 孤表审计（已完成 0.31：`server/tools/audit_orphans.py` + `tests/test_isolation.py`，31 条链接 / 20 张表、live 库孤儿 0）
 
 以 `store.py` 实际表为准（`cycles` `plans` `logs` `readiness` `readiness_v2` `archives` `body_metrics` `questionnaires` `ai_calls` `attempts` `deletion_tokens` `accounts`，外加处方版本表与会话表），逐表写「孤儿查询」（引用了不存在 `cycle_id` 的行数必须为 0），并写表级隔离单测：A 账户写、B 账户读不到。
 
-### T4 · 主键与迁移（已完成 0.32：`Store.upgrade_cycle_keys()` 重建 14 张表到复合键、`user_version=6`、导入 409 改「同账号占用」、`test_same_cycle_id_allowed_across_accounts`）
+### T4 · 主键与迁移（已完成 0.32：`Store.upgrade_cycle_keys()` 重建 14 张表到复合键、`user_version=7`（0.34 再升位）、导入 409 改「同账号占用」、`test_same_cycle_id_allowed_across_accounts`）
 
 `cycles.id TEXT PRIMARY KEY` 全局唯一是缺陷：改成复合主键 `(account_id, id)`，相关表外键随之重建，`user_version` 升位，迁移前快照，导入 409 文案改为「同账号占用 / 另存新 ID」，单测改名 `test_same_cycle_id_allowed_across_accounts`。
 
@@ -140,7 +142,7 @@ GEAR 小片与单侧配片；Sheiko 热身（只给主项）；比赛三盏裁�
 
 ### R6 · 首页会员对比（已完成 0.36）
 
-落地：`web/src/components/MembershipMatrix.vue`（约 340 行）。数据只从 `web/src/membership.json` 取，`verify.js` 的 `membershipMatrixCheck()` 断言四列、五档、11 项能力、组件内无手抄价格与能力文案、真 `<th scope>`、`ResizeObserver`、`prefers-reduced-motion`。桌面：Plus 列 `RECOMMENDED` 胶囊 + 深半档 + 两侧墨线、CNY/USD 180ms 翻牌、前 6 行默认展开其余 `grid-template-rows: 0fr → 1fr` 240ms（行始终在文档里，折叠时 `aria-hidden`）、悬停/键盘整列聚焦、勾号默认可见（描边动画只叠加，减动效下仍可见）。手机：`scroll-snap` 四张卡（`data-tier` / `aria-current`）+ 每行四档标 `.on` 联动 + 深层折叠。Ultra 墨底条进视口扫光一次。`WelcomeView.vue` 插在 `08 /` 与下载段之间，编号 `09 / Membership`、下载改 `10 /`。
+落地：`web/src/components/MembershipMatrix.vue`（约 340 行）。数据只从 `web/src/membership.json` 取，`verify.js` 的 `membershipMatrixCheck()` 断言四列、五档、12 项能力、组件内无手抄价格与能力文案、真 `<th scope>`、`ResizeObserver`、`prefers-reduced-motion`。桌面：Plus 列 `RECOMMENDED` 胶囊 + 深半档 + 两侧墨线、CNY/USD 180ms 翻牌、前 6 行默认展开其余 `grid-template-rows: 0fr → 1fr` 240ms（行始终在文档里，折叠时 `aria-hidden`）、悬停/键盘整列聚焦、勾号默认可见（描边动画只叠加，减动效下仍可见）。手机：`scroll-snap` 四张卡（`data-tier` / `aria-current`）+ 每行四档标 `.on` 联动 + 深层折叠。Ultra 墨底条进视口扫光一次。`WelcomeView.vue` 插在 `08 /` 与下载段之间，编号 `09 / Membership`、下载改 `10 /`。
 
 ### R7 · 老站首页效果补齐（已完成 0.36）
 

@@ -5,7 +5,7 @@ import { solveLoad, sideText, plateLabel } from '../plate-load.js';
 const props = defineProps({
   load: { type: Number, default: null },
   barKg: { type: Number, default: 20 },
-  collarPair: { type: Number, default: 5 },
+  collarPair: { type: Number, default: 0 },
 });
 
 const solved = computed(() => props.load === null ? null : solveLoad(props.load, props.barKg, props.collarPair));

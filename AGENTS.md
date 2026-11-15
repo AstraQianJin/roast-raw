@@ -60,6 +60,22 @@ Plan then act in the same turn. When a plan is handed over, check every open que
 - **Stopping a pipeline is not stopping the writer.** Before deleting a runaway file, read its size twice to confirm it stopped growing, and re-check after the delete.
 - **Match the gate to the change.** Docs-only edits need the bundled Skill checker plus the changed pointers opened. The full `verify.js` takes minutes and is dominated by the Python suite, so reserve it for code, data, contract or migration changes.
 
+## Disk and process hygiene (owner ruling 2026-11-15)
+
+The owner pays for every redundant write and every full walk. These rules bind agents before they run a command:
+
+- **One full gate sweep per version, never per edit.** Batch the edits, build once, run `verify.js` once, run `browser.mjs` once. A stopped or interrupted run is not evidence; rerun only the interrupted gate, not the whole chain.
+- **Targeted tests first.** While iterating use the single module (`python -m unittest tests.test_x`), the single browser group, or a scratch probe. `verify.js` is the version gate, not a save button.
+- **One fixture server per session.** Start `tests/serve_fixture.py` once, reuse the port, kill it in `finally`. A port conflict produces a silent failure and a retry loop.
+- **Probes are ephemeral and live outside the repo.** Scratch scripts go to `RR\scratch`, answer one question, and are deleted with `Remove-Item` once their result is recorded. Keep only the script that reproduces published evidence; everything else is clutter.
+- **No duplicate artifacts.** One screenshot folder per release (`SHOTS_DIR` follows `package.json`), no re-shooting the same state at the same width, no copying evidence into a second directory "for safety".
+- **Do not regenerate a generated artifact unless its input changed.** `data/plan.json`, `web/src/landing-facts.json`, `web/src/membership.json` and `web/dist` are outputs; rebuilding them without a source change is pure churn.
+- **Cache reads inside the gate.** A check that reads the same file five times reads it once: `verify.js` keeps a small `file()` cache. New checks must use it instead of `readFileSync(join(root, ...))`.
+- **An assertion must pin a real failure mode.** Do not add defensive duplicates that restate a neighbour, do not assert implementation details that cannot break without another check failing, and do not grow the suite by counting lines. One check may pin several facts read from one pass.
+- **Delete permanently, do not shovel into the recycle bin.** Cleanup uses `Remove-Item -Force` on resolved `-LiteralPath`s, after confirming the path stays inside the workspace or the named temp directory.
+- **Temp files stay in the temp directory.** `%LOCALAPPDATA%\Temp\rr-*` is the only scratch space outside `RR\scratch`; nothing temporary is written into the repository, `Ref\`, or the desktop root.
+
+
 ## Receipts
 
 A report is one of two kinds, and the reader must know which without guessing: **completion** (only what already happened and was verified) or **plan** (only what has not been executed). Never mix them in one block; when both are needed, completion first, then a lone `---` line, then the plan.

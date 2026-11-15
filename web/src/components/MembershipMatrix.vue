@@ -174,7 +174,7 @@ onBeforeUnmount(() => cleanups.forEach(fn => fn()));
         <tbody class="mm-extra">
           <tr>
             <td colspan="5" style="padding: 0; border: 0;">
-              <div class="mm-extra-wrap" :class="{ open: expanded }" :aria-hidden="!expanded">
+              <div id="mm-extra-rows" class="mm-extra-wrap" :class="{ open: expanded }" :aria-hidden="!expanded">
                 <div class="mm-extra-clip">
                   <table class="mm-extra-table">
                     <tbody>
@@ -202,8 +202,8 @@ onBeforeUnmount(() => cleanups.forEach(fn => fn()));
           </tr>
         </tbody>
       </table>
-      <button v-if="!expanded" type="button" class="mm-more" data-testid="mm-more" @click="expanded = true">Show every row ↓</button>
-      <button v-else type="button" class="mm-more" data-testid="mm-more" aria-expanded="true" @click="expanded = false">Show fewer rows ↑</button>
+      <button v-if="!expanded" type="button" class="mm-more" data-testid="mm-more" aria-expanded="false" aria-controls="mm-extra-rows" @click="expanded = true">Show every row ↓</button>
+      <button v-else type="button" class="mm-more" data-testid="mm-more" aria-expanded="true" aria-controls="mm-extra-rows" @click="expanded = false">Show fewer rows ↑</button>
       <p class="mm-foot">Pricing is published. Checkout opens soon. Registration needs an invite code.</p>
 
       <div ref="stage" class="mm-ultra">
@@ -249,7 +249,7 @@ onBeforeUnmount(() => cleanups.forEach(fn => fn()));
           </span>
         </li>
       </ul>
-      <button v-if="!expanded" type="button" class="mm-more" data-testid="mm-more-mobile" @click="expanded = true">Show every row ↓</button>
+      <button v-if="!expanded" type="button" class="mm-more" data-testid="mm-more-mobile" aria-expanded="false" @click="expanded = true">Show every row ↓</button>
       <button v-else type="button" class="mm-more" data-testid="mm-more-mobile" aria-expanded="true" @click="expanded = false">Show fewer rows ↑</button>
       <p class="mm-foot">Pricing is published. Checkout opens soon. Registration needs an invite code.</p>
       <div class="mm-ultra">
@@ -326,7 +326,7 @@ onBeforeUnmount(() => cleanups.forEach(fn => fn()));
   .mm-ultra-tag { display: flex; align-items: center; gap: 8px; font: 700 10px var(--mono); letter-spacing: .14em; }
   .mm-bean.gold { outline: 1px solid var(--gold); outline-offset: 1px; }
   .mm-ultra-copy { font: 500 13px var(--sans); color: rgba(241, 240, 235, .78); }
-  .mm-ultra-link { color: var(--bg); font: 700 9.5px var(--mono); letter-spacing: .06em; text-decoration: none; border-bottom: 1px solid rgba(241, 240, 235, .4); padding-bottom: 2px; }
+  .mm-ultra-link { display: inline-flex; align-items: center; min-height: 44px; color: var(--bg); font: 700 9.5px var(--mono); letter-spacing: .06em; text-decoration: none; border-bottom: 1px solid rgba(241, 240, 235, .4); padding-bottom: 2px; }
   .mm-ultra-shine { position: absolute; left: 0; right: 0; top: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .85), transparent); transform: scaleX(0); transform-origin: left center; }
   .mm-ultra.in .mm-ultra-shine { animation: mm-sweep .9s cubic-bezier(.22, 1, .36, 1) forwards; }
   @keyframes mm-sweep { to { transform: scaleX(1); } }
@@ -363,7 +363,7 @@ onBeforeUnmount(() => cleanups.forEach(fn => fn()));
 .mm-ultra-tag { display: flex; align-items: center; gap: 8px; font: 700 10px var(--mono); letter-spacing: .14em; }
 .mm-bean.gold { outline: 1px solid var(--gold); outline-offset: 1px; }
 .mm-ultra-copy { font: 12.5px var(--sans); color: rgba(241, 240, 235, .78); }
-.mm-ultra-link { color: var(--bg); font: 700 9.5px var(--mono); letter-spacing: .06em; text-decoration: none; }
+.mm-ultra-link { display: inline-flex; align-items: center; min-height: 44px; color: var(--bg); font: 700 9.5px var(--mono); letter-spacing: .06em; text-decoration: none; }
 
 .mm.mm-reduced, .mm.mm-reduced * { animation: none !important; transition: none !important; }
 @media (prefers-reduced-motion: reduce) {
