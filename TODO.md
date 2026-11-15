@@ -6,17 +6,17 @@
 
 ---
 
-## 0 · 状态快照（2026-11-15 · 0.32 收工）
+## 0 · 状态快照（2026-11-15 · 0.33 收工）
 
 | 项 | 值 |
 |---|---|
-| 版本 | `web/package.json` = **0.0.32**；0.29–0.32 均已本地提交，未 push、未部署 |
+| 版本 | `web/package.json` = **0.0.33**；0.29–0.33 均已本地提交，未 push、未部署 |
 | 工作树 | 以本节所在提交为准 |
 | 最近提交 | 见 `git log --oneline -3` |
-| 门禁 | `node tests/verify.js` **317** 用例 / **6587** 检查、exit 0（sabotage 子进程仍按预期红）；`npm --prefix web run build` exit 0；`check_skill.py --root .` PASS |
+| 门禁 | `node tests/verify.js` **317** 用例 / **6603** 检查、exit 0（sabotage 子进程仍按预期红）；`npm --prefix web run build` exit 0；`check_skill.py --root .` PASS |
 | 红基线 | `tests/browser.mjs` 自 0.21 起失效（删主题切换、注册页改四输入，旧断言过时）；**0.35 重写后才可作绿灯证据** |
 | 部署 | 线上仍是 0.20 版 `http://82.157.146.30/`（公开落地页 + 账户门控 journal）。本轮**不 push、不部署**（用户 2026-11-15 裁定） |
-| 证据落点 | `RR\shots\0.29\`、`RR\shots\0.30\`（`prestart-evidence.json` + 五宽截图）、`RR\shots\0.31\`（`about-evidence.json`、`free-readonly-evidence.json` + 三宽 about / 免费档只读截图）；0.32 是纯后端迁移，证据在 `RR\scratch\migrate-live-032.py` 的输出（行数不变、`foreign_key_check` 空、29 条链接孤儿 0）与 `test_ledger.py` 的旧库升级用例 |
+| 证据落点 | `RR\shots\0.29\`、`RR\shots\0.30\`（`prestart-evidence.json` + 五宽截图）、`RR\shots\0.31\`（`about-evidence.json`、`free-readonly-evidence.json` + 三宽 about / 免费档只读截图）、`RR\shots\0.33\`（`r4-evidence.json` + 12 张实机宽截图，脚本 `RR\scratch\shot-033.mjs`）；0.32 是纯后端迁移，证据在 `RR\scratch\migrate-live-032.py` 的输出（行数不变、`foreign_key_check` 空、29 条链接孤儿 0）与 `test_ledger.py` 的旧库升级用例 |
 | 老项目 | 两个老项目已迁 `RR\ref-projects\`（`roast-powerlifting`、`rplref`）；`rplref` 2026-11-15 瘦身 2243.6 MB，依据与恢复路径见 `RR\ref-projects\rplref\_repo\MIRROR_SLIMMED.md` |
 
 **长期边界**：只做 Web（Vue 3 + Vite + Motion One + FastAPI + SQLite）；界面英文、对话中文；`Ref/` 与两个老项目只读；不手改 `data/plan.json` 与 `web/dist/`；不弱化断言、不中和 sabotage。
@@ -32,9 +32,9 @@
 
 ---
 
-## 1 · 下一动作：0.33 视觉欠账
+## 1 · 下一动作：0.34 测试周真存
 
-**接手指令**：`docs\agent-prompt-0.29-0.39.md` 的 0.33 行（`R4`：GEAR 小片与单侧配片、Sheiko 热身只给主项、比赛三盏裁判灯、测试周四组 UI）。
+**接手指令**：`docs\agent-prompt-0.29-0.39.md` 的 0.34 行（`R4b`：新表 `test_results`，八项变式 + 5km 入库；ASSAY 可对比、导出/分享卡带出；`meta.testPlan` 补齐）。规格见 §4 `R4b`。
 
 按序执行，一步一提交。提交前跑门禁，回执按 `AGENTS.md` 五字段。
 
@@ -49,7 +49,7 @@
 | ~~0.30~~ ✅ | 计划未开始态 | 周期推迟到 2026-11-23、`CyclePrestart` 四区块 | 已交付 `6c56b7d` + `aa1cd8b`；重算零差 |
 | ~~0.31~~ ✅ | 门控与出口 | T6 读开写关、T5 降档刷新、T3 孤表审计、P0-03b 导出、P0-04 `/about` | 已交付 `1397e65`；317 用例 / 6587 检查 |
 | ~~0.32~~ ✅ | T4 迁移 | 复合主键 + 14 张表重建 + `user_version=6` | 已交付 `0809155`；旧库行数零差、孤儿 0 |
-| **0.33** | R4 视觉欠账 | GEAR 小片与单侧配片、Sheiko 热身（只给主项）、比赛三盏裁判灯、测试周四组 UI | 四宽截图 + 每个交互一次实点 |
+| ~~0.33~~ ✅ | R4 视觉欠账 | GEAR 小片与单侧配片、Sheiko 热身（只给主项）、比赛三盏裁判灯、测试周四组 UI、赛扣开关 | 已交付 `556e88f`；实机 421/320/1280 无横向溢出，四交互各实点一次 |
 | **0.34** | R4b 测试周真存 | 新表 `test_results`：八项变式 + 5km 入库；ASSAY 可对比、导出/分享卡带出 | 八项 + 5km 写入读回一致；降档后仍可读可导出；迁移零差 |
 | **0.35** | R5 + P1 | 完成率单函数；重写 `tests/browser.mjs`；P1 清单清理 | `verify.js` 与 `browser.mjs` 都 exit 0；每个改写断言做一次故意破坏 |
 | **0.36** | R6 + R7 | 首页会员对比矩阵；老站首页效果补齐 | 320/360/390/412/1280 无横向溢出；折叠/币种/动效各一张 |
@@ -67,6 +67,7 @@
 | 0.30 | `6c56b7d` `aa1cd8b` | `gen_data.py --start-date 2026-11-23` 全站单源重算、`roll_cycle.py` 归档 `rpl-raw-2026-11-16` 并播种 `-11-23`、`CyclePrestart` 四区块、桌面 hero 按钮堆叠 | `RR\shots\0.30\` |
 | 0.31 | `1397e65` | 读开写关（含免费档 DailyRecord 常驻 + 禁用表单）、403/`timed_until`/`visibilitychange` 三处一次性刷新、孤表审计 + 表级隔离、`/api/export/logs.csv`、`/about`、`cdp.mjs` 补 `Network.enable` | `RR\shots\0.31\` |
 | 0.32 | `0809155` | `cycles` 复合主键、14 张表复合外键重建、写入/读取全线按账户过滤、导入 409 改「同账号占用」、审计扩到 29 条链接 | `RR\scratch\migrate-live-032.py` 输出 + `tests/test_ledger.py` |
+| 0.33 | `556e88f` | 杠铃片算术抽成 `web/src/plate-load.js`（小片带数值标签、单侧配片、缺量上报）；`GearPlates` 小片柜进 GEAR；热身只列主项且无主项日不留空位；比赛三盏裁判灯（2 白 GOOD / 2 红 MISS）；测试周 SBD 三组 + 计划真实行第四组，各带独立输入；赛扣开关（设置内，默认关，设备本地）贯穿配片、分享卡与起跑页 | `RR\shots\0.33\` |
 
 **仍生效的生成物契约**（改生成器时守住，别再抄第二份）：
 
@@ -92,9 +93,23 @@
 
 自有数据 GET 放开、写入口锁；派生视图（`performance` / `geometry` / `vault`）整块锁。与 0.28 的差异：free 账号的 DailyRecord **不再整体隐藏**，改为可读、写入口锁。
 
-### R4 · 视觉欠账（0.33）
+### R4 · 视觉欠账（已完成 0.33，`556e88f`）
 
-GEAR 小片与单侧配片；Sheiko 热身（只给主项）；比赛三盏裁判灯（2 白 = GOOD、2 红 = MISS）；测试周四组 UI：SBD 三组 + 计划里真实存在的行，各自独立输入行。
+GEAR 小片与单侧配片；Sheiko 热身（只给主项）；比赛三盏裁判灯（2 白 = GOOD、2 红 = MISS）；测试周四组 UI：SBD 三组 + 计划里真实存在的行，各自独立输入行。实现细节查 git，判定口径见 `RR\shots\0.33\r4-evidence.json`。
+
+### R4a · 赛扣（已完成 0.33，用户裁定「默认关、放设置里」）
+
+- 语义：赛扣按**一对 5 kg** 计入总重；关时只有杆重是固定重量。
+- 位置：VAULT 账户区 `Gear setup` 内的开关（`data-testid=collar-toggle`），**默认关**。
+- 归属：设备级场地事实，存 `localStorage('rr.gear.collars')`，不随计划导出、不上服务器（沿用老项目「场地库存在本机」的裁定）。
+- 贯穿：`GearPlates` 分片、`BarbellStrip` 文案、`AttemptBoard`、`CyclePrestart`、分享卡（含底部说明行）与 GEAR 摘要 chip 读同一开关。
+- 不动配重口径：开关只改「杆 / 扣 / 片」的拆解，不改任何 `loadKg`、处方、统计或导出字段。
+
+### R4c · 证据宽度协议（0.33 起，取代原「四宽取哪四个」问题）
+
+- 基准机是用户实机**荣耀 500 Pro**（6.55″、2736×1264 物理像素、DPR 3 ⇒ 约 421 CSS px 视口）。
+- 宽度不写死：截图脚本读 `RR_DEVICE_WIDTH`（默认 421），并把页面 `window.innerWidth` 实测值写进 evidence；换机只改变量与 `AGENTS.md` 的那段话。
+- 每版响应式证据固定三档：实机宽、**320**（窄底线）、**1280**（桌面），报告横向溢出、控件可视高度与截图宽度。
 
 ### R4b · 测试周真存（0.34，用户裁定「新表真存」）
 
@@ -278,7 +293,8 @@ C:\Users\Astra\Desktop\RR\
 
 1. **线上怎么迁**：`http://82.157.146.30/` 还是 0.20 旧 schema（v1 期），本地库已到 v6。要上线必须整库替换或对线上库跑同一条迁移链，两种都要先停服务 + 备份。需用户推翻 2026-11-15 的「不 push、不部署」裁定才动手。
 2. **`days[3].titleEn` 里的 `(W13 TEST)`**：属源模板文本，0.30 保留了它。若判定为文案回退，需把清理固化进 `gen_data.py` 而不是手改 `plan.json`。
-3. **0.33 四宽到底取哪四个**：`SKILL` 写 320/360/390/412/1280 五宽，`TODO` 旧文只写「四宽」。建议按 320/390/412/1280，回话即锁定。
+
+（原第 3 条「0.33 四宽取哪四个」已由用户 2026-11-15 裁定：以实机荣耀 500 Pro 视口为准、宽度不写死，见 §4 `R4c`。）
 
 ---
 

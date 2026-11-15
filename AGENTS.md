@@ -76,6 +76,12 @@ NEXT     owner plus action, each tagged GO / ASK / HUMAN
 
 Plan skeleton: `GOAL` (one judgeable sentence), `STEPS` (numbered, each naming its artifact), `ORDER` (prerequisites or "none"), `ASK` (the decision the owner must make, with options and costs — or an explicit "nothing to decide"). A step without an artifact is not a step.
 
+### Evidence widths (device protocol, owner ruling 2026-11-15)
+
+- The reference phone is the owner's HONOR 500 Pro: 6.55 in panel, 2736×1264 physical pixels, so roughly a 421 px CSS viewport at DPR 3. Every responsive claim is captured at that viewport, at 320 px as the narrow floor, and at 1280 px for desktop.
+- Never hardcode a device width in product CSS, tests or prose. Screenshot scripts take the width from `RR_DEVICE_WIDTH` (default 421) and record the value the page actually reported through `window.innerWidth`; a new phone changes the variable and this paragraph, nothing else.
+- Report the measured numbers, not the intent: overflow (`scrollWidth - clientWidth`), control height, and the width each screenshot was taken at.
+
 ### What counts as evidence
 
 Evidence is a value someone else can re-obtain. Feelings, tool-call counts and a model's own assessment are not evidence.
