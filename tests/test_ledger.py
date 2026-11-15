@@ -102,12 +102,22 @@ class LedgerTests(unittest.TestCase):
         self.assertEqual([cycle['id'] for cycle in self.owner.get('/api/cycle').json()['cycles']], [self.cycle])
         self.assertEqual(guest.post('/api/archive/delete/prepare', json={'cycle_id': self.cycle}).status_code, 404)
 
-    def test_cycle_ids_stay_unique_across_accounts(self):
+    def test_same_cycle_id_allowed_across_accounts(self):
         guest = self.account('Guest_three', 'plus')
-        body = {'plan_json': json.dumps(SEED), 'filename': 'plan.json'}
-        response = guest.post('/api/plan/import/preview', json=body)
-        self.assertEqual(response.status_code, 409)
-        self.assertIn('already exists', response.json()['error'])
+        confirmed, preview = self.import_plan(guest, copy.deepcopy(SEED))
+        self.assertEqual(confirmed.status_code, 200, confirmed.text)
+        self.assertEqual(confirmed.json()['active_cycle_id'], self.cycle)
+        self.assertEqual(guest.get('/api/plan').json(), SEED, 'the guest owns its own copy of the same id')
+        self.assertEqual(self.owner.get('/api/plan').json(), SEED, 'the owner copy is untouched')
+        row = SEED['workouts'][0]
+        log = {'week': row['week'], 'day': row['day'], 'seq': row['seq'], 'load': 90.0, 'sets': 1, 'reps': 2,
+               'rpe': None, 'note': 'guest only'}
+        self.assertEqual(guest.put('/api/log', json={**log, 'cycle_id': self.cycle}).status_code, 200)
+        self.assertEqual(self.owner.get('/api/log').json()['logs'], {}, 'same id, different ledgers')
+        own = guest.post('/api/plan/import/preview',
+                         json={'plan_json': json.dumps(copy.deepcopy(SEED)), 'filename': 'plan.json'})
+        self.assertEqual(own.status_code, 409, 'a second import into the same ledger must still collide')
+        self.assertIn('already used in your own ledger', own.json()['error'])
 
     def test_every_gate_is_403_below_and_open_at_its_tier(self):
         clients = {tier: self.account(f'Gate_{tier}', tier) for tier in ('free', 'lite', 'plus', 'pro')}
@@ -149,13 +159,21 @@ class LedgerTests(unittest.TestCase):
 
     def test_ai_quota_counts_per_account(self):
         first, second = self.store.for_account(901), self.store.for_account(902)
+        # v6 keeps a cycle id unique per account, so quitting tests need their own cycle rows.
+        with closing(sqlite3.connect(self.store.path)) as db:
+            for account in (901, 902):
+                db.execute('INSERT INTO cycles(account_id,id,name,start_date,end_date,status,schema_version)'
+                           ' VALUES(?,?,?,?,?,?,?)',
+                           (account, f'quota-{account}', 'Quota cycle', SEED['meta']['startDate'],
+                            SEED['meta']['endDate'], 'active', SEED['schemaVersion']))
+            db.commit()
         for _ in range(Store.AI_DAILY_LIMIT):
-            first.reserve_ai_call(self.cycle, '2026-11-15', 'outlook', 'p', [])
+            first.reserve_ai_call('quota-901', '2026-11-15', 'outlook', 'p', [])
         with self.assertRaises(AiQuotaError):
-            first.reserve_ai_call(self.cycle, '2026-11-15', 'outlook', 'p', [])
+            first.reserve_ai_call('quota-901', '2026-11-15', 'outlook', 'p', [])
         self.assertEqual(first.ai_quota('2026-11-15')['remaining'], 0)
         self.assertEqual(second.ai_quota('2026-11-15')['remaining'], Store.AI_DAILY_LIMIT)
-        second.reserve_ai_call(self.cycle, '2026-11-15', 'outlook', 'p', [])
+        second.reserve_ai_call('quota-902', '2026-11-15', 'outlook', 'p', [])
         self.assertEqual(second.ai_quota('2026-11-15')['used'], 1)
 
 
@@ -171,16 +189,34 @@ class LedgerMigrationTests(unittest.TestCase):
             store.create_account('Someone', PASSWORD)
             store.create_account(owner, PASSWORD)
         row = SEED['workouts'][0]
-        store.save_log(SEED['meta']['planId'], row, {'load': 120.0, 'sets': 2, 'reps': 3, 'rpe': 8.0, 'note': 'legacy'})
-        store.save_metrics(SEED['meta']['planId'], {'date': row['date'], 'bodyweight': 83.0, 'bodyfat': None, 'measurements': {}})
-        store.reserve_ai_call(SEED['meta']['planId'], '2026-11-01', 'outlook', 'legacy prompt', [])
+        cycle = SEED['meta']['planId']
+        # Legacy rows are written in the pre-v6 shape, so the composite-key migration has real data
+        # to carry across instead of an empty shell.
+        with closing(sqlite3.connect(path)) as db:
+            db.execute('BEGIN IMMEDIATE')
+            db.execute('INSERT INTO logs_journal(cycle_id,key,payload,created_at) VALUES(?,?,?,?)',
+                       (cycle, f"{row['week']}|{row['day']}|{row['seq']}",
+                        json.dumps({'load': 120.0, 'sets': 2, 'reps': 3, 'rpe': 8.0, 'note': 'legacy'}),
+                        '2026-11-01T00:00:00+00:00'))
+            db.execute('INSERT INTO logs VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+                       (cycle, f"{row['week']}|{row['day']}|{row['seq']}", row['date'],
+                        f"{row['week']}|{row['day']}", row['movementId'], 120.0, 3, 8.0, 2, 'legacy',
+                        '2026-11-01T00:00:00+00:00'))
+            db.execute('INSERT INTO body_metrics(cycle_id,date,bodyweight,bodyfat,measurements_json) VALUES(?,?,?,?,?)',
+                       (cycle, row['date'], 83.0, None, '{}'))
+            db.execute('INSERT INTO ai_calls(cycle_id,day,kind,status,prompt,conversation,created_at,updated_at)'
+                       " VALUES(?,?,?,?,?,?,?,?)",
+                       (cycle, '2026-11-01', 'outlook', 'ok', 'legacy prompt', '[]',
+                        '2026-11-01T00:00:00+00:00', '2026-11-01T00:00:00+00:00'))
+            db.execute('COMMIT')
         return path, store
 
     def test_snapshot_first_and_every_row_survives(self):
         with tempfile.TemporaryDirectory() as folder:
             path, store = self.build_legacy(folder, owner='Astra')
             before = rows(path)
-            source_before = digest(store.review_source(SEED['meta']['planId']))
+            source = store.review_source(SEED['meta']['planId'])
+            source_plan, source_logs = source['plan'], source['logs']
             existing = set((path.parent / 'backups').glob('*.sqlite3'))
             store.upgrade_ledger('Astra')
             created = set((path.parent / 'backups').glob('*.sqlite3')) - existing
@@ -198,10 +234,25 @@ class LedgerMigrationTests(unittest.TestCase):
                 else:
                     self.assertEqual(after[table], records, table)
             self.assertEqual(after['ledger_meta'], [('open_ledger', str(owner))])
-            self.assertEqual(digest(store.for_account(owner).review_source(SEED['meta']['planId'])), source_before)
+            # The scoped views filter children by account, so the composite-key schema has to exist first.
+            store.upgrade_cycle_keys()
+            keyed = rows(path)
+            for table, records in before.items():
+                if table not in Store.V6_TABLES:
+                    continue
+                with self.subTest(table=table):
+                    self.assertEqual(columns(path, table)[0], 'account_id')
+                    self.assertEqual(sorted((record[1:] for record in keyed[table]), key=repr), records, table)
+                    if records:
+                        self.assertEqual({record[0] for record in keyed[table]}, {owner}, table)
+            self.assertEqual(Store(path).open_ledger(), owner)
+            review = store.for_account(owner).review_source(SEED['meta']['planId'])
+            self.assertEqual(review['plan'], source_plan)
+            self.assertEqual(review['logs'], source_logs)
             self.assertIsNone(store.for_account(owner + 1000).review_source(SEED['meta']['planId']))
             store.upgrade_ledger('Astra')
-            self.assertEqual(rows(path), after, 'the ledger migration runs once')
+            store.upgrade_cycle_keys()
+            self.assertEqual(rows(path), keyed, 'both migrations run once')
 
     def test_legacy_database_upgrades_through_the_app_without_changing_api_output(self):
         with tempfile.TemporaryDirectory() as folder:

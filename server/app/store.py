@@ -55,7 +55,7 @@ class Store:
     def initialize(self, plan):
         with self.connect() as db:
             version = db.execute('PRAGMA user_version').fetchone()[0]
-            if version not in (0, 1, 2, 3, 4, 5):
+            if version not in (0, 1, 2, 3, 4, 5, 6):
                 raise RuntimeError('Unsupported database version; no data was changed')
             db.execute('PRAGMA journal_mode=WAL')
             db.executescript('''
@@ -95,10 +95,19 @@ class Store:
             db.execute("CREATE UNIQUE INDEX IF NOT EXISTS one_active_cycle ON cycles(status) WHERE status='active'")
             if db.execute('SELECT count(*) FROM cycles').fetchone()[0] == 0:
                 meta = plan['meta']
-                db.execute('INSERT INTO cycles VALUES(?,?,?,?,?,?)',
-                           (meta['planId'], meta['name'], meta['startDate'], meta['endDate'], 'active', plan['schemaVersion']))
-                db.execute('INSERT INTO plans VALUES(?,?,?,?,?)',
-                           (meta['planId'], meta['planId'], json.dumps(plan, ensure_ascii=False), plan['schemaVersion'], timestamp()))
+                account = self._account(db)
+                if account is None:
+                    db.execute('INSERT INTO cycles VALUES(?,?,?,?,?,?)',
+                               (meta['planId'], meta['name'], meta['startDate'], meta['endDate'], 'active', plan['schemaVersion']))
+                    db.execute('INSERT INTO plans VALUES(?,?,?,?,?)',
+                               (meta['planId'], meta['planId'], json.dumps(plan, ensure_ascii=False), plan['schemaVersion'], timestamp()))
+                else:
+                    db.execute('INSERT INTO cycles(account_id,id,name,start_date,end_date,status,schema_version)'
+                               ' VALUES(?,?,?,?,?,?,?)',
+                               (account, meta['planId'], meta['name'], meta['startDate'], meta['endDate'], 'active', plan['schemaVersion']))
+                    db.execute('INSERT INTO plans(account_id,id,cycle_id,json,version,created_at) VALUES(?,?,?,?,?,?)',
+                               (account, meta['planId'], meta['planId'], json.dumps(plan, ensure_ascii=False),
+                                plan['schemaVersion'], timestamp()))
 
     def snapshot(self):
         folder = self.path.parent / 'backups'
@@ -113,7 +122,7 @@ class Store:
     def upgrade(self):
         with self.connect() as db:
             version = db.execute('PRAGMA user_version').fetchone()[0]
-        if version in (2, 3, 4, 5):
+        if version in (2, 3, 4, 5, 6):
             return
         if version != 1:
             raise RuntimeError('Unsupported database version; no data was changed')
@@ -133,7 +142,7 @@ class Store:
         from .stats.variations import digest
         with self.connect() as db:
             version = db.execute('PRAGMA user_version').fetchone()[0]
-        if version in (3, 4, 5):
+        if version in (3, 4, 5, 6):
             return
         if version != 2:
             raise RuntimeError('Unsupported database version; no data was changed')
@@ -152,7 +161,7 @@ class Store:
     def upgrade_questionnaire(self):
         with self.connect() as db:
             version = db.execute('PRAGMA user_version').fetchone()[0]
-        if version in (4, 5):
+        if version in (4, 5, 6):
             return
         if version != 3:
             raise RuntimeError('Unsupported database version; no data was changed')
@@ -168,7 +177,7 @@ class Store:
     def upgrade_ai(self):
         with self.connect() as db:
             version = db.execute('PRAGMA user_version').fetchone()[0]
-        if version == 5:
+        if version in (5, 6):
             return
         if version != 4:
             raise RuntimeError('Unsupported database version; no data was changed')
@@ -277,6 +286,143 @@ class Store:
             row = db.execute("SELECT value FROM ledger_meta WHERE key='open_ledger'").fetchone()
         return int(row['value']) if row else 0
 
+    # v6: a cycle id only has to be unique inside its own account. Every child table carries the
+    # parent's account so a composite key can hold, and the foreign key says so out loud.
+    V6_TABLES = {
+        'cycles': ("""CREATE TABLE {name} (
+                account_id INTEGER NOT NULL, id TEXT NOT NULL, name TEXT NOT NULL,
+                start_date TEXT NOT NULL, end_date TEXT NOT NULL,
+                status TEXT NOT NULL CHECK(status IN ('active','completed','archived')),
+                schema_version TEXT NOT NULL, PRIMARY KEY(account_id, id))""",
+                   ('account_id', 'id', 'name', 'start_date', 'end_date', 'status', 'schema_version'), None),
+        'plans': ("""CREATE TABLE {name} (
+                account_id INTEGER NOT NULL, id TEXT NOT NULL, cycle_id TEXT NOT NULL,
+                json TEXT NOT NULL, version TEXT NOT NULL, created_at TEXT NOT NULL,
+                PRIMARY KEY(account_id, id), UNIQUE(account_id, cycle_id),
+                FOREIGN KEY(account_id, cycle_id) REFERENCES cycles(account_id, id))""",
+                  ('id', 'cycle_id', 'json', 'version', 'created_at'), 'cycle_id'),
+        'logs': ("""CREATE TABLE {name} (
+                account_id INTEGER NOT NULL, cycle_id TEXT NOT NULL, key TEXT NOT NULL,
+                date TEXT NOT NULL, session_id TEXT NOT NULL, exercise_id TEXT NOT NULL,
+                load REAL, reps INTEGER NOT NULL CHECK(reps>=0), rpe REAL CHECK(rpe>=5.5 AND rpe<=10),
+                set_count INTEGER NOT NULL CHECK(set_count>=0), note TEXT NOT NULL, updated_at TEXT NOT NULL,
+                PRIMARY KEY(account_id, cycle_id, key),
+                FOREIGN KEY(account_id, cycle_id) REFERENCES cycles(account_id, id))""",
+                 ('cycle_id', 'key', 'date', 'session_id', 'exercise_id', 'load', 'reps', 'rpe', 'set_count',
+                  'note', 'updated_at'), 'cycle_id'),
+        'logs_journal': ("""CREATE TABLE {name} (
+                account_id INTEGER NOT NULL, id INTEGER PRIMARY KEY, cycle_id TEXT NOT NULL,
+                key TEXT NOT NULL, payload TEXT NOT NULL, created_at TEXT NOT NULL,
+                FOREIGN KEY(account_id, cycle_id) REFERENCES cycles(account_id, id))""",
+                         ('id', 'cycle_id', 'key', 'payload', 'created_at'), 'cycle_id'),
+        'readiness': ("""CREATE TABLE {name} (
+                account_id INTEGER NOT NULL, cycle_id TEXT NOT NULL, date TEXT NOT NULL, session_id TEXT NOT NULL,
+                fatigue INTEGER, arousal INTEGER, nutrition INTEGER, hrv REAL,
+                sleep_score REAL, rhr REAL, session_time TEXT, rec REAL, note TEXT,
+                PRIMARY KEY(account_id, cycle_id, date, session_id),
+                FOREIGN KEY(account_id, cycle_id) REFERENCES cycles(account_id, id))""",
+                      ('cycle_id', 'date', 'session_id', 'fatigue', 'arousal', 'nutrition', 'hrv', 'sleep_score',
+                       'rhr', 'session_time', 'rec', 'note'), 'cycle_id'),
+        'readiness_v2': ("""CREATE TABLE {name} (
+                account_id INTEGER NOT NULL, cycle_id TEXT NOT NULL, date TEXT NOT NULL,
+                session_id TEXT NOT NULL, payload TEXT NOT NULL, updated_at TEXT NOT NULL,
+                PRIMARY KEY(account_id, cycle_id, date, session_id),
+                FOREIGN KEY(account_id, cycle_id) REFERENCES cycles(account_id, id))""",
+                         ('cycle_id', 'date', 'session_id', 'payload', 'updated_at'), 'cycle_id'),
+        'archives': ("""CREATE TABLE {name} (
+                account_id INTEGER NOT NULL, id TEXT PRIMARY KEY, cycle_id TEXT NOT NULL,
+                review_json TEXT NOT NULL, exported_at TEXT NOT NULL, UNIQUE(account_id, cycle_id),
+                FOREIGN KEY(account_id, cycle_id) REFERENCES cycles(account_id, id))""",
+                     ('id', 'cycle_id', 'review_json', 'exported_at'), 'cycle_id'),
+        'body_metrics': ("""CREATE TABLE {name} (
+                account_id INTEGER NOT NULL, id INTEGER PRIMARY KEY, cycle_id TEXT NOT NULL,
+                date TEXT NOT NULL, bodyweight REAL, bodyfat REAL, measurements_json TEXT,
+                UNIQUE(account_id, cycle_id, date),
+                FOREIGN KEY(account_id, cycle_id) REFERENCES cycles(account_id, id))""",
+                         ('id', 'cycle_id', 'date', 'bodyweight', 'bodyfat', 'measurements_json'), 'cycle_id'),
+        'records_journal': ("""CREATE TABLE {name} (
+                account_id INTEGER NOT NULL, id INTEGER PRIMARY KEY, cycle_id TEXT NOT NULL,
+                kind TEXT NOT NULL, key TEXT NOT NULL, payload TEXT NOT NULL, created_at TEXT NOT NULL,
+                FOREIGN KEY(account_id, cycle_id) REFERENCES cycles(account_id, id))""",
+                            ('id', 'cycle_id', 'kind', 'key', 'payload', 'created_at'), 'cycle_id'),
+        'prescription_versions': ("""CREATE TABLE {name} (
+                account_id INTEGER NOT NULL, cycle_id TEXT NOT NULL, id TEXT NOT NULL,
+                json TEXT NOT NULL, created_at TEXT NOT NULL,
+                PRIMARY KEY(account_id, cycle_id, id),
+                FOREIGN KEY(account_id, cycle_id) REFERENCES cycles(account_id, id))""",
+                                  ('cycle_id', 'id', 'json', 'created_at'), 'cycle_id'),
+        'questionnaires': ("""CREATE TABLE {name} (
+                account_id INTEGER NOT NULL, cycle_id TEXT NOT NULL, payload TEXT NOT NULL,
+                status TEXT NOT NULL CHECK(status IN ('draft','complete')), updated_at TEXT NOT NULL,
+                PRIMARY KEY(account_id, cycle_id),
+                FOREIGN KEY(account_id, cycle_id) REFERENCES cycles(account_id, id))""",
+                           ('cycle_id', 'payload', 'status', 'updated_at'), 'cycle_id'),
+        'ai_calls': ("""CREATE TABLE {name} (
+                account_id INTEGER NOT NULL, id INTEGER PRIMARY KEY, cycle_id TEXT NOT NULL,
+                day TEXT NOT NULL, kind TEXT NOT NULL CHECK(kind IN ('outlook','chat')),
+                status TEXT NOT NULL CHECK(status IN ('reserved','ok','error')),
+                prompt TEXT NOT NULL, conversation TEXT NOT NULL DEFAULT '[]',
+                response TEXT, error TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+                FOREIGN KEY(account_id, cycle_id) REFERENCES cycles(account_id, id))""",
+                     ('id', 'cycle_id', 'day', 'kind', 'status', 'prompt', 'conversation', 'response', 'error',
+                      'created_at', 'updated_at'), 'cycle_id'),
+        'attempts': ("""CREATE TABLE {name} (
+                account_id INTEGER NOT NULL, cycle_id TEXT NOT NULL,
+                lift TEXT NOT NULL CHECK(lift IN ('squat','bench','deadlift')),
+                number INTEGER NOT NULL CHECK(number IN (1,2,3)),
+                load REAL NOT NULL, result TEXT CHECK(result IN ('good','miss')),
+                updated_at TEXT NOT NULL, PRIMARY KEY(account_id, cycle_id, lift, number),
+                FOREIGN KEY(account_id, cycle_id) REFERENCES cycles(account_id, id))""",
+                     ('cycle_id', 'lift', 'number', 'load', 'result', 'updated_at'), 'cycle_id'),
+        'deletion_tokens': ("""CREATE TABLE {name} (
+                account_id INTEGER NOT NULL, token TEXT PRIMARY KEY, cycle_id TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(account_id, cycle_id) REFERENCES cycles(account_id, id))""",
+                            ('token', 'cycle_id', 'created_at'), 'cycle_id'),
+    }
+
+    def upgrade_cycle_keys(self):
+        with self.connect() as db:
+            version = db.execute('PRAGMA user_version').fetchone()[0]
+        if version >= 6:
+            return
+        if version != 5:
+            raise RuntimeError('Unsupported database version; no data was changed')
+        self.snapshot()
+        with self.connect() as db:
+            db.execute('PRAGMA foreign_keys=OFF')
+            counts = {table: db.execute(f'SELECT count(*) FROM {table}').fetchone()[0]
+                      for table in self.V6_TABLES}
+            db.execute('BEGIN IMMEDIATE')
+            for table, (ddl, columns, parent) in self.V6_TABLES.items():
+                db.execute(ddl.format(name=f'{table}__v6'))
+                if parent is None:
+                    db.execute(f'INSERT INTO {table}__v6(account_id,{",".join(columns)}) '
+                               f'SELECT account_id,{",".join(columns)} FROM {table}')
+                elif parent == 'cycle_id':
+                    db.execute(f'INSERT INTO {table}__v6(account_id,{",".join(columns)}) '
+                               f'SELECT c.account_id,{",".join(f"o.{c}" for c in columns)} '
+                               f'FROM {table} o JOIN cycles c ON c.id = o.cycle_id')
+                copied = db.execute(f'SELECT count(*) FROM {table}__v6').fetchone()[0]
+                if copied != counts[table]:
+                    db.execute('ROLLBACK')
+                    raise RuntimeError(f'{table}: {counts[table] - copied} rows have no cycle to belong to; '
+                                       'run server/tools/audit_orphans.py before migrating')
+            for table in self.V6_TABLES:
+                db.execute(f'DROP TABLE {table}')
+                db.execute(f'ALTER TABLE {table}__v6 RENAME TO {table}')
+            db.execute('CREATE INDEX cycles_account ON cycles(account_id)')
+            db.execute("CREATE UNIQUE INDEX one_active_cycle_per_account ON cycles(account_id) WHERE status='active'")
+            db.execute('CREATE INDEX ai_calls_day ON ai_calls(day)')
+            db.execute('CREATE INDEX ai_calls_account_day ON ai_calls(account_id, day)')
+            broken = db.execute('PRAGMA foreign_key_check').fetchall()
+            if broken:
+                db.execute('ROLLBACK')
+                raise RuntimeError(f'migration left {len(broken)} broken foreign keys; nothing was committed')
+            db.execute('PRAGMA user_version=6')
+            db.execute('COMMIT')
+            db.execute('PRAGMA foreign_keys=ON')
+
     def for_account(self, account_id):
         """Bounded view cache: 64 accounts, least-recently-used evicted, idle 30 minutes expired."""
         now = time.monotonic()
@@ -317,6 +463,15 @@ class Store:
                 account = int(row['value']) if row else 0
             columns, values = (*columns, 'account_id'), (*values, account)
         return db.execute(f"INSERT INTO {table}({','.join(columns)}) VALUES({','.join('?' * len(values))})", values)
+
+    def _account(self, db):
+        """The ledger a child row belongs to: the scoped view's account, or the open ledger."""
+        if self.ledger is not None:
+            return self.ledger
+        if not self._ledger_ready(db):
+            return None
+        row = db.execute("SELECT value FROM ledger_meta WHERE key='open_ledger'").fetchone()
+        return int(row['value']) if row else 0
 
     @staticmethod
     def _row(row):
@@ -578,8 +733,9 @@ class Store:
         with self.connect() as db:
             if not self._owns(db, cycle_id):
                 return []
-            rows = db.execute('SELECT lift,number,load,result,updated_at FROM attempts WHERE cycle_id=? ORDER BY lift,number',
-                              (cycle_id,)).fetchall()
+            clause, args = self._mine()
+            rows = db.execute(f'SELECT lift,number,load,result,updated_at FROM attempts WHERE cycle_id=?{clause}'
+                              ' ORDER BY lift,number', (cycle_id, *args)).fetchall()
         return [dict(row) for row in rows]
 
     def save_attempt(self, cycle_id, lift, number, load, result):
@@ -588,16 +744,18 @@ class Store:
             db.execute('BEGIN IMMEDIATE')
             self.require_active(db, cycle_id)
             if number > 1:
-                previous = db.execute('SELECT result FROM attempts WHERE cycle_id=? AND lift=? AND number=?',
-                                      (cycle_id, lift, number - 1)).fetchone()
+                clause, args = self._mine()
+                previous = db.execute(f'SELECT result FROM attempts WHERE cycle_id=? AND lift=? AND number=?{clause}',
+                                      (cycle_id, lift, number - 1, *args)).fetchone()
                 if previous is None or previous['result'] is None:
                     raise ReadOnlyError(f'Confirm {lift} attempt {number - 1} before attempt {number}.')
-            db.execute('''INSERT INTO attempts VALUES(?,?,?,?,?,?)
-                ON CONFLICT(cycle_id,lift,number) DO UPDATE SET load=excluded.load,
+            db.execute('''INSERT INTO attempts(account_id,cycle_id,lift,number,load,result,updated_at)
+                VALUES(?,?,?,?,?,?,?)
+                ON CONFLICT(account_id,cycle_id,lift,number) DO UPDATE SET load=excluded.load,
                 result=excluded.result,updated_at=excluded.updated_at''',
-                (cycle_id, lift, number, load, result, stamp))
-            db.execute('INSERT INTO records_journal(cycle_id,kind,key,payload,created_at) VALUES(?,?,?,?,?)',
-                       (cycle_id, 'attempt', f'{lift}|{number}',
+                (self._account(db), cycle_id, lift, number, load, result, stamp))
+            db.execute('INSERT INTO records_journal(account_id,cycle_id,kind,key,payload,created_at) VALUES(?,?,?,?,?,?)',
+                       (self._account(db), cycle_id, 'attempt', f'{lift}|{number}',
                         json.dumps({'lift': lift, 'number': number, 'load': load, 'result': result}), stamp))
         return {'lift': lift, 'number': number, 'load': load, 'result': result, 'updated_at': stamp}
 
@@ -614,32 +772,37 @@ class Store:
         with self.connect() as db:
             db.execute('BEGIN IMMEDIATE')
             self._owned_status(db, cycle_id)
-            db.execute('DELETE FROM deletion_tokens WHERE cycle_id=?', (cycle_id,))
-            db.execute('INSERT INTO deletion_tokens VALUES(?,?,?)', (token, cycle_id, timestamp()))
+            clause, args = self._mine()
+            db.execute(f'DELETE FROM deletion_tokens WHERE cycle_id=?{clause}', (cycle_id, *args))
+            db.execute('INSERT INTO deletion_tokens(account_id,token,cycle_id,created_at) VALUES(?,?,?,?)',
+                       (self._account(db), token, cycle_id, timestamp()))
         return token
 
     def delete_cycle(self, cycle_id, token):
         with self.connect() as db:
             db.execute('BEGIN IMMEDIATE')
             self._owned_status(db, cycle_id)
-            issued = db.execute('SELECT token FROM deletion_tokens WHERE cycle_id=?', (cycle_id,)).fetchone()
+            clause, args = self._mine()
+            issued = db.execute(f'SELECT token FROM deletion_tokens WHERE cycle_id=?{clause}', (cycle_id, *args)).fetchone()
             if issued is None or not secrets.compare_digest(issued['token'], token):
                 raise ReadOnlyError('Export this cycle before deleting it. Request a fresh deletion export first.')
             # Snapshot only validated deletions, before any row is removed.
             self.snapshot()
-            for table in ('attempts', 'ai_calls', 'questionnaires', 'prescription_versions', 'body_metrics',
+            clause, args = self._mine()
+            for table in ('attempts', 'questionnaires', 'prescription_versions', 'body_metrics',
                           'archives', 'records_journal', 'readiness_v2', 'readiness', 'logs_journal', 'logs',
                           'plans', 'deletion_tokens'):
-                db.execute(f'DELETE FROM {table} WHERE cycle_id=?', (cycle_id,))
-            db.execute('DELETE FROM cycles WHERE id=?', (cycle_id,))
+                db.execute(f'DELETE FROM {table} WHERE cycle_id=?{clause}', (cycle_id, *args))
+            db.execute(f'DELETE FROM cycles WHERE id=?{clause}', (cycle_id, *args))
         return {'deleted': cycle_id}
 
     def questionnaire(self, cycle_id):
         with self.connect() as db:
             if not self._owns(db, cycle_id):
                 return None
-            row = db.execute('SELECT payload,status,updated_at FROM questionnaires WHERE cycle_id=?',
-                             (cycle_id,)).fetchone()
+            clause, args = self._mine()
+            row = db.execute(f'SELECT payload,status,updated_at FROM questionnaires WHERE cycle_id=?{clause}',
+                             (cycle_id, *args)).fetchone()
         if row is None:
             return None
         return {'status': row['status'], 'payload': json.loads(row['payload']), 'updated_at': row['updated_at']}
@@ -650,11 +813,11 @@ class Store:
         with self.connect() as db:
             db.execute('BEGIN IMMEDIATE')
             self.require_active(db, cycle_id)
-            db.execute('INSERT INTO records_journal(cycle_id,kind,key,payload,created_at) VALUES(?,?,?,?,?)',
-                       (cycle_id, 'questionnaire', status, json.dumps({'status': status, 'payload': payload}), stamp))
-            db.execute('''INSERT INTO questionnaires VALUES(?,?,?,?)
-                ON CONFLICT(cycle_id) DO UPDATE SET payload=excluded.payload,status=excluded.status,
-                updated_at=excluded.updated_at''', (cycle_id, encoded, status, stamp))
+            db.execute('INSERT INTO records_journal(account_id,cycle_id,kind,key,payload,created_at) VALUES(?,?,?,?,?,?)',
+                       (self._account(db), cycle_id, 'questionnaire', status, json.dumps({'status': status, 'payload': payload}), stamp))
+            db.execute('''INSERT INTO questionnaires(account_id,cycle_id,payload,status,updated_at) VALUES(?,?,?,?,?)
+                ON CONFLICT(account_id,cycle_id) DO UPDATE SET payload=excluded.payload,status=excluded.status,
+                updated_at=excluded.updated_at''', (self._account(db), cycle_id, encoded, status, stamp))
         return {'status': status, 'payload': payload, 'updated_at': stamp}
 
     def prescription_versions(self, cycle_id):
@@ -664,7 +827,9 @@ class Store:
             return []
         current = digest(plan)
         with self.connect() as db:
-            rows = db.execute('SELECT * FROM prescription_versions WHERE cycle_id=? ORDER BY created_at DESC', (cycle_id,)).fetchall()
+            clause, args = self._mine()
+            rows = db.execute(f'SELECT * FROM prescription_versions WHERE cycle_id=?{clause} ORDER BY created_at DESC',
+                              (cycle_id, *args)).fetchall()
         return [{'id': row['id'], 'created_at': row['created_at'], 'current': row['id'] == current,
                  'policy': json.loads(row['json']).get('prescription', {}).get('version', 'legacy')}
                 for row in rows]
@@ -673,7 +838,9 @@ class Store:
         with self.connect() as db:
             if not self._owns(db, cycle_id):
                 return None
-            row = db.execute('SELECT json FROM prescription_versions WHERE cycle_id=? AND id=?', (cycle_id, revision_id)).fetchone()
+            clause, args = self._mine()
+            row = db.execute(f'SELECT json FROM prescription_versions WHERE cycle_id=? AND id=?{clause}',
+                             (cycle_id, revision_id, *args)).fetchone()
         return json.loads(row['json']) if row else None
 
     def replace_prescription(self, cycle_id, expected_id, plan, action):
@@ -683,15 +850,18 @@ class Store:
         with self.connect() as db:
             db.execute('BEGIN IMMEDIATE')
             self.require_active(db, cycle_id)
-            current = json.loads(db.execute('SELECT json FROM plans WHERE cycle_id=?', (cycle_id,)).fetchone()['json'])
+            clause, args = self._mine()
+            current = json.loads(db.execute(f'SELECT json FROM plans WHERE cycle_id=?{clause}',
+                                            (cycle_id, *args)).fetchone()['json'])
             if digest(current) != expected_id:
                 raise ReadOnlyError('Prescription changed. Refresh and review the new version before saving.')
             if revision_id != expected_id:
                 encoded = json.dumps(plan, ensure_ascii=False, allow_nan=False)
                 stamp = timestamp()
-                db.execute('INSERT OR IGNORE INTO prescription_versions VALUES(?,?,?,?)', (cycle_id, revision_id, encoded, stamp))
-                db.execute('INSERT INTO records_journal(cycle_id,kind,key,payload,created_at) VALUES(?,?,?,?,?)',
-                           (cycle_id, 'prescription', revision_id, json.dumps({'action': action, 'from': expected_id, 'to': revision_id}), stamp))
+                db.execute('INSERT OR IGNORE INTO prescription_versions(account_id,cycle_id,id,json,created_at)'
+                           ' VALUES(?,?,?,?,?)', (self._account(db), cycle_id, revision_id, encoded, stamp))
+                db.execute('INSERT INTO records_journal(account_id,cycle_id,kind,key,payload,created_at) VALUES(?,?,?,?,?,?)',
+                           (self._account(db), cycle_id, 'prescription', revision_id, json.dumps({'action': action, 'from': expected_id, 'to': revision_id}), stamp))
                 db.execute('UPDATE plans SET json=? WHERE cycle_id=?', (encoded, cycle_id))
         return revision_id
 
@@ -699,20 +869,26 @@ class Store:
         with self.connect() as db:
             if not self._owns(db, cycle_id):
                 return []
-            records = db.execute('SELECT payload,updated_at FROM readiness_v2 WHERE cycle_id=? ORDER BY date,updated_at', (cycle_id,)).fetchall()
+            clause, args = self._mine()
+            records = db.execute(f'SELECT payload,updated_at FROM readiness_v2 WHERE cycle_id=?{clause}'
+                                 ' ORDER BY date,updated_at', (cycle_id, *args)).fetchall()
         return [{**json.loads(row['payload']), 'updated_at': row['updated_at']} for row in records]
 
     def legacy_readiness(self, cycle_id):
         with self.connect() as db:
             if not self._owns(db, cycle_id):
                 return []
-            return [dict(row) for row in db.execute('SELECT * FROM readiness WHERE cycle_id=? ORDER BY date,session_id', (cycle_id,))]
+            clause, args = self._mine()
+            return [dict(row) for row in db.execute(f'SELECT * FROM readiness WHERE cycle_id=?{clause}'
+                                                    ' ORDER BY date,session_id', (cycle_id, *args))]
 
     def metrics(self, cycle_id):
         with self.connect() as db:
             if not self._owns(db, cycle_id):
                 return []
-            rows = db.execute('SELECT * FROM body_metrics WHERE cycle_id=? ORDER BY date', (cycle_id,)).fetchall()
+            clause, args = self._mine()
+            rows = db.execute(f'SELECT * FROM body_metrics WHERE cycle_id=?{clause} ORDER BY date',
+                              (cycle_id, *args)).fetchall()
         return [{'date': row['date'], 'bodyweight': row['bodyweight'], 'bodyfat': row['bodyfat'],
                  'measurements': json.loads(row['measurements_json'] or '{}')} for row in rows]
 
@@ -723,22 +899,22 @@ class Store:
         with self.connect() as db:
             db.execute('BEGIN IMMEDIATE')
             self.require_active(db, cycle_id)
-            db.execute('INSERT INTO records_journal(cycle_id,kind,key,payload,created_at) VALUES(?,?,?,?,?)',
-                       (cycle_id, 'readiness', key, encoded, stamp))
-            db.execute('''INSERT INTO readiness_v2 VALUES(?,?,?,?,?)
-                ON CONFLICT(cycle_id,date,session_id) DO UPDATE SET payload=excluded.payload,updated_at=excluded.updated_at''',
-                       (cycle_id, payload['date'], payload['session_id'], encoded, stamp))
+            db.execute('INSERT INTO records_journal(account_id,cycle_id,kind,key,payload,created_at) VALUES(?,?,?,?,?,?)',
+                       (self._account(db), cycle_id, 'readiness', key, encoded, stamp))
+            db.execute('''INSERT INTO readiness_v2(account_id,cycle_id,date,session_id,payload,updated_at) VALUES(?,?,?,?,?,?)
+                ON CONFLICT(account_id,cycle_id,date,session_id) DO UPDATE SET payload=excluded.payload,updated_at=excluded.updated_at''',
+                       (self._account(db), cycle_id, payload['date'], payload['session_id'], encoded, stamp))
 
     def save_metrics(self, cycle_id, payload):
         with self.connect() as db:
             db.execute('BEGIN IMMEDIATE')
             self.require_active(db, cycle_id)
-            db.execute('INSERT INTO records_journal(cycle_id,kind,key,payload,created_at) VALUES(?,?,?,?,?)',
-                       (cycle_id, 'body_metrics', payload['date'], json.dumps(payload), timestamp()))
-            db.execute('''INSERT INTO body_metrics(cycle_id,date,bodyweight,bodyfat,measurements_json) VALUES(?,?,?,?,?)
-                ON CONFLICT(cycle_id,date) DO UPDATE SET bodyweight=excluded.bodyweight,
+            db.execute('INSERT INTO records_journal(account_id,cycle_id,kind,key,payload,created_at) VALUES(?,?,?,?,?,?)',
+                       (self._account(db), cycle_id, 'body_metrics', payload['date'], json.dumps(payload), timestamp()))
+            db.execute('''INSERT INTO body_metrics(account_id,cycle_id,date,bodyweight,bodyfat,measurements_json) VALUES(?,?,?,?,?,?)
+                ON CONFLICT(account_id,cycle_id,date) DO UPDATE SET bodyweight=excluded.bodyweight,
                 bodyfat=excluded.bodyfat,measurements_json=excluded.measurements_json''',
-                       (cycle_id, payload['date'], payload['bodyweight'], payload['bodyfat'], json.dumps(payload['measurements'])))
+                       (self._account(db), cycle_id, payload['date'], payload['bodyweight'], payload['bodyfat'], json.dumps(payload['measurements'])))
 
     def require_active(self, db, cycle_id):
         clause, args = self._mine()
@@ -765,7 +941,8 @@ class Store:
         with self.connect() as db:
             if not self._owns(db, cycle_id):
                 return {}
-            rows = db.execute('SELECT * FROM logs WHERE cycle_id=? ORDER BY key', (cycle_id,)).fetchall()
+            clause, args = self._mine()
+            rows = db.execute(f'SELECT * FROM logs WHERE cycle_id=?{clause} ORDER BY key', (cycle_id, *args)).fetchall()
         return {row['key']: {'load': row['load'], 'sets': row['set_count'], 'reps': row['reps'],
                              'rpe': row['rpe'], 'note': row['note'], 'updated_at': row['updated_at']}
                 for row in rows}
@@ -780,25 +957,33 @@ class Store:
         cycle = db.execute(f'SELECT * FROM cycles WHERE id=?{clause}', (cycle_id, *args)).fetchone()
         if cycle is None:
             return None
-        plan = json.loads(db.execute('SELECT json FROM plans WHERE cycle_id=?', (cycle_id,)).fetchone()['json'])
+        plan = json.loads(db.execute(f'SELECT json FROM plans WHERE cycle_id=?{clause}',
+                                    (cycle_id, *args)).fetchone()['json'])
         logs = {row['key']: {'load': row['load'], 'sets': row['set_count'], 'reps': row['reps'],
                             'rpe': row['rpe'], 'note': row['note'], 'updated_at': row['updated_at']}
-                for row in db.execute('SELECT * FROM logs WHERE cycle_id=? ORDER BY key', (cycle_id,))}
+                for row in db.execute(f'SELECT * FROM logs WHERE cycle_id=?{clause} ORDER BY key', (cycle_id, *args))}
         metrics = [{'date': row['date'], 'bodyweight': row['bodyweight'], 'bodyfat': row['bodyfat'],
                     'measurements': json.loads(row['measurements_json'] or '{}')}
-                   for row in db.execute('SELECT * FROM body_metrics WHERE cycle_id=? ORDER BY date', (cycle_id,))]
+                   for row in db.execute(f'SELECT * FROM body_metrics WHERE cycle_id=?{clause} ORDER BY date',
+                                         (cycle_id, *args))]
         readiness = [{**json.loads(row['payload']), 'updated_at': row['updated_at']}
-                     for row in db.execute('SELECT * FROM readiness_v2 WHERE cycle_id=? ORDER BY date,updated_at', (cycle_id,))]
-        legacy = [dict(row) for row in db.execute('SELECT * FROM readiness WHERE cycle_id=? ORDER BY date,session_id', (cycle_id,))]
+                     for row in db.execute(f'SELECT * FROM readiness_v2 WHERE cycle_id=?{clause}'
+                                           ' ORDER BY date,updated_at', (cycle_id, *args))]
+        legacy = [dict(row) for row in db.execute(f'SELECT * FROM readiness WHERE cycle_id=?{clause}'
+                                                  ' ORDER BY date,session_id', (cycle_id, *args))]
         versions = [{'id': row['id'], 'plan': json.loads(row['json']), 'created_at': row['created_at']}
-                    for row in db.execute('SELECT * FROM prescription_versions WHERE cycle_id=? ORDER BY created_at,id', (cycle_id,))]
+                    for row in db.execute(f'SELECT * FROM prescription_versions WHERE cycle_id=?{clause}'
+                                          ' ORDER BY created_at,id', (cycle_id, *args))]
         journals = {}
         for name, table in (('logs', 'logs_journal'), ('records', 'records_journal')):
-            journals[name] = [{**dict(row), 'payload': json.loads(row['payload'])}
-                              for row in db.execute(f'SELECT * FROM {table} WHERE cycle_id=? ORDER BY id', (cycle_id,))]
-        archived = db.execute('SELECT review_json FROM archives WHERE cycle_id=?', (cycle_id,)).fetchone()
-        questionnaire = db.execute('SELECT payload,status,updated_at FROM questionnaires WHERE cycle_id=?',
-                                   (cycle_id,)).fetchone()
+            journals[name] = [{**{k: v for k, v in dict(row).items() if k != 'account_id'},
+                               'payload': json.loads(row['payload'])}
+                              for row in db.execute(f'SELECT * FROM {table} WHERE cycle_id=?{clause} ORDER BY id',
+                                                    (cycle_id, *args))]
+        archived = db.execute(f'SELECT review_json FROM archives WHERE cycle_id=?{clause}',
+                              (cycle_id, *args)).fetchone()
+        questionnaire = db.execute(f'SELECT payload,status,updated_at FROM questionnaires WHERE cycle_id=?{clause}',
+                                   (cycle_id, *args)).fetchone()
         return {'cycle': self._row(cycle), 'plan': plan, 'logs': logs, 'body_metrics': metrics,
                 'readiness': readiness, 'legacy_readiness': legacy, 'prescription_versions': versions,
                 'journals': journals, 'saved_review': json.loads(archived['review_json']) if archived else None,
@@ -812,13 +997,13 @@ class Store:
         from .validation import validate_plan
         validate_plan(plan, file='import.json')
         with self.connect() as db:
-            if db.execute('PRAGMA user_version').fetchone()[0] != 5:
+            if db.execute('PRAGMA user_version').fetchone()[0] != 6:
                 raise RuntimeError('Unsupported database version. No data was changed.')
         self.snapshot()
         clause, args = self._mine()
         with self.connect() as db:
             db.execute('BEGIN IMMEDIATE')
-            if db.execute('PRAGMA user_version').fetchone()[0] != 5:
+            if db.execute('PRAGMA user_version').fetchone()[0] != 6:
                 raise RuntimeError('Unsupported database version. No data was changed.')
             active = db.execute(f"SELECT id FROM cycles WHERE status='active'{clause}", args).fetchone()
             source = self._review_source(db, active['id']) if active else None
@@ -826,27 +1011,28 @@ class Store:
             if current_id != expected_source_id:
                 raise ReadOnlyError('Current cycle or records changed. Preview again before importing.')
             meta = plan['meta']
-            if db.execute('SELECT 1 FROM cycles WHERE id=?', (meta['planId'],)).fetchone():
-                raise ReadOnlyError('Cycle ID already exists. Existing cycles cannot be overwritten.')
+            clause, args = self._mine()
+            if db.execute(f'SELECT 1 FROM cycles WHERE id=?{clause}', (meta['planId'], *args)).fetchone():
+                raise ReadOnlyError('That cycle ID is already used in your own ledger. Save it under a new ID.')
             stamp = timestamp()
             old_id = source['cycle']['id'] if source else None
             if source:
                 event = {'action': 'import', 'from': old_id, 'to': meta['planId'], 'plan_sha256': digest(plan)}
-                db.execute('INSERT INTO records_journal(cycle_id,kind,key,payload,created_at) VALUES(?,?,?,?,?)',
-                           (old_id, 'import', meta['planId'], json.dumps(event), stamp))
+                db.execute('INSERT INTO records_journal(account_id,cycle_id,kind,key,payload,created_at) VALUES(?,?,?,?,?,?)',
+                           (self._account(db), old_id, 'import', meta['planId'], json.dumps(event), stamp))
                 db.execute("UPDATE cycles SET status='archived' WHERE id=?", (old_id,))
                 archived_source = self._review_source(db, old_id)
                 as_of = calendar_state(source['plan'], source['logs'])['date']
                 review = build_review(archived_source, stamp, app_version, as_of)
-                db.execute('INSERT INTO archives VALUES(?,?,?,?)',
-                           (old_id, old_id, json.dumps(review, ensure_ascii=False, allow_nan=False), stamp))
+                db.execute('INSERT INTO archives(account_id,id,cycle_id,review_json,exported_at) VALUES(?,?,?,?,?)',
+                           (self._account(db), old_id, old_id, json.dumps(review, ensure_ascii=False, allow_nan=False), stamp))
             encoded = json.dumps(plan, ensure_ascii=False, allow_nan=False)
             self._root_insert(db, 'cycles', ('id', 'name', 'start_date', 'end_date', 'status', 'schema_version'),
                               (meta['planId'], meta['name'], meta['startDate'], meta['endDate'], 'active', plan['schemaVersion']))
-            db.execute('INSERT INTO plans VALUES(?,?,?,?,?)',
-                       (meta['planId'], meta['planId'], encoded, plan['schemaVersion'], stamp))
-            db.execute('INSERT INTO prescription_versions VALUES(?,?,?,?)',
-                       (meta['planId'], digest(plan), encoded, stamp))
+            db.execute('INSERT INTO plans(account_id,id,cycle_id,json,version,created_at) VALUES(?,?,?,?,?,?)',
+                       (self._account(db), meta['planId'], meta['planId'], encoded, plan['schemaVersion'], stamp))
+            db.execute('INSERT INTO prescription_versions(account_id,cycle_id,id,json,created_at) VALUES(?,?,?,?,?)',
+                       (self._account(db), meta['planId'], digest(plan), encoded, stamp))
         return {'saved': True, 'active_cycle_id': meta['planId'], 'archived_cycle_id': old_id}
 
     def save_log(self, cycle_id, row, payload):
@@ -855,12 +1041,13 @@ class Store:
         with self.connect() as db:
             db.execute('BEGIN IMMEDIATE')
             self.require_active(db, cycle_id)
-            db.execute('INSERT INTO logs_journal(cycle_id,key,payload,created_at) VALUES(?,?,?,?)',
-                       (cycle_id, key, json.dumps(payload), stamp))
-            db.execute('''INSERT INTO logs VALUES(?,?,?,?,?,?,?,?,?,?,?)
-                ON CONFLICT(cycle_id,key) DO UPDATE SET
+            db.execute('INSERT INTO logs_journal(account_id,cycle_id,key,payload,created_at) VALUES(?,?,?,?,?)',
+                       (self._account(db), cycle_id, key, json.dumps(payload), stamp))
+            db.execute('''INSERT INTO logs(account_id,cycle_id,key,date,session_id,exercise_id,load,reps,rpe,set_count,note,updated_at)
+                VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(account_id,cycle_id,key) DO UPDATE SET
                 load=excluded.load,reps=excluded.reps,rpe=excluded.rpe,set_count=excluded.set_count,
                 note=excluded.note,updated_at=excluded.updated_at''',
-                (cycle_id, key, row['date'], f"{row['week']}|{row['day']}", row['movementId'],
+                (self._account(db), cycle_id, key, row['date'], f"{row['week']}|{row['day']}", row['movementId'],
                  payload['load'], payload['reps'], payload['rpe'], payload['sets'], payload['note'], stamp))
         return {'key': key, **payload, 'updated_at': stamp}

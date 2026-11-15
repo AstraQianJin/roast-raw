@@ -189,6 +189,7 @@ def create_app(db_path=None, plan_path=None):
         base.upgrade_membership()
         base.seed_owner(access_username, access_password)
         base.upgrade_ledger(access_username)
+        base.upgrade_cycle_keys()
         app.state.open_ledger = base.open_ledger()
         app.state.store = base.for_account(app.state.open_ledger)
         yield
@@ -688,8 +689,8 @@ def create_app(db_path=None, plan_path=None):
         source = store.review_source(active_id) if active_id else None
         if active_id and (source is None or source['cycle']['status'] != 'active'):
             raise ReadOnlyError('Current cycle changed. Refresh before importing.')
-        if any(cycle['id'] == candidate['meta']['planId'] for cycle in base.cycles()['cycles']):
-            raise ReadOnlyError('Cycle ID already exists. Existing cycles cannot be overwritten.')
+        if any(cycle['id'] == candidate['meta']['planId'] for cycle in records['cycles']):
+            raise ReadOnlyError('That cycle ID is already used in your own ledger. Save it under a new ID.')
         return candidate, {
             'currentId': digest(source) if source else store.EMPTY_SOURCE_ID, 'candidateId': digest(candidate),
             'current': summary(source['plan']) if source else None, 'candidate': summary(candidate),

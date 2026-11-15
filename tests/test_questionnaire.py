@@ -340,12 +340,13 @@ class QuestionnaireAPITests(unittest.TestCase):
         import sqlite3
         archived_id = self.cycle_id + '-archived'
         with closing(sqlite3.connect(self.db_path)) as db:
-            db.execute("INSERT INTO cycles(id,name,start_date,end_date,status,schema_version) "
-                       "VALUES(?,?,?,?,?,?)",
-                       (archived_id, 'Archived', '2026-01-01', '2026-04-01', 'archived',
+            account = db.execute('SELECT account_id FROM cycles LIMIT 1').fetchone()[0]
+            db.execute("INSERT INTO cycles(account_id,id,name,start_date,end_date,status,schema_version) "
+                       "VALUES(?,?,?,?,?,?,?)",
+                       (account, archived_id, 'Archived', '2026-01-01', '2026-04-01', 'archived',
                         self.seed['schemaVersion']))
-            db.execute("INSERT INTO plans(id,cycle_id,json,version,created_at) VALUES(?,?,?,?,?)",
-                       (archived_id, archived_id, json.dumps(self.seed),
+            db.execute("INSERT INTO plans(account_id,id,cycle_id,json,version,created_at) VALUES(?,?,?,?,?,?)",
+                       (account, archived_id, archived_id, json.dumps(self.seed),
                         self.seed['schemaVersion'], '2026-01-01T00:00:00+00:00'))
             db.commit()
         response = self.put('draft', skeleton(), cycle_id=archived_id)

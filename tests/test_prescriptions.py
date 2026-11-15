@@ -176,11 +176,12 @@ class PrescriptionTests(unittest.TestCase):
             response = self.client.put(path, json=payload)
             self.assertEqual(response.status_code, 200, response.text)
         with open_db(self.path) as db:
-            db.execute('INSERT INTO readiness(cycle_id,date,session_id,fatigue,note) VALUES(?,?,?,?,?)',
-                       (self.cycle, row['date'], 'legacy', 7, 'Fatigue is not recovery'))
+            db.execute('INSERT INTO readiness(account_id,cycle_id,date,session_id,fatigue,note) VALUES(?,?,?,?,?,?)',
+                       (db.execute('SELECT account_id FROM cycles LIMIT 1').fetchone()[0], self.cycle, row['date'],
+                        'legacy', 7, 'Fatigue is not recovery'))
         return row
 
-    def assert_snapshot(self, snapshot, rows, version=5):
+    def assert_snapshot(self, snapshot, rows, version=6):
         with open_db(snapshot) as db:
             self.assertEqual(db.execute('PRAGMA integrity_check').fetchone()[0], 'ok')
             self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], version)
@@ -207,7 +208,7 @@ class PrescriptionTests(unittest.TestCase):
         self.assertEqual(current['versions'][0]['id'], canonical_id(self.seed))
         self.assertTrue(current['versions'][0]['current'])
         with open_db(self.path) as db:
-            self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], 5)
+            self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], 6)
         payload = {'cycle_id': self.cycle, 'current_id': current['currentId'], 'references': current['references']}
         preview = self.preview(payload)
         self.assertTrue(preview['changes'])
@@ -330,7 +331,7 @@ class PrescriptionTests(unittest.TestCase):
             if table not in {'prescription_versions', 'records_journal'}:
                 self.assertEqual(after[table], rows, f'Restore must not rewrite {table}')
         self.assertEqual(after['records_journal'][:len(before['records_journal'])], before['records_journal'])
-        journal = [json.loads(entry[4]) for entry in after['records_journal'] if entry[2] == 'prescription']
+        journal = [json.loads(entry[5]) for entry in after['records_journal'] if entry[3] == 'prescription']
         self.assertEqual([entry['action'] for entry in journal], ['apply', 'apply', 'restore'])
         self.assertEqual(journal[-1], {'action': 'restore', 'from': canonical_id(second), 'to': original_id})
         self.assertEqual(after['prescription_versions'], before_restore['prescription_versions'])
@@ -466,10 +467,11 @@ class PrescriptionTests(unittest.TestCase):
         with open_db(self.path) as db:
             db.execute('INSERT INTO cycles(id,name,start_date,end_date,status,schema_version,account_id) VALUES(?,?,?,?,?,?,(SELECT account_id FROM cycles ORDER BY rowid LIMIT 1))',
                        (archived_id, meta['name'], meta['startDate'], meta['endDate'], 'archived', archived['schemaVersion']))
-            db.execute('INSERT INTO plans VALUES(?,?,?,?,?)',
-                       (archived_id, archived_id, json.dumps(archived), archived['schemaVersion'], '2026-01-01T00:00:00+00:00'))
-            db.execute('INSERT INTO prescription_versions VALUES(?,?,?,?)',
-                       (archived_id, archived_revision, json.dumps(archived), '2026-01-01T00:00:00+00:00'))
+            account = db.execute('SELECT account_id FROM cycles LIMIT 1').fetchone()[0]
+            db.execute('INSERT INTO plans(account_id,id,cycle_id,json,version,created_at) VALUES(?,?,?,?,?,?)',
+                       (account, archived_id, archived_id, json.dumps(archived), archived['schemaVersion'], '2026-01-01T00:00:00+00:00'))
+            db.execute('INSERT INTO prescription_versions(account_id,cycle_id,id,json,created_at) VALUES(?,?,?,?,?)',
+                       (account, archived_id, archived_revision, json.dumps(archived), '2026-01-01T00:00:00+00:00'))
         before = database_rows(self.path)
         self.assertEqual(self.get_json('/api/prescription/version', cycle_id=archived_id,
                                       revision_id=archived_revision)['plan'], archived)
@@ -646,12 +648,23 @@ class PrescriptionMigrationTests(unittest.TestCase):
                 self.assertEqual(database_rows(path)[table], rows)
             for definition in original_schema:
                 self.assertIn(definition, database_schema(path))
-            store.save_log(cycle, row, {'load': 101.25, 'sets': 0, 'reps': 0, 'rpe': None, 'note': 'Explicit zero'})
-            store.save_readiness(cycle, {'date': row['date'], 'session_id': 'daily',
-                                         'recovery': 1, 'arousal': 4, 'nutrition': 7, 'note': 'New recovery'})
-            store.save_metrics(cycle, {'date': row['date'], 'bodyweight': 85., 'bodyfat': 18., 'measurements': {'waist': 80.}})
-            before, prior_backups = database_rows(path), backups(path)
+            # Rows are written in the v2 shape: the v6 writers require account_id columns.
+            with open_db(path) as db:
+                db.execute('INSERT INTO logs_journal(cycle_id,key,payload,created_at) VALUES(?,?,?,?)',
+                           (cycle, '1|A|1', json.dumps({'load': 101.25, 'sets': 0, 'reps': 0, 'rpe': None, 'note': 'Explicit zero'}),
+                            '2026-01-01T00:00:00+00:00'))
+                db.execute('INSERT INTO logs VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+                           (cycle, '1|A|1', row['date'], '1|A', row['movementId'], 101.25, 0, None, 0, 'Explicit zero',
+                            '2026-01-01T00:00:00+00:00'))
+                db.execute('INSERT INTO readiness_v2(cycle_id,date,session_id,payload,updated_at) VALUES(?,?,?,?,?)',
+                           (cycle, row['date'], 'daily',
+                            json.dumps({'date': row['date'], 'session_id': 'daily', 'recovery': 1,
+                                        'arousal': 4, 'nutrition': 7, 'note': 'New recovery'}),
+                            '2026-01-01T00:00:00+00:00'))
+                db.execute('INSERT INTO body_metrics(cycle_id,date,bodyweight,bodyfat,measurements_json) VALUES(?,?,?,?,?)',
+                           (cycle, row['date'], 85., 18., json.dumps({'waist': 80.})))
             before_schema = database_schema(path)
+            before, prior_backups = database_rows(path), backups(path)
             store.upgrade()
             self.assertEqual(database_rows(path), before)
             self.assertEqual(backups(path), prior_backups)
@@ -697,20 +710,18 @@ class PrescriptionMigrationTests(unittest.TestCase):
             store.initialize(seed)
             store.upgrade()
             store.upgrade_prescriptions()
-            expected = dict(after)
-            expected['questionnaires'] = []
-            expected['ai_calls'] = []
-            expected['attempts'] = []
-            expected['deletion_tokens'] = []
-            expected['accounts'] = []
-            expected['invites'] = []
-            expected['invite_redemptions'] = []
-            expected['sessions'] = []
-            expected['cycles'] = [tuple(row) + (0,) for row in after['cycles']]
+            from server.app.store import Store as StoreClass
+            expected = {table: list(rows) for table, rows in after.items()}
+            for table in ('questionnaires', 'ai_calls', 'attempts', 'deletion_tokens', 'accounts', 'invites',
+                          'invite_redemptions', 'sessions'):
+                expected[table] = []
+            # v6 prepends the account to every cycle-scoped table, seed rows included.
+            for table in StoreClass.V6_TABLES:
+                expected[table] = sorted(((0,) + tuple(row)) for row in after.get(table, []))
             expected['ledger_meta'] = [('open_ledger', '0')]
             self.assertEqual(database_rows(path), expected)
             migrated_backups = backups(path) - stable_backups
-            self.assertEqual(len(migrated_backups), 5, 'v4 questionnaire, v5 AI, additive accounts, membership and per-account ledger migrations must each snapshot once')
+            self.assertEqual(len(migrated_backups), 6, 'v4 questionnaire, v5 AI, additive accounts, membership, per-account ledger and composite-key migrations must each snapshot once')
             snapshot_versions = set()
             for backup in migrated_backups:
                 with open_db(backup) as db:

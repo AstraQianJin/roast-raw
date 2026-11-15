@@ -40,10 +40,11 @@ class ReviewAPITests(GeneratedPlanCase):
         with open_db(self.db_path) as db:
             db.execute('INSERT INTO cycles(id,name,start_date,end_date,status,schema_version,account_id) VALUES(?,?,?,?,?,?,(SELECT account_id FROM cycles ORDER BY rowid LIMIT 1))',
                        (cycle_id, plan['meta']['name'], plan['meta']['startDate'], plan['meta']['endDate'], status, plan['schemaVersion']))
-            db.execute('INSERT INTO plans VALUES(?,?,?,?,?)',
-                       (cycle_id, cycle_id, json.dumps(plan), plan['schemaVersion'], '2026-11-01T00:00:00+00:00'))
-            db.execute('INSERT INTO prescription_versions VALUES(?,?,?,?)',
-                       (cycle_id, digest(plan), json.dumps(plan), '2026-11-01T00:00:00+00:00'))
+            account = db.execute('SELECT account_id FROM cycles LIMIT 1').fetchone()[0]
+            db.execute('INSERT INTO plans(account_id,id,cycle_id,json,version,created_at) VALUES(?,?,?,?,?,?)',
+                       (account, cycle_id, cycle_id, json.dumps(plan), plan['schemaVersion'], '2026-11-01T00:00:00+00:00'))
+            db.execute('INSERT INTO prescription_versions(account_id,cycle_id,id,json,created_at) VALUES(?,?,?,?,?)',
+                       (account, cycle_id, digest(plan), json.dumps(plan), '2026-11-01T00:00:00+00:00'))
         return plan
 
     def test_empty_review_export_does_not_archive_or_write_and_unknown_actuals_are_null(self):
@@ -82,8 +83,9 @@ class ReviewAPITests(GeneratedPlanCase):
         self.assertEqual(self.client.put('/api/readiness', json={**self.params, 'date': row['date'],
                          'session_id': 'daily', 'recovery': 5, 'arousal': 4, 'nutrition': 6}).status_code, 200)
         with open_db(self.db_path) as db:
-            db.execute('INSERT INTO readiness(cycle_id,date,session_id,fatigue,note) VALUES(?,?,?,?,?)',
-                       (self.cycle_id, row['date'], 'daily', 6, 'Original negative fatigue'))
+            db.execute('INSERT INTO readiness(account_id,cycle_id,date,session_id,fatigue,note) VALUES(?,?,?,?,?,?)',
+                       (db.execute('SELECT account_id FROM cycles LIMIT 1').fetchone()[0], self.cycle_id, row['date'],
+                        'daily', 6, 'Original negative fatigue'))
         before = database_rows(self.db_path)
         review = self.client.get('/api/review/export', params=self.params).json()
         self.assertEqual(review['logs'][0]['key'], log_key(row))

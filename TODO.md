@@ -6,11 +6,11 @@
 
 ---
 
-## 0 · 状态快照（2026-11-15 · 0.31 收工）
+## 0 · 状态快照（2026-11-15 · 0.32 收工）
 
 | 项 | 值 |
 |---|---|
-| 版本 | `web/package.json` = **0.0.31**；0.29–0.31 均已本地提交，未 push、未部署 |
+| 版本 | `web/package.json` = **0.0.32**；0.29–0.32 均已本地提交，未 push、未部署 |
 | 工作树 | 以本节所在提交为准 |
 | 最近提交 | 见 `git log --oneline -3` |
 | 门禁 | `node tests/verify.js` **317** 用例 / **6587** 检查、exit 0（sabotage 子进程仍按预期红）；`npm --prefix web run build` exit 0；`check_skill.py --root .` PASS |
@@ -30,9 +30,9 @@
 
 ---
 
-## 1 · 下一动作：0.32 复合主键与迁移
+## 1 · 下一动作：0.33 视觉欠账
 
-**接手指令**：`docs\agent-prompt-0.29-0.39.md` 的 0.32 行 + 本文件 §4 `T4`。
+**接手指令**：`docs\agent-prompt-0.29-0.39.md` 的 0.33 行（`R4`：GEAR 小片与单侧配片、Sheiko 热身只给主项、比赛三盏裁判灯、测试周四组 UI）。
 
 按序执行，一步一提交。提交前跑门禁，回执按 `AGENTS.md` 五字段。
 
@@ -129,7 +129,7 @@
 
 以 `store.py` 实际表为准（`cycles` `plans` `logs` `readiness` `readiness_v2` `archives` `body_metrics` `questionnaires` `ai_calls` `attempts` `deletion_tokens` `accounts`，外加处方版本表与会话表），逐表写「孤儿查询」（引用了不存在 `cycle_id` 的行数必须为 0），并写表级隔离单测：A 账户写、B 账户读不到。
 
-### T4 · 主键与迁移（0.32，下一动作）
+### T4 · 主键与迁移（已完成 0.32：`Store.upgrade_cycle_keys()` 重建 14 张表到复合键、`user_version=6`、导入 409 改「同账号占用」、`test_same_cycle_id_allowed_across_accounts`）
 
 `cycles.id TEXT PRIMARY KEY` 全局唯一是缺陷：改成复合主键 `(account_id, id)`，相关表外键随之重建，`user_version` 升位，迁移前快照，导入 409 文案改为「同账号占用 / 另存新 ID」，单测改名 `test_same_cycle_id_allowed_across_accounts`。
 

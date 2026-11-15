@@ -35,9 +35,22 @@ LINKS = (
     ('attempts', 'cycle_id', 'cycles', 'id', None),
     ('deletion_tokens', 'cycle_id', 'cycles', 'id', None),
     ('cycles', 'account_id', 'accounts', 'id', 0),
-    ('ai_calls', 'account_id', 'accounts', 'id', 0),
+    ('ai_calls', 'account_id', 'accounts', 'id', None),
     ('sessions', 'account_id', 'accounts', 'id', None),
     ('invite_redemptions', 'account_id', 'accounts', 'id', None),
+    # v6: every cycle-scoped table also carries the parent's account, so both halves are audited.
+    ('plans', 'account_id', 'accounts', 'id', None),
+    ('logs', 'account_id', 'accounts', 'id', None),
+    ('logs_journal', 'account_id', 'accounts', 'id', None),
+    ('readiness', 'account_id', 'accounts', 'id', None),
+    ('readiness_v2', 'account_id', 'accounts', 'id', None),
+    ('archives', 'account_id', 'accounts', 'id', None),
+    ('body_metrics', 'account_id', 'accounts', 'id', None),
+    ('records_journal', 'account_id', 'accounts', 'id', None),
+    ('prescription_versions', 'account_id', 'accounts', 'id', None),
+    ('questionnaires', 'account_id', 'accounts', 'id', None),
+    ('attempts', 'account_id', 'accounts', 'id', None),
+    ('deletion_tokens', 'account_id', 'accounts', 'id', None),
 )
 
 

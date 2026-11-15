@@ -69,10 +69,12 @@ def seed_historical_log(path, cycle_id, row, payload):
     key = log_key(row)
     stamp = '2026-11-01T00:00:00+00:00'
     with open_db(path) as db:
-        db.execute('INSERT INTO logs_journal(cycle_id,key,payload,created_at) VALUES(?,?,?,?)',
-                   (cycle_id, key, json.dumps(payload), stamp))
-        db.execute('INSERT INTO logs VALUES(?,?,?,?,?,?,?,?,?,?,?)',
-                   (cycle_id, key, row['date'], f"{row['week']}|{row['day']}", row['movementId'],
+        account = db.execute('SELECT account_id FROM cycles LIMIT 1').fetchone()[0]
+        db.execute('INSERT INTO logs_journal(account_id,cycle_id,key,payload,created_at) VALUES(?,?,?,?,?)',
+                   (account, cycle_id, key, json.dumps(payload), stamp))
+        db.execute('INSERT INTO logs(account_id,cycle_id,key,date,session_id,exercise_id,load,reps,rpe,set_count,note,updated_at)'
+                   ' VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
+                   (account, cycle_id, key, row['date'], f"{row['week']}|{row['day']}", row['movementId'],
                     payload['load'], payload['reps'], payload['rpe'], payload['sets'], payload['note'], stamp))
     return {'key': key, **payload, 'updated_at': stamp}
 
@@ -150,13 +152,16 @@ class APITests(GeneratedPlanCase):
         archived['meta']['name'] = 'Historical test cycle'
         meta = archived['meta']
         with open_db(self.db_path) as db:
+            account = db.execute('SELECT account_id FROM cycles LIMIT 1').fetchone()[0]
             db.execute(
-                'INSERT INTO cycles(id,name,start_date,end_date,status,schema_version) VALUES(?,?,?,?,?,?)',
-                (meta['planId'], meta['name'], meta['startDate'], meta['endDate'], status, archived['schemaVersion']),
+                'INSERT INTO cycles(account_id,id,name,start_date,end_date,status,schema_version)'
+                ' VALUES(?,?,?,?,?,?,?)',
+                (account, meta['planId'], meta['name'], meta['startDate'], meta['endDate'], status,
+                 archived['schemaVersion']),
             )
             db.execute(
-                'INSERT INTO plans(id,cycle_id,json,version,created_at) VALUES(?,?,?,?,?)',
-                (meta['planId'], meta['planId'], json.dumps(archived), archived['schemaVersion'],
+                'INSERT INTO plans(account_id,id,cycle_id,json,version,created_at) VALUES(?,?,?,?,?,?)',
+                (account, meta['planId'], meta['planId'], json.dumps(archived), archived['schemaVersion'],
                  '2026-01-01T00:00:00+00:00'),
             )
         return archived
@@ -406,19 +411,25 @@ class APITests(GeneratedPlanCase):
             tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
             self.assertTrue(REQUIRED_TABLES <= tables, f'Missing required tables: {REQUIRED_TABLES - tables}')
             self.assertIn('logs_journal', tables)
-            self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], 5)
+            self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], 6)
             self.assertEqual(db.execute('PRAGMA journal_mode').fetchone()[0].lower(), 'wal')
             self.assertEqual(db.execute('PRAGMA foreign_key_check').fetchall(), [])
+            cycle_columns = [row[1] for row in db.execute('PRAGMA table_info(cycles)')]
+            self.assertEqual(cycle_columns[:2], ['account_id', 'id'], 'cycles must key on (account_id, id)')
             for table in ('plans', 'logs', 'logs_journal', 'readiness', 'archives', 'body_metrics'):
                 with self.subTest(table=table):
                     foreign_keys = db.execute(f'PRAGMA foreign_key_list({table})').fetchall()
-                    self.assertTrue(any(row[2:5] == ('cycles', 'cycle_id', 'id') for row in foreign_keys))
+                    pairs = {(row[2], row[3], row[4]) for row in foreign_keys}
+                    self.assertIn(('cycles', 'account_id', 'account_id'), pairs)
+                    self.assertIn(('cycles', 'cycle_id', 'id'), pairs)
         before = database_rows(self.db_path)
         with self.assertRaises(sqlite3.IntegrityError):
             with open_db(self.db_path) as db:
+                account = db.execute('SELECT account_id FROM cycles LIMIT 1').fetchone()[0]
                 db.execute(
-                    'INSERT INTO cycles(id,name,start_date,end_date,status,schema_version) VALUES(?,?,?,?,?,?)',
-                    (self.cycle_id + '-second-active', 'Duplicate active', self.seed['meta']['startDate'],
+                    'INSERT INTO cycles(account_id,id,name,start_date,end_date,status,schema_version)'
+                    ' VALUES(?,?,?,?,?,?,?)',
+                    (account, self.cycle_id + '-second-active', 'Duplicate active', self.seed['meta']['startDate'],
                      self.seed['meta']['endDate'], 'active', self.seed['schemaVersion']),
                 )
         self.assertEqual(database_rows(self.db_path), before)

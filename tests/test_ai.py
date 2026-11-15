@@ -129,7 +129,7 @@ class AiTests(unittest.TestCase):
         import sqlite3
         from contextlib import closing
         with closing(sqlite3.connect(self.store.path)) as db:
-            self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], 5)
+            self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], 6)
 
 
 if __name__ == '__main__':

@@ -128,8 +128,11 @@ class OrphanAuditTests(IsolationCase):
     def test_planted_orphan_is_reported(self):
         self.write_every_table(self.owner, SEED['meta']['planId'])
         with closing(sqlite3.connect(self.db_path)) as db:
-            db.execute("INSERT INTO logs(cycle_id, key, date, session_id, exercise_id, load, reps, rpe, set_count, note, updated_at)"
-                       " VALUES('ghost-cycle', '1|A|1', '2026-11-23', '1|A', 'hb-squat', 100.0, 5, NULL, 3, 'orphan', '2026-11-23T00:00:00+00:00')")
+            account = db.execute('SELECT account_id FROM cycles LIMIT 1').fetchone()[0]
+            db.execute("INSERT INTO logs(account_id, cycle_id, key, date, session_id, exercise_id, load, reps, rpe,"
+                       " set_count, note, updated_at)"
+                       " VALUES(?, 'ghost-cycle', '1|A|1', '2026-11-23', '1|A', 'hb-squat', 100.0, 5, NULL, 3,"
+                       " 'orphan', '2026-11-23T00:00:00+00:00')", (account,))
             db.commit()
         result = self.orphans()
         self.assertEqual(result['orphans'], {'logs.cycle_id->cycles.id': 1}, result['orphans'])

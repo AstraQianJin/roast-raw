@@ -72,14 +72,15 @@ with tempfile.TemporaryDirectory(prefix='roastraw-browser-') as directory:
         with store.connect() as db:
             db.execute('INSERT INTO cycles(id,name,start_date,end_date,status,schema_version,account_id) VALUES(?,?,?,?,?,?,(SELECT account_id FROM cycles ORDER BY rowid LIMIT 1))',
                        (meta['planId'], meta['name'], meta['startDate'], meta['endDate'], 'archived', historical['schemaVersion']))
-            db.execute('INSERT INTO plans VALUES(?,?,?,?,?)',
-                       (meta['planId'], meta['planId'], json.dumps(historical), historical['schemaVersion'], '2026-11-01T00:00:00+00:00'))
-            db.execute('INSERT INTO prescription_versions VALUES(?,?,?,?)',
-                       (meta['planId'], digest(historical), json.dumps(historical), '2026-11-01T00:00:00+00:00'))
-            db.execute('INSERT INTO body_metrics(cycle_id,date,bodyweight,bodyfat,measurements_json) VALUES(?,?,?,?,?)',
-                       (meta['planId'], meta['endDate'], 83.4, 0, '{}'))
-            db.execute('INSERT INTO readiness(cycle_id,date,session_id,fatigue,note) VALUES(?,?,?,?,?)',
-                       (meta['planId'], meta['endDate'], 'daily', 6, 'Original fatigue, not recovery'))
+            account = db.execute('SELECT account_id FROM cycles LIMIT 1').fetchone()['account_id']
+            db.execute('INSERT INTO plans(account_id,id,cycle_id,json,version,created_at) VALUES(?,?,?,?,?,?)',
+                       (account, meta['planId'], meta['planId'], json.dumps(historical), historical['schemaVersion'], '2026-11-01T00:00:00+00:00'))
+            db.execute('INSERT INTO prescription_versions(account_id,cycle_id,id,json,created_at) VALUES(?,?,?,?,?)',
+                       (account, meta['planId'], digest(historical), json.dumps(historical), '2026-11-01T00:00:00+00:00'))
+            db.execute('INSERT INTO body_metrics(account_id,cycle_id,date,bodyweight,bodyfat,measurements_json) VALUES(?,?,?,?,?,?)',
+                       (account, meta['planId'], meta['endDate'], 83.4, 0, '{}'))
+            db.execute('INSERT INTO readiness(account_id,cycle_id,date,session_id,fatigue,note) VALUES(?,?,?,?,?,?)',
+                       (account, meta['planId'], meta['endDate'], 'daily', 6, 'Original fatigue, not recovery'))
         row = next(row for row in active['workouts'] if row['bucket'] == 'main')
         store.save_log(active['meta']['planId'], row, {'load': 100.0, 'sets': 2, 'reps': 3, 'rpe': 8.0, 'note': 'Active fixture'})
         from test_api import seed_historical_log

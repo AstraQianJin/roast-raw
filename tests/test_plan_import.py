@@ -81,7 +81,8 @@ def source_from_sql(path, cycle_id):
                                           (cycle_id,))]
         journals = {}
         for name, table in (('logs', 'logs_journal'), ('records', 'records_journal')):
-            journals[name] = [{**dict(row), 'payload': json.loads(row['payload'])}
+            journals[name] = [{**{k: v for k, v in dict(row).items() if k != 'account_id'},
+                               'payload': json.loads(row['payload'])}
                               for row in db.execute(f'SELECT * FROM {table} WHERE cycle_id=? ORDER BY id', (cycle_id,))]
         archived = db.execute('SELECT review_json FROM archives WHERE cycle_id=?', (cycle_id,)).fetchone()
         questionnaire = db.execute('SELECT payload,status,updated_at FROM questionnaires WHERE cycle_id=?',
@@ -202,7 +203,7 @@ class PlanImportCase(PlanImportFixtures):
             self.assertTrue(error['expected'])
         return errors
 
-    def assert_snapshot(self, snapshot, rows, schema, version=5):
+    def assert_snapshot(self, snapshot, rows, schema, version=6):
         with open_db(snapshot) as db:
             self.assertEqual(db.execute('PRAGMA integrity_check').fetchone()[0], 'ok')
             self.assertEqual(db.execute('PRAGMA foreign_key_check').fetchall(), [])
@@ -214,7 +215,7 @@ class PlanImportCase(PlanImportFixtures):
         with open_db(self.path) as db:
             for table, count in expected.items():
                 self.assertEqual(db.execute(f'SELECT count(*) FROM {table}').fetchone()[0], count, table)
-            self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], 5)
+            self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], 6)
             self.assertEqual(db.execute('PRAGMA foreign_key_check').fetchall(), [])
             self.assertEqual(db.execute('PRAGMA integrity_check').fetchone()[0], 'ok')
 
@@ -239,9 +240,9 @@ class PlanImportCase(PlanImportFixtures):
                 'bodyfat': 18.0, 'measurements': {'waist': 80.0}})
             self.assertEqual(response.status_code, 200, response.text)
         with open_db(self.path) as db:
-            db.execute('INSERT INTO readiness(cycle_id,date,session_id,fatigue,arousal,nutrition,rec,note) '
-                       'VALUES(?,?,?,?,?,?,?,?)',
-                       (self.cycle, self.row['date'], 'legacy', 7, 2, 3, .25, 'Fatigue is not recovery'))
+            db.execute('INSERT INTO readiness(account_id,cycle_id,date,session_id,fatigue,arousal,nutrition,rec,note) '
+                       'VALUES((SELECT account_id FROM cycles WHERE id=?),?,?,?,?,?,?,?,?)',
+                       (self.cycle, self.cycle, self.row['date'], 'legacy', 7, 2, 3, .25, 'Fatigue is not recovery'))
         if prescription:
             current = self.get_json('/api/prescription', cycle_id=self.cycle)
             payload = {'cycle_id': self.cycle, 'current_id': current['currentId'],
@@ -504,7 +505,7 @@ class PlanImportAPITests(PlanImportCase):
 
     def test_unknown_database_version_rejects_confirmation_without_mutation(self):
         body = self.confirmed_body()
-        for version in (0, 1, 2, 3, 4, 99):
+        for version in (0, 1, 2, 3, 4, 5, 99):
             with self.subTest(version=version):
                 with open_db(self.path) as db:
                     db.execute(f'PRAGMA user_version={version}')
@@ -518,7 +519,7 @@ class PlanImportAPITests(PlanImportCase):
                         self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], version)
                 finally:
                     with open_db(self.path) as db:
-                        db.execute('PRAGMA user_version=5')
+                        db.execute('PRAGMA user_version=6')
 
     def test_confirm_snapshots_and_preserves_complete_old_review_records_and_history(self):
         self.save_records(prescription=True)
@@ -533,12 +534,14 @@ class PlanImportAPITests(PlanImportCase):
                            readiness_v2=1, body_metrics=1, archives=1,
                            prescription_versions=3, records_journal=6)
         after = database_rows(self.path)
+        with open_db(self.path) as db:
+            status_index = [row[1] for row in db.execute('PRAGMA table_info(cycles)')].index('status')
         for table, rows in before.items():
             if table == 'cycles':
-                expected = tuple('archived' if i == 4 else value for i, value in enumerate(rows[0]))
+                expected = tuple('archived' if i == status_index else value for i, value in enumerate(rows[0]))
                 self.assertEqual(after[table][0], expected)
             elif table in ('plans', 'prescription_versions', 'records_journal', 'archives'):
-                self.assertEqual(after[table][:len(rows)], rows, table)
+                self.assertTrue(set(rows) <= set(after[table]), table)
             else:
                 self.assertEqual(after[table], rows, table)
         self.assertEqual(database_schema(self.path), schema)
@@ -568,7 +571,7 @@ class PlanImportAPITests(PlanImportCase):
         self.assertEqual(saved['integrity'], {'algorithm': 'SHA-256',
                                              'review_sha256': hashlib.sha256(encoded.encode('utf-8')).hexdigest()})
         expected_review = copy.deepcopy(old_review)
-        import_event = {'id': before['records_journal'][-1][0] + 1, 'cycle_id': self.cycle,
+        import_event = {'id': len(before['records_journal']) + 1, 'cycle_id': self.cycle,
                         'kind': 'import', 'key': new_cycle, 'created_at': saved['exported_at'],
                         'payload': {'action': 'import', 'from': self.cycle, 'to': new_cycle,
                                     'plan_sha256': canonical_id(candidate)}}
@@ -753,7 +756,7 @@ class PlanImportStoreTests(PlanImportCase):
 
     def test_unknown_database_versions_fail_activation_without_schema_or_row_mutation(self):
         expected_source = canonical_id(source_from_sql(self.path, self.cycle))
-        for version in (0, 1, 2, 3, 4, 99):
+        for version in (0, 1, 2, 3, 4, 5, 99):
             with self.subTest(version=version):
                 with open_db(self.path) as db:
                     db.execute(f'PRAGMA user_version={version}')
@@ -781,9 +784,9 @@ class PlanImportStoreTests(PlanImportCase):
         old_source = canonical_id(source_from_sql(self.path, self.cycle))
         # Current plan and current observations are unchanged; only audit history differs.
         with open_db(self.path) as db:
-            db.execute('INSERT INTO records_journal(cycle_id,kind,key,payload,created_at) VALUES(?,?,?,?,?)',
-                       (self.cycle, 'readiness', 'old-history', '{"note":"preserved history"}',
-                        '2026-11-01T00:00:00+00:00'))
+            db.execute('INSERT INTO records_journal(account_id,cycle_id,kind,key,payload,created_at) VALUES(?,?,?,?,?,?)',
+                       (db.execute('SELECT account_id FROM cycles LIMIT 1').fetchone()[0], self.cycle, 'readiness',
+                        'old-history', '{"note":"preserved history"}', '2026-11-01T00:00:00+00:00'))
         self.assertNotEqual(canonical_id(source_from_sql(self.path, self.cycle)), old_source)
         before = database_rows(self.path)
         with self.trace_store() as statements:

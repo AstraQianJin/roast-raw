@@ -132,8 +132,9 @@ class AttemptAPITests(GeneratedPlanCase):
             db.execute('INSERT INTO cycles(id,name,start_date,end_date,status,schema_version,account_id) VALUES(?,?,?,?,?,?,(SELECT account_id FROM cycles ORDER BY rowid LIMIT 1))',
                        ('old-cycle', 'Old', plan['meta']['startDate'], plan['meta']['endDate'],
                         'archived', plan['schemaVersion']))
-            db.execute('INSERT INTO plans VALUES(?,?,?,?,?)',
-                       ('old-cycle', 'old-cycle', json.dumps(plan), plan['schemaVersion'],
+            account = db.execute('SELECT account_id FROM cycles LIMIT 1').fetchone()[0]
+            db.execute('INSERT INTO plans(account_id,id,cycle_id,json,version,created_at) VALUES(?,?,?,?,?,?)',
+                       (account, 'old-cycle', 'old-cycle', json.dumps(plan), plan['schemaVersion'],
                         '2026-11-01T00:00:00+00:00'))
         response = self.client.put('/api/attempts', json={
             'cycle_id': 'old-cycle', 'lift': 'squat', 'number': 1, 'load': 140.0, 'result': 'good'})
