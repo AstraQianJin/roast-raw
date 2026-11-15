@@ -3,6 +3,7 @@ import json
 import os
 import re
 from contextlib import asynccontextmanager
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Literal
 
@@ -26,6 +27,15 @@ from .validation import Reject, validate_plan
 
 ROOT = Path(__file__).resolve().parents[2]
 OPEN_ACCOUNT = {'id': None, 'username': None, 'tier': 'ultra'}
+CURRENT_STORE = ContextVar('rr_store')
+CURRENT_ACCOUNT = ContextVar('rr_account', default=None)
+
+
+class ScopedStore:
+    """Resolves to the signed-in account's ledger for the current request."""
+
+    def __getattr__(self, name):
+        return getattr(CURRENT_STORE.get(), name)
 
 
 class LoginInput(BaseModel):
@@ -156,7 +166,8 @@ class QuestionnaireInput(BaseModel):
 
 
 def create_app(db_path=None, plan_path=None):
-    store = Store(db_path or os.environ.get('RR_DB_PATH', ROOT / 'data' / 'roastraw.sqlite3'))
+    base = Store(db_path or os.environ.get('RR_DB_PATH', ROOT / 'data' / 'roastraw.sqlite3'))
+    store = ScopedStore()
     access_password = os.environ.get('RR_ACCESS_PASSWORD', '')
     access_username = os.environ.get('RR_ACCESS_USERNAME', '')
 
@@ -164,21 +175,24 @@ def create_app(db_path=None, plan_path=None):
     async def lifespan(app):
         seed = json.loads(Path(plan_path or ROOT / 'data' / 'plan.json').read_text(encoding='utf-8'))
         validate_plan(seed)
-        store.initialize(seed)
-        store.upgrade()
-        store.upgrade_prescriptions()
-        store.upgrade_questionnaire()
-        store.upgrade_ai()
-        store.upgrade_accounts()
-        store.upgrade_membership()
-        store.seed_owner(access_username, access_password)
+        base.initialize(seed)
+        base.upgrade()
+        base.upgrade_prescriptions()
+        base.upgrade_questionnaire()
+        base.upgrade_ai()
+        base.upgrade_accounts()
+        base.upgrade_membership()
+        base.seed_owner(access_username, access_password)
+        base.upgrade_ledger(access_username)
+        app.state.open_ledger = base.open_ledger()
+        app.state.store = base.for_account(app.state.open_ledger)
         yield
 
     package_version = json.loads((ROOT / 'web/package.json').read_text(encoding='utf-8'))['version']
     version_parts = package_version.split('.')
     release_version = f'{version_parts[0]}.{int(version_parts[2]):02d}'
     app = FastAPI(title='Roast Raw', version=package_version, lifespan=lifespan)
-    app.state.store = store
+    app.state.store = base
     allowed_hosts = ['127.0.0.1', 'localhost', 'testserver']
     allowed_hosts += [host.strip() for host in os.environ.get('RR_ALLOWED_HOSTS', '').split(',') if host.strip()]
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
@@ -194,21 +208,34 @@ def create_app(db_path=None, plan_path=None):
         except (ValueError, UnicodeDecodeError):
             return None
         user, _, pwd = decoded.partition(':')
-        verified = store.verify_account(user, pwd)
-        return store.account(verified['id']) if verified else None
+        verified = base.verify_account(user, pwd)
+        return base.account(verified['id']) if verified else None
 
     @app.middleware('http')
     async def access_gate(request, call_next):
         path = request.url.path
         request.state.account = None
         if path.startswith('/api/'):
-            request.state.account = store.session_account(request.cookies.get('rr_session')) or basic_account(request)
+            request.state.account = base.session_account(request.cookies.get('rr_session')) or basic_account(request)
             if request.state.account is None and not access_password:
                 request.state.account = dict(OPEN_ACCOUNT)
+            account = request.state.account
+            ledger = account['id'] if account and account.get('id') is not None else getattr(app.state, 'open_ledger', 0)
+            CURRENT_STORE.set(base.for_account(ledger))
+            CURRENT_ACCOUNT.set(account)
         if path.startswith('/api/') and path not in public_api and request.state.account is None:
             return JSONResponse(status_code=401, content={'error': 'Authentication required.'},
                                 headers={'WWW-Authenticate': 'Basic realm="Roast Raw"'})
         return await call_next(request)
+
+    @app.exception_handler(membership.TierError)
+    async def tier_locked(request, error):
+        return JSONResponse(status_code=403, content={'error': str(error), 'required_tier': error.required_tier,
+                                                      'capability': error.capability})
+
+    def need(capability):
+        account = CURRENT_ACCOUNT.get() or OPEN_ACCOUNT
+        membership.require(account['tier'], capability)
 
     @app.exception_handler(Reject)
     async def rejected(request, error):
@@ -384,6 +411,7 @@ def create_app(db_path=None, plan_path=None):
 
     @app.put('/api/attempts')
     def save_attempt(payload: AttemptInput):
+        need('test_week')
         if abs(payload.load / 2.5 - round(payload.load / 2.5)) > 1e-6:
             raise HTTPException(422, 'Attempt load must be a multiple of 2.5 kg')
         try:
@@ -429,6 +457,7 @@ def create_app(db_path=None, plan_path=None):
 
     @app.get('/api/performance')
     def recorded_performance(cycle_id: str | None = None):
+        need('lift_register')
         selected = active_plan(cycle_id)
         return performance(selected, store.logs(selected['meta']['planId']))
 
@@ -475,6 +504,7 @@ def create_app(db_path=None, plan_path=None):
 
     @app.put('/api/readiness')
     def save_readiness(payload: ReadinessInput):
+        need('recovery_body')
         writable(payload.cycle_id)
         selected = active_plan(payload.cycle_id)
         if payload.session_id != 'daily' and not any(
@@ -499,6 +529,7 @@ def create_app(db_path=None, plan_path=None):
 
     @app.put('/api/body-metrics')
     def save_metrics(payload: MetricsInput):
+        need('recovery_body')
         writable(payload.cycle_id)
         store.save_metrics(payload.cycle_id, payload.model_dump(exclude={'cycle_id'}))
         return metrics(payload.cycle_id, payload.date)
@@ -604,6 +635,7 @@ def create_app(db_path=None, plan_path=None):
 
     @app.get('/api/geometry')
     def geometry():
+        need('muscle_map')
         return json.loads((ROOT / 'data' / 'muscle_geo.json').read_text(encoding='utf-8'))
 
     def import_preview(payload):
@@ -612,15 +644,16 @@ def create_app(db_path=None, plan_path=None):
         from .stats.variations import digest
         candidate = parse_plan(payload.plan_json, payload.filename)
         records = store.cycles()
-        source = store.review_source(records['active_cycle_id'])
-        if source is None or source['cycle']['status'] != 'active':
+        active_id = records['active_cycle_id']
+        source = store.review_source(active_id) if active_id else None
+        if active_id and (source is None or source['cycle']['status'] != 'active'):
             raise ReadOnlyError('Current cycle changed. Refresh before importing.')
-        if any(cycle['id'] == candidate['meta']['planId'] for cycle in records['cycles']):
+        if any(cycle['id'] == candidate['meta']['planId'] for cycle in base.cycles()['cycles']):
             raise ReadOnlyError('Cycle ID already exists. Existing cycles cannot be overwritten.')
         return candidate, {
-            'currentId': digest(source), 'candidateId': digest(candidate),
-            'current': summary(source['plan']), 'candidate': summary(candidate),
-            'currentPlan': source['plan'], 'candidatePlan': candidate,
+            'currentId': digest(source) if source else store.EMPTY_SOURCE_ID, 'candidateId': digest(candidate),
+            'current': summary(source['plan']) if source else None, 'candidate': summary(candidate),
+            'currentPlan': source['plan'] if source else None, 'candidatePlan': candidate,
             'sourceSha256': sha256(payload.plan_json.encode('utf-8')).hexdigest()}
 
     @app.post('/api/plan/import/preview')
@@ -633,6 +666,28 @@ def create_app(db_path=None, plan_path=None):
         if preview['candidateId'] != payload.candidate_id or preview['currentId'] != payload.current_id:
             raise ReadOnlyError('Preview or current records changed. Preview again before importing.')
         return store.activate_plan(candidate, payload.current_id, package_version)
+
+    def vault_state():
+        records = store.cycles()
+        sources = [store.review_source(cycle['id']) for cycle in records['cycles']]
+        return records, [source for source in sources if source]
+
+    @app.get('/api/vault')
+    def vault():
+        need('vault_ledger')
+        records, sources = vault_state()
+        return {'active_cycle_id': records['active_cycle_id'], 'cycles': len(records['cycles']),
+                'archived': sum(cycle['status'] != 'active' for cycle in records['cycles']),
+                'logs': sum(len(source['logs']) for source in sources),
+                'journal_entries': sum(len(source['journals']['logs']) + len(source['journals']['records']) for source in sources)}
+
+    @app.get('/api/vault/export')
+    def vault_export():
+        need('vault_ledger')
+        records, sources = vault_state()
+        return JSONResponse({'exported_at': timestamp(), 'version': package_version,
+                             'active_cycle_id': records['active_cycle_id'], 'cycles': sources},
+                            headers={'Content-Disposition': 'attachment; filename="RoastRaw-vault.json"', 'Cache-Control': 'no-store'})
 
     @app.post('/api/plan/validate')
     async def validate(request: Request):
@@ -707,6 +762,7 @@ def create_app(db_path=None, plan_path=None):
     @app.post('/api/ai/outlook')
     def ai_outlook(payload: AiOutlookInput):
         from .ai import build_outlook_prompt, parse_outlook
+        need('oracle_ai')
         writable(payload.cycle_id)
         review, questionnaire = ai_context(payload.cycle_id)
         prompt = build_outlook_prompt(review, questionnaire)
@@ -716,6 +772,7 @@ def create_app(db_path=None, plan_path=None):
     @app.post('/api/ai/chat')
     def ai_chat(payload: AiChatInput):
         from .ai import CHAT_SYSTEM, build_outlook_prompt
+        need('oracle_ai')
         writable(payload.cycle_id)
         review, questionnaire = ai_context(payload.cycle_id)
         prompt = build_outlook_prompt(review, questionnaire)

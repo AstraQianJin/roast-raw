@@ -61,6 +61,7 @@ def source_from_sql(path, cycle_id):
         db.row_factory = sqlite3.Row
         db.execute('BEGIN')
         cycle = dict(db.execute('SELECT * FROM cycles WHERE id=?', (cycle_id,)).fetchone())
+        cycle.pop('account_id', None)
         plan = json.loads(db.execute('SELECT json FROM plans WHERE cycle_id=?', (cycle_id,)).fetchone()[0])
         logs = {row['key']: {
             'load': row['load'], 'sets': row['set_count'], 'reps': row['reps'],

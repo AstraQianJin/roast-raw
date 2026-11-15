@@ -38,7 +38,7 @@ class ReviewAPITests(GeneratedPlanCase):
         plan['meta']['planId'] = cycle_id
         plan['meta']['name'] = f'Historical {cycle_id}'
         with open_db(self.db_path) as db:
-            db.execute('INSERT INTO cycles VALUES(?,?,?,?,?,?)',
+            db.execute('INSERT INTO cycles(id,name,start_date,end_date,status,schema_version,account_id) VALUES(?,?,?,?,?,?,(SELECT account_id FROM cycles ORDER BY rowid LIMIT 1))',
                        (cycle_id, plan['meta']['name'], plan['meta']['startDate'], plan['meta']['endDate'], status, plan['schemaVersion']))
             db.execute('INSERT INTO plans VALUES(?,?,?,?,?)',
                        (cycle_id, cycle_id, json.dumps(plan), plan['schemaVersion'], '2026-11-01T00:00:00+00:00'))

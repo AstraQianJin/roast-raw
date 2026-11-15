@@ -28,6 +28,7 @@ import CyclePrestart from './components/CyclePrestart.vue';
 import LoadProfile from './components/LoadProfile.vue';
 import AnalysisView from './components/AnalysisView.vue';
 import BlockWeekNav from './components/BlockWeekNav.vue';
+import LockedFeature from './components/LockedFeature.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -48,13 +49,16 @@ async function savedLog(saved) {
   const { key, ...values } = saved;
   logs.value[key] = values;
   try {
-    [analysis.value, calendar.value, performance.value] = await Promise.all([get(`/api/analysis?mode=${mode.value}`), get('/api/today'), get('/api/performance')]);
+    [analysis.value, calendar.value, performance.value] = await Promise.all([get(`/api/analysis?mode=${mode.value}`), get('/api/today'), soft('/api/performance')]);
     await refreshPrescription();
   } catch { error.value = 'Your log was saved, but the updated summary could not be loaded. Retry the connection.'; }
 }
 const error = ref('');
 const loading = ref(false);
 const session = ref(null);
+const loaded = ref(false);
+const emptyLedger = computed(() => loaded.value && !error.value && cycles.value && !cycles.value.active_cycle_id);
+const can = capability => (session.value?.capabilities || []).includes(capability);
 const authReady = ref(false);
 const mode = ref('plan');
 const outlookTab = ref('questionnaire');
@@ -167,19 +171,34 @@ async function get(path) {
   if (!response.ok) throw new Error(`Server request failed (${response.status}). Your saved data has not been changed.`);
   return response.json();
 }
+async function soft(path) {
+  const response = await fetch(path, { cache: 'no-store' });
+  if (response.status === 403) return null;
+  if (!response.ok) throw new Error(`Server request failed (${response.status}). Your saved data has not been changed.`);
+  return response.json();
+}
 async function refresh() {
   loading.value = true;
   error.value = '';
   try {
-    const result = await Promise.all(['/api/plan', `/api/analysis?mode=${mode.value}`, '/api/geometry', '/api/today', '/api/cycle', '/api/log', '/api/performance'].map(get));
-    [plan.value, analysis.value, geometry.value, calendar.value, cycles.value] = result;
-    logs.value = result[5].logs;
-    performance.value = result[6];
+    cycles.value = await get('/api/cycle');
+    if (!cycles.value.active_cycle_id) {
+      plan.value = null;
+      return;
+    }
+    const result = await Promise.all([get('/api/plan'), get(`/api/analysis?mode=${mode.value}`), soft('/api/geometry'), get('/api/today'), get('/api/log'), soft('/api/performance')]);
+    [plan.value, analysis.value, geometry.value, calendar.value] = result;
+    logs.value = result[4].logs;
+    performance.value = result[5];
     prescriptionInfo.value = await get(`/api/prescription?${new URLSearchParams({ cycle_id: plan.value.meta.planId })}`);
     try { bodyMetrics.value = await get(`/api/body-metrics?${new URLSearchParams({ cycle_id: plan.value.meta.planId })}`); }
     catch { bodyMetrics.value = null; }
   } catch (failure) { error.value = failure.message || 'The server is unavailable. Reconnect and try again.'; }
-  finally { loading.value = false; }
+  finally { loading.value = false; loaded.value = true; }
+}
+const activated = ref(false);
+async function onActivated() {
+  activated.value = true;
 }
 async function changeMode(value) {
   if (loading.value || isPublic.value) return;
@@ -192,7 +211,7 @@ async function loadSession() {
   finally { authReady.value = true; }
 }
 async function ensureData() {
-  if (plan.value || loading.value) return;
+  if (loaded.value || loading.value) return;
   await refresh();
   await nextTick();
   if (!matchMedia('(prefers-reduced-motion: reduce)').matches && document.querySelector('.main-loads')) {
@@ -207,6 +226,9 @@ async function onAuthed(account) {
 async function logout() {
   try { await fetch('/api/logout', { method: 'POST' }); } catch { /* session cleared client-side regardless */ }
   plan.value = null;
+  cycles.value = null;
+  loaded.value = false;
+  activated.value = false;
   error.value = '';
   router.replace('/');
   await loadSession();
@@ -232,7 +254,7 @@ watch(() => route.path, () => {
 }, { immediate: true });
 watch(page, value => { if (!isPublic.value && value !== 'analysis' && mode.value !== 'plan') changeMode('plan'); });
 watch([() => route.fullPath, loading], async () => {
-  if (loading.value || error.value || !validRoute.value || !route.params.day) return;
+  if (loading.value || error.value || !plan.value || !validRoute.value || !route.params.day) return;
   await nextTick();
   const target = document.getElementById(`day-${currentWeek.value}-${route.params.day}`);
   if (!target) return;
@@ -251,6 +273,8 @@ watch([() => route.fullPath, loading], async () => {
       <RegisterView v-else-if="page === 'register'" @authed="onAuthed" />
       <div v-else-if="loading" class="empty-state" role="status"><h1>Reading the plan.</h1><p>Loading your training data from the server.</p></div>
       <div v-else-if="error" class="error-panel" role="alert"><h2>Connection interrupted.</h2><p>{{ error }}</p><p>No offline copy is used for statistics.</p><button @click="refresh">Retry connection</button></div>
+      <div v-else-if="emptyLedger" class="empty-state" :data-testid="activated ? 'ledger-activated' : 'empty-ledger'"><h1>{{ activated ? 'Cycle activated.' : 'No cycle yet.' }}</h1><p>{{ activated ? 'This account now holds its first cycle. Open it to start logging; other accounts are untouched.' : 'Your journal is empty. Import a plan to start your first cycle; nothing is shared with other accounts.' }}</p><PlanImport @activated="onActivated" /></div>
+      <div v-else-if="!plan" class="empty-state" role="status"><h1>Reading the plan.</h1><p>Loading your training data from the server.</p></div>
       <div v-else-if="!validRoute" class="empty-state"><h1>Not in this plan.</h1><p>This page, block, week or day does not exist.</p><RouterLink to="/cycle" class="inline-link">Return to the cycle</RouterLink></div>
       <template v-else>
         <div v-if="page === 'today'" class="workspace" data-testid="today">
@@ -270,14 +294,16 @@ watch([() => route.fullPath, loading], async () => {
               <section class="day-capacity" aria-label="Session capacity"><header><span class="section-label">SESSION CAPACITY · PLANNED</span><strong>{{ todaySetCount }} SETS</strong></header><div class="capacity-track"><i v-for="(sets, index) in [todayTotals.main, todayTotals.sbdVar + todayTotals.nonSbdVar, todayTotals.accessory]" :key="index" :style="{ width: `${sets / Math.max(todaySetCount, 1) * 100}%` }"></i></div><div class="capacity-key"><span>MAIN {{ todayTotals.main }}</span><span>VAR {{ todayTotals.sbdVar + todayTotals.nonSbdVar }}</span><span>ACCESSORY {{ todayTotals.accessory }}</span></div></section>
               <CycleStrip :weeks="plan.weeks" :blocks="plan.blocks" :current="todaySession.week" />
               <RouterLink :to="`/cycle/week/${todaySession.week}/day/${todaySession.day}`" class="inline-link">Open the scheduled day →</RouterLink>
-              <DailyRecord :cycle-id="plan.meta.planId" :date="todaySession.date" :session-id="`${todaySession.week}|${todaySession.day}`" @saved="refreshPrescription" />
-              <details class="gear"><summary>GEAR <span class="chip">{{ needsMicroPlates(todayRows) ? 'MICRO PLATES' : 'SESSION SETUP' }}</span><span v-if="plan.meta.profile.bar_kg" class="chip">{{ display(plan.meta.profile.bar_kg) }} KG BAR</span></summary><p>{{ needsMicroPlates(todayRows) ? 'Some prescribed loads need micro plates. Prepare equipment before the session; loads remain unchanged.' : 'Standard plates cover these prescribed loads. Prepare equipment before the session.' }}</p><p v-if="plan.meta.profile.bar_kg">Plan bar reference: {{ display(plan.meta.profile.bar_kg) }} kg. {{ plan.meta.profile.collars ? 'Collars included in the plan setup.' : 'Collars are not included in the plan load reference.' }}</p><p v-if="todayRows.some(row => prescriptionInfo?.systemLoads[row.week + '|' + row.day + '|' + row.seq])">Pull-up and dip loads include bodyweight. Check the dated bodyweight reading before choosing assistance or added weight.</p></details>
-              <WarmupSuggestions :entries="plan.warmups?.[todaySession.date] || []" />
+              <DailyRecord v-if="can('recovery_body')" :cycle-id="plan.meta.planId" :date="todaySession.date" :session-id="`${todaySession.week}|${todaySession.day}`" @saved="refreshPrescription" />
+              <LockedFeature v-else compact label="Recovery & body metrics" tier="plus" />
+              <details v-if="can('gear_warmups')" class="gear"><summary>GEAR <span class="chip">{{ needsMicroPlates(todayRows) ? 'MICRO PLATES' : 'SESSION SETUP' }}</span><span v-if="plan.meta.profile.bar_kg" class="chip">{{ display(plan.meta.profile.bar_kg) }} KG BAR</span></summary><p>{{ needsMicroPlates(todayRows) ? 'Some prescribed loads need micro plates. Prepare equipment before the session; loads remain unchanged.' : 'Standard plates cover these prescribed loads. Prepare equipment before the session.' }}</p><p v-if="plan.meta.profile.bar_kg">Plan bar reference: {{ display(plan.meta.profile.bar_kg) }} kg. {{ plan.meta.profile.collars ? 'Collars included in the plan setup.' : 'Collars are not included in the plan load reference.' }}</p><p v-if="todayRows.some(row => prescriptionInfo?.systemLoads[row.week + '|' + row.day + '|' + row.seq])">Pull-up and dip loads include bodyweight. Check the dated bodyweight reading before choosing assistance or added weight.</p></details>
+              <WarmupSuggestions v-if="can('gear_warmups')" :entries="plan.warmups?.[todaySession.date] || []" />
+              <LockedFeature v-else compact label="Gear & Sheiko warm-ups" tier="lite" />
               <ExerciseRows :rows="todayRows" :cycle-id="plan.meta.planId" :logs="logs" :system-loads="prescriptionInfo?.systemLoads || {}" @saved="savedLog" />
               <ShareButton :plan="plan" :logs="logs" :default-date="todaySession.date" />
             </template>
           </div>
-          <aside><MuscleMap compact :geometry="geometry" :leaves="leaves" :heat-scale="analysis.heatScale" :week-number="currentWeek" :week-count="plan.weeks.length" @week="selectWeek" /><WeekCapacity :week="week" :ranges="analysis.ranges" /></aside>
+          <aside><MuscleMap v-if="geometry" compact :geometry="geometry" :leaves="leaves" :heat-scale="analysis.heatScale" :week-number="currentWeek" :week-count="plan.weeks.length" @week="selectWeek" /><LockedFeature v-else compact label="Muscle-group map" tier="plus" /><WeekCapacity :week="week" :ranges="analysis.ranges" /></aside>
         </div>
                 <template v-else-if="page === 'cycle'">
           <template v-if="planView === 'cycle'">
@@ -320,7 +346,8 @@ watch([() => route.fullPath, loading], async () => {
             <div class="workspace"><div>
             <div class="week-header"><span class="week-number">{{ currentWeek }}</span><div><h2>{{ weekMeta.blockName }}</h2><small>{{ week.kind.toUpperCase() }} WEEK</small></div><div class="week-summary"><strong>{{ display(week.tonnageKg / 1000) }} t</strong><small>{{ week.sessions }} SESSIONS</small></div></div>
             <p v-if="weekMeta.kind === 'deload'" class="notice">{{ DELOAD_NOTE }}</p>
-            <AttemptBoard v-if="weekMeta.kind === 'test'" :cycle-id="plan.meta.planId" :bar-kg="plan.meta.profile.bar_kg || 20" :collar-pair="plan.meta.profile.collars ? 5 : 0" />
+            <LockedFeature v-if="weekMeta.kind === 'test' && !can('test_week')" label="Test week & meet attempts" tier="lite" />
+            <AttemptBoard v-else-if="weekMeta.kind === 'test'" :cycle-id="plan.meta.planId" :bar-kg="plan.meta.profile.bar_kg || 20" :collar-pair="plan.meta.profile.collars ? 5 : 0" />
             <div class="top-intensity"><span>TOP %1RM <b>{{ display(week.topPct) }}%</b></span><span>S {{ display(week.topPctByLift.S) }} · B {{ display(week.topPctByLift.B) }} · D {{ display(week.topPctByLift.D) }}</span></div>
             <div class="day-stack">
             <div v-for="day in days" :id="day.id ? `day-${currentWeek}-${day.id}` : undefined" :key="day.date" :tabindex="route.params.day && route.params.day === day.id ? -1 : undefined" class="day-card" :class="{ open: route.params.day && route.params.day === day.id, rest: !day.rows.length }">
@@ -337,10 +364,12 @@ watch([() => route.fullPath, loading], async () => {
                 </RouterLink>
                 <section v-if="route.params.day === day.id" class="day-detail">
                   <div class="day-detail-head"><span>SESSION PLAN</span><span>{{ day.rows.length }} PRESCRIBED ROWS</span></div>
-                  <DailyRecord :cycle-id="plan.meta.planId" :date="day.date" :session-id="`${currentWeek}|${day.id}`" @saved="refreshPrescription" />
-                  <WarmupSuggestions :entries="plan.warmups?.[day.date] || []" />
+                  <DailyRecord v-if="can('recovery_body')" :cycle-id="plan.meta.planId" :date="day.date" :session-id="`${currentWeek}|${day.id}`" @saved="refreshPrescription" />
+                  <LockedFeature v-else compact label="Recovery & body metrics" tier="plus" />
+                  <WarmupSuggestions v-if="can('gear_warmups')" :entries="plan.warmups?.[day.date] || []" />
                   <ExerciseRows :rows="day.rows" :cycle-id="plan.meta.planId" :logs="logs" :system-loads="prescriptionInfo?.systemLoads || {}" @saved="savedLog" />
-                  <details class="gear"><summary>GEAR <span class="chip">{{ needsMicroPlates(day.rows) ? 'MICRO PLATES' : 'SESSION SETUP' }}</span><span v-if="plan.meta.profile.bar_kg" class="chip">{{ display(plan.meta.profile.bar_kg) }} KG BAR</span></summary><p>{{ needsMicroPlates(day.rows) ? 'Prepare micro plates for the prescribed loads.' : 'Standard plates cover these prescribed loads.' }} All loads stay as prescribed; bodyweight movements use dated total system weight when shown.</p></details>
+                  <LockedFeature v-if="!can('gear_warmups')" compact label="Gear & Sheiko warm-ups" tier="lite" />
+                  <details v-else class="gear"><summary>GEAR <span class="chip">{{ needsMicroPlates(day.rows) ? 'MICRO PLATES' : 'SESSION SETUP' }}</span><span v-if="plan.meta.profile.bar_kg" class="chip">{{ display(plan.meta.profile.bar_kg) }} KG BAR</span></summary><p>{{ needsMicroPlates(day.rows) ? 'Prepare micro plates for the prescribed loads.' : 'Standard plates cover these prescribed loads.' }} All loads stay as prescribed; bodyweight movements use dated total system weight when shown.</p></details>
                   <ShareButton :plan="plan" :logs="logs" :default-date="day.date" />
                 </section>
               </template>
@@ -350,10 +379,10 @@ watch([() => route.fullPath, loading], async () => {
             <WeekCapacity :week="week" :ranges="analysis.ranges" />
             <figure class="cond-card" aria-label="Conditioning equivalent minutes"><div class="cond-head"><div><div class="eyebrow">CONDITIONING</div><h3>Equivalent minutes <em>ESTIMATE</em></h3></div><strong>{{ conditioningWeek }}<small> min/wk</small></strong></div><div class="cond-band"><div class="cond-zone"></div><div class="cond-bars"><i v-for="bar in conditioningBars" :key="bar.n" :class="[bar.kind, { on: bar.n === currentWeek }]" :style="{ height: `${Math.min(100, bar.minutes / 60 * 100)}%` }" :title="`Week ${bar.n}: ${bar.minutes} min`"></i></div></div><div class="cond-scale"><span>0</span><span>20</span><span>60</span></div><p class="cond-note">Moderate-intensity equivalent from planned cardio. It is an estimate, not a measured load.</p></figure>
             <details class="gear gpp" data-testid="gpp"><summary>GPP <span class="chip">CARDIO / RECOVERY / WEAK POINT</span></summary><p class="micro-copy">Planned supporting work. These targets are not recorded completion and do not add SBD equivalent sets.</p><p v-if="!weekGpp.length && !weekCardio.length">No supporting work prescribed for this week.</p><article v-for="item in weekGpp" :key="item.item_idx"><h3>{{ item.item || item.domain || 'Supporting work' }}</h3><p>{{ item.rx_text || `${display(item.target_value)} ${item.target_unit || ''}` }}</p><small v-if="item.note">{{ item.note }}</small></article><article v-for="item in weekCardio" :key="item.day"><h3>Cardio · {{ dateLabel(item.date) }} <small v-if="item.optional">OPTIONAL</small></h3><p>{{ item.note }}</p><p v-if="item.duration_min">{{ display(item.duration_min) }} min · {{ item.zone || 'Prescribed effort' }}<template v-if="item.hr_low && item.hr_high"> · HR {{ item.hr_low }}–{{ item.hr_high }}</template></p></article></details>
-            </div><aside class="week-aside"><MuscleMap compact :geometry="geometry" :leaves="leaves" :heat-scale="analysis.heatScale" :week-number="currentWeek" :week-count="plan.weeks.length" @week="selectWeek" /></aside></div>
+            </div><aside class="week-aside"><LockedFeature v-if="!geometry" compact label="Muscle-group map" tier="plus" /><MuscleMap v-else compact :geometry="geometry" :leaves="leaves" :heat-scale="analysis.heatScale" :week-number="currentWeek" :week-count="plan.weeks.length" @week="selectWeek" /></aside></div>
           </template>
         </template>
-<AnalysisView v-else-if="page === 'analysis'" :plan="plan" :analysis="analysis" :geometry="geometry" :performance="performance" :current-week="currentWeek" :mode="mode" :logs="logs" @week="selectWeek" @mode="changeMode" />
+<AnalysisView v-else-if="page === 'analysis'" :plan="plan" :analysis="analysis" :geometry="geometry" :performance="performance" :capabilities="session?.capabilities || []" :current-week="currentWeek" :mode="mode" :logs="logs" @week="selectWeek" @mode="changeMode" />
         <template v-else-if="page === 'archive'">
           <section v-if="!route.params.cycleId" class="vault-strip" aria-label="Vault status">
             <div class="vault-cell"><span class="section-label">CLOUD LEDGER</span><strong>Server-backed</strong><small>SQLite · Asia/Shanghai · one record for phone and web</small></div>
@@ -374,7 +403,7 @@ watch([() => route.fullPath, loading], async () => {
           <header class="outlook-hero"><div><div class="eyebrow">RR / 03 · ORACLE — AI COMPUTE / NEXT CYCLE</div><h1>Read the cycle.<br>Write the next one.</h1><p class="analysis-deck">Questionnaire, research and AI in one page. It reads the cycle you actually ran, compares lines side by side, and proposes the next block. Nothing reaches the ledger until you accept it.</p></div><div class="outlook-badge"><span>AI</span><strong>{{ outlookTab === 'questionnaire' ? '7 STEPS' : 'BRIEF' }}</strong></div></header>
           <nav class="analysis-tabs" aria-label="Outlook sections"><button type="button" :aria-pressed="outlookTab === 'questionnaire'" @click="outlookTab = 'questionnaire'">Questionnaire</button><button type="button" :aria-pressed="outlookTab === 'ai'" @click="outlookTab = 'ai'">AI brief</button><button type="button" :aria-pressed="outlookTab === 'both'" @click="outlookTab = 'both'">Both</button></nav>
           <div v-show="outlookTab !== 'ai'" class="outlook-panel"><div class="panel-label">01 / QUESTIONNAIRE</div><QuestionnaireView /></div>
-          <div v-show="outlookTab !== 'questionnaire'" class="outlook-panel"><div class="panel-label">02 / AI BRIEF</div><AiOutlook :cycle-id="plan.meta.planId" /></div>
+          <div v-show="outlookTab !== 'questionnaire'" class="outlook-panel"><div class="panel-label">02 / AI BRIEF</div><AiOutlook v-if="can('oracle_ai')" :cycle-id="plan.meta.planId" /><LockedFeature v-else label="ORACLE AI brief" tier="pro" /></div>
         </template>
 
       </template>

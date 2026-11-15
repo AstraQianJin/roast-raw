@@ -1,0 +1,117 @@
+{
+  "tiers": [
+    "free",
+    "lite",
+    "plus",
+    "pro",
+    "ultra"
+  ],
+  "columns": [
+    "free",
+    "lite",
+    "plus",
+    "pro"
+  ],
+  "pricing": {
+    "free": {
+      "usd": "0",
+      "cny": "0",
+      "billing": "FREE",
+      "billing_text": "Free forever",
+      "period": ""
+    },
+    "lite": {
+      "usd": "19.9",
+      "cny": "68",
+      "billing": "ONE-TIME",
+      "billing_text": "One-time, no renewal",
+      "period": ""
+    },
+    "plus": {
+      "usd": "69.9",
+      "cny": "198",
+      "billing": "ONE-TIME",
+      "billing_text": "One-time, no renewal",
+      "period": ""
+    },
+    "pro": {
+      "usd": "19.9",
+      "cny": "98",
+      "billing": "MONTHLY",
+      "billing_text": "Billed monthly",
+      "period": "/mo"
+    },
+    "ultra": {
+      "usd": null,
+      "cny": null,
+      "billing": "INVITE",
+      "billing_text": "Invite only",
+      "period": ""
+    }
+  },
+  "device_limit": 5,
+  "pro_grant_days": 30,
+  "capabilities": [
+    {
+      "id": "logging",
+      "label": "Logging & daily prescription",
+      "min_tier": "free"
+    },
+    {
+      "id": "cycle_views",
+      "label": "Cycle, block & week views",
+      "min_tier": "free"
+    },
+    {
+      "id": "plan_io",
+      "label": "Plan import & export",
+      "min_tier": "free"
+    },
+    {
+      "id": "basic_stats",
+      "label": "Basic stats",
+      "min_tier": "free"
+    },
+    {
+      "id": "share_card",
+      "label": "Share card",
+      "min_tier": "free"
+    },
+    {
+      "id": "gear_warmups",
+      "label": "Gear & Sheiko warm-ups",
+      "min_tier": "lite"
+    },
+    {
+      "id": "test_week",
+      "label": "Test week & meet attempts",
+      "min_tier": "lite"
+    },
+    {
+      "id": "muscle_map",
+      "label": "Muscle-group map",
+      "min_tier": "plus"
+    },
+    {
+      "id": "lift_register",
+      "label": "Lift register & trends",
+      "min_tier": "plus"
+    },
+    {
+      "id": "recovery_body",
+      "label": "Recovery & body metrics",
+      "min_tier": "plus"
+    },
+    {
+      "id": "oracle_ai",
+      "label": "ORACLE AI brief",
+      "min_tier": "pro",
+      "note": "20 calls per Beijing day"
+    },
+    {
+      "id": "vault_ledger",
+      "label": "VAULT cloud ledger",
+      "min_tier": "pro"
+    }
+  ]
+}

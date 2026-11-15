@@ -1,3 +1,4 @@
+import copy
 import hashlib
 import hmac
 import json
@@ -31,6 +32,7 @@ class Store:
     def __init__(self, path):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._scoped = {}
 
     @contextmanager
     def connect(self):
@@ -54,7 +56,6 @@ class Store:
                     id TEXT PRIMARY KEY, name TEXT NOT NULL, start_date TEXT NOT NULL,
                     end_date TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ('active','completed','archived')),
                     schema_version TEXT NOT NULL);
-                CREATE UNIQUE INDEX IF NOT EXISTS one_active_cycle ON cycles(status) WHERE status='active';
                 CREATE TABLE IF NOT EXISTS plans (
                     id TEXT PRIMARY KEY, cycle_id TEXT NOT NULL UNIQUE REFERENCES cycles(id),
                     json TEXT NOT NULL, version TEXT NOT NULL, created_at TEXT NOT NULL);
@@ -82,6 +83,9 @@ class Store:
             ''')
             if version == 0:
                 db.execute('PRAGMA user_version=1')
+            if self._ledger_ready(db):
+                return
+            db.execute("CREATE UNIQUE INDEX IF NOT EXISTS one_active_cycle ON cycles(status) WHERE status='active'")
             if db.execute('SELECT count(*) FROM cycles').fetchone()[0] == 0:
                 meta = plan['meta']
                 db.execute('INSERT INTO cycles VALUES(?,?,?,?,?,?)',
@@ -233,6 +237,69 @@ class Store:
                     created_at TEXT NOT NULL, last_seen_at TEXT NOT NULL, user_agent TEXT NOT NULL DEFAULT '');
                 CREATE INDEX IF NOT EXISTS sessions_account ON sessions(account_id);
             ''')
+
+    LEDGER_ROOTS = ('cycles', 'ai_calls')
+    ledger = None
+
+    @staticmethod
+    def _ledger_ready(db):
+        return any(row[1] == 'account_id' for row in db.execute('PRAGMA table_info(cycles)'))
+
+    def upgrade_ledger(self, owner_username=''):
+        with self.connect() as db:
+            if self._ledger_ready(db):
+                return
+        owner = self.owner_id(owner_username) or 0
+        self.snapshot()
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            for table in self.LEDGER_ROOTS:
+                db.execute(f'ALTER TABLE {table} ADD COLUMN account_id INTEGER NOT NULL DEFAULT 0')
+                db.execute(f'UPDATE {table} SET account_id=?', (owner,))
+            db.execute('DROP INDEX IF EXISTS one_active_cycle')
+            db.execute("CREATE UNIQUE INDEX one_active_cycle_per_account ON cycles(account_id) WHERE status='active'")
+            db.execute('CREATE INDEX cycles_account ON cycles(account_id)')
+            db.execute('CREATE INDEX ai_calls_account_day ON ai_calls(account_id, day)')
+            db.execute('CREATE TABLE ledger_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)')
+            db.execute("INSERT INTO ledger_meta VALUES('open_ledger', ?)", (str(owner),))
+
+    def open_ledger(self):
+        with self.connect() as db:
+            if not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='ledger_meta'").fetchone():
+                return 0
+            row = db.execute("SELECT value FROM ledger_meta WHERE key='open_ledger'").fetchone()
+        return int(row['value']) if row else 0
+
+    def for_account(self, account_id):
+        if account_id not in self._scoped:
+            scoped = copy.copy(self)
+            scoped.ledger = account_id
+            self._scoped[account_id] = scoped
+        return self._scoped[account_id]
+
+    def _mine(self, alias=''):
+        if self.ledger is None:
+            return '', ()
+        return f' AND {alias}account_id=?', (self.ledger,)
+
+    def _owns(self, db, cycle_id):
+        clause, args = self._mine()
+        return db.execute(f'SELECT 1 FROM cycles WHERE id=?{clause}', (cycle_id, *args)).fetchone() is not None
+
+    def _root_insert(self, db, table, columns, values):
+        if self._ledger_ready(db):
+            account = self.ledger
+            if account is None:
+                row = db.execute("SELECT value FROM ledger_meta WHERE key='open_ledger'").fetchone()
+                account = int(row['value']) if row else 0
+            columns, values = (*columns, 'account_id'), (*values, account)
+        return db.execute(f"INSERT INTO {table}({','.join(columns)}) VALUES({','.join('?' * len(values))})", values)
+
+    @staticmethod
+    def _row(row):
+        record = dict(row)
+        record.pop('account_id', None)
+        return record
 
     def seed_owner(self, username, password):
         if not password:
@@ -439,23 +506,26 @@ class Store:
             return bool(db.execute('DELETE FROM sessions WHERE account_id=? AND id=?', (account_id, session_id)).rowcount)
 
     AI_DAILY_LIMIT = 20
+    EMPTY_SOURCE_ID = hashlib.sha256(b'roast-raw:empty-ledger').hexdigest()
 
     def ai_quota(self, day):
+        clause, args = self._mine()
         with self.connect() as db:
-            used = db.execute('SELECT COUNT(*) FROM ai_calls WHERE day=?', (day,)).fetchone()[0]
+            used = db.execute(f'SELECT COUNT(*) FROM ai_calls WHERE day=?{clause}', (day, *args)).fetchone()[0]
         return {'date': day, 'used': used, 'limit': self.AI_DAILY_LIMIT,
                 'remaining': max(0, self.AI_DAILY_LIMIT - used)}
 
     def reserve_ai_call(self, cycle_id, day, kind, prompt, conversation):
         stamp = timestamp()
+        clause, args = self._mine()
         with self.connect() as db:
             db.execute('BEGIN IMMEDIATE')
-            used = db.execute('SELECT COUNT(*) FROM ai_calls WHERE day=?', (day,)).fetchone()[0]
+            used = db.execute(f'SELECT COUNT(*) FROM ai_calls WHERE day=?{clause}', (day, *args)).fetchone()[0]
             if used >= self.AI_DAILY_LIMIT:
                 raise AiQuotaError('Daily AI quota reached (20 calls, Beijing time). Try again tomorrow or export for an external AI.')
-            cursor = db.execute('''INSERT INTO ai_calls(cycle_id,day,kind,status,prompt,conversation,created_at,updated_at)
-                VALUES(?,?,?,'reserved',?,?,?,?)''',
-                (cycle_id, day, kind, prompt, json.dumps(conversation, ensure_ascii=False), stamp, stamp))
+            cursor = self._root_insert(db, 'ai_calls',
+                                       ('cycle_id', 'day', 'kind', 'status', 'prompt', 'conversation', 'created_at', 'updated_at'),
+                                       (cycle_id, day, kind, 'reserved', prompt, json.dumps(conversation, ensure_ascii=False), stamp, stamp))
             return cursor.lastrowid
 
     def finish_ai_call(self, call_id, status, response=None, error=None):
@@ -465,21 +535,26 @@ class Store:
 
     def ai_calls(self, cycle_id):
         with self.connect() as db:
+            if not self._owns(db, cycle_id):
+                return []
             rows = db.execute('''SELECT id,day,kind,status,error,created_at,updated_at FROM ai_calls
                 WHERE cycle_id=? ORDER BY id DESC LIMIT 100''', (cycle_id,)).fetchall()
         return [dict(row) for row in rows]
 
     def ai_call(self, call_id):
+        clause, args = self._mine()
         with self.connect() as db:
-            row = db.execute('SELECT * FROM ai_calls WHERE id=?', (call_id,)).fetchone()
+            row = db.execute(f'SELECT * FROM ai_calls WHERE id=?{clause}', (call_id, *args)).fetchone()
         if row is None:
             return None
-        record = dict(row)
+        record = self._row(row)
         record['conversation'] = json.loads(record['conversation'])
         return record
 
     def attempts(self, cycle_id):
         with self.connect() as db:
+            if not self._owns(db, cycle_id):
+                return []
             rows = db.execute('SELECT lift,number,load,result,updated_at FROM attempts WHERE cycle_id=? ORDER BY lift,number',
                               (cycle_id,)).fetchall()
         return [dict(row) for row in rows]
@@ -503,15 +578,19 @@ class Store:
                         json.dumps({'lift': lift, 'number': number, 'load': load, 'result': result}), stamp))
         return {'lift': lift, 'number': number, 'load': load, 'result': result, 'updated_at': stamp}
 
+    def _owned_status(self, db, cycle_id):
+        clause, args = self._mine()
+        cycle = db.execute(f'SELECT status FROM cycles WHERE id=?{clause}', (cycle_id, *args)).fetchone()
+        if cycle is None:
+            raise KeyError(cycle_id)
+        if cycle['status'] == 'active':
+            raise ReadOnlyError('The active cycle cannot be deleted. Import a new plan first.')
+
     def prepare_deletion(self, cycle_id):
         token = secrets.token_urlsafe(24)
         with self.connect() as db:
             db.execute('BEGIN IMMEDIATE')
-            cycle = db.execute('SELECT status FROM cycles WHERE id=?', (cycle_id,)).fetchone()
-            if cycle is None:
-                raise KeyError(cycle_id)
-            if cycle['status'] == 'active':
-                raise ReadOnlyError('The active cycle cannot be deleted. Import a new plan first.')
+            self._owned_status(db, cycle_id)
             db.execute('DELETE FROM deletion_tokens WHERE cycle_id=?', (cycle_id,))
             db.execute('INSERT INTO deletion_tokens VALUES(?,?,?)', (token, cycle_id, timestamp()))
         return token
@@ -519,11 +598,7 @@ class Store:
     def delete_cycle(self, cycle_id, token):
         with self.connect() as db:
             db.execute('BEGIN IMMEDIATE')
-            cycle = db.execute('SELECT status FROM cycles WHERE id=?', (cycle_id,)).fetchone()
-            if cycle is None:
-                raise KeyError(cycle_id)
-            if cycle['status'] == 'active':
-                raise ReadOnlyError('The active cycle cannot be deleted. Import a new plan first.')
+            self._owned_status(db, cycle_id)
             issued = db.execute('SELECT token FROM deletion_tokens WHERE cycle_id=?', (cycle_id,)).fetchone()
             if issued is None or not secrets.compare_digest(issued['token'], token):
                 raise ReadOnlyError('Export this cycle before deleting it. Request a fresh deletion export first.')
@@ -538,6 +613,8 @@ class Store:
 
     def questionnaire(self, cycle_id):
         with self.connect() as db:
+            if not self._owns(db, cycle_id):
+                return None
             row = db.execute('SELECT payload,status,updated_at FROM questionnaires WHERE cycle_id=?',
                              (cycle_id,)).fetchone()
         if row is None:
@@ -559,7 +636,10 @@ class Store:
 
     def prescription_versions(self, cycle_id):
         from .stats.variations import digest
-        current = digest(self.plan(cycle_id))
+        plan = self.plan(cycle_id)
+        if plan is None:
+            return []
+        current = digest(plan)
         with self.connect() as db:
             rows = db.execute('SELECT * FROM prescription_versions WHERE cycle_id=? ORDER BY created_at DESC', (cycle_id,)).fetchall()
         return [{'id': row['id'], 'created_at': row['created_at'], 'current': row['id'] == current,
@@ -568,6 +648,8 @@ class Store:
 
     def prescription_version(self, cycle_id, revision_id):
         with self.connect() as db:
+            if not self._owns(db, cycle_id):
+                return None
             row = db.execute('SELECT json FROM prescription_versions WHERE cycle_id=? AND id=?', (cycle_id, revision_id)).fetchone()
         return json.loads(row['json']) if row else None
 
@@ -592,15 +674,21 @@ class Store:
 
     def readiness_records(self, cycle_id):
         with self.connect() as db:
+            if not self._owns(db, cycle_id):
+                return []
             records = db.execute('SELECT payload,updated_at FROM readiness_v2 WHERE cycle_id=? ORDER BY date,updated_at', (cycle_id,)).fetchall()
         return [{**json.loads(row['payload']), 'updated_at': row['updated_at']} for row in records]
 
     def legacy_readiness(self, cycle_id):
         with self.connect() as db:
+            if not self._owns(db, cycle_id):
+                return []
             return [dict(row) for row in db.execute('SELECT * FROM readiness WHERE cycle_id=? ORDER BY date,session_id', (cycle_id,))]
 
     def metrics(self, cycle_id):
         with self.connect() as db:
+            if not self._owns(db, cycle_id):
+                return []
             rows = db.execute('SELECT * FROM body_metrics WHERE cycle_id=? ORDER BY date', (cycle_id,)).fetchall()
         return [{'date': row['date'], 'bodyweight': row['bodyweight'], 'bodyfat': row['bodyfat'],
                  'measurements': json.loads(row['measurements_json'] or '{}')} for row in rows]
@@ -629,26 +717,31 @@ class Store:
                 bodyfat=excluded.bodyfat,measurements_json=excluded.measurements_json''',
                        (cycle_id, payload['date'], payload['bodyweight'], payload['bodyfat'], json.dumps(payload['measurements'])))
 
-    @staticmethod
-    def require_active(db, cycle_id):
-        if db.execute("SELECT 1 FROM cycles WHERE id=? AND status='active'", (cycle_id,)).fetchone() is None:
+    def require_active(self, db, cycle_id):
+        clause, args = self._mine()
+        if db.execute(f"SELECT 1 FROM cycles WHERE id=? AND status='active'{clause}", (cycle_id, *args)).fetchone() is None:
             raise ReadOnlyError('Archived cycles are read-only')
 
     def cycles(self):
+        clause, args = self._mine()
         with self.connect() as db:
-            cycles = [dict(row) for row in db.execute('SELECT * FROM cycles ORDER BY start_date DESC')]
+            cycles = [self._row(row) for row in db.execute(f'SELECT * FROM cycles WHERE 1=1{clause} ORDER BY start_date DESC', args)]
         return {'cycles': cycles, 'active_cycle_id': next((row['id'] for row in cycles if row['status'] == 'active'), None)}
 
     def plan(self, cycle_id=None):
+        clause, args = self._mine('c.')
         with self.connect() as db:
             if cycle_id is None:
-                row = db.execute("SELECT p.json FROM plans p JOIN cycles c ON c.id=p.cycle_id WHERE c.status='active'").fetchone()
+                row = db.execute(f"SELECT p.json FROM plans p JOIN cycles c ON c.id=p.cycle_id WHERE c.status='active'{clause}", args).fetchone()
             else:
-                row = db.execute('SELECT json FROM plans WHERE cycle_id=?', (cycle_id,)).fetchone()
+                row = db.execute(f'SELECT p.json FROM plans p JOIN cycles c ON c.id=p.cycle_id WHERE p.cycle_id=?{clause}',
+                                 (cycle_id, *args)).fetchone()
         return json.loads(row['json']) if row else None
 
     def logs(self, cycle_id):
         with self.connect() as db:
+            if not self._owns(db, cycle_id):
+                return {}
             rows = db.execute('SELECT * FROM logs WHERE cycle_id=? ORDER BY key', (cycle_id,)).fetchall()
         return {row['key']: {'load': row['load'], 'sets': row['set_count'], 'reps': row['reps'],
                              'rpe': row['rpe'], 'note': row['note'], 'updated_at': row['updated_at']}
@@ -659,9 +752,9 @@ class Store:
             db.execute('BEGIN')
             return self._review_source(db, cycle_id)
 
-    @staticmethod
-    def _review_source(db, cycle_id):
-        cycle = db.execute('SELECT * FROM cycles WHERE id=?', (cycle_id,)).fetchone()
+    def _review_source(self, db, cycle_id):
+        clause, args = self._mine()
+        cycle = db.execute(f'SELECT * FROM cycles WHERE id=?{clause}', (cycle_id, *args)).fetchone()
         if cycle is None:
             return None
         plan = json.loads(db.execute('SELECT json FROM plans WHERE cycle_id=?', (cycle_id,)).fetchone()['json'])
@@ -683,7 +776,7 @@ class Store:
         archived = db.execute('SELECT review_json FROM archives WHERE cycle_id=?', (cycle_id,)).fetchone()
         questionnaire = db.execute('SELECT payload,status,updated_at FROM questionnaires WHERE cycle_id=?',
                                    (cycle_id,)).fetchone()
-        return {'cycle': dict(cycle), 'plan': plan, 'logs': logs, 'body_metrics': metrics,
+        return {'cycle': self._row(cycle), 'plan': plan, 'logs': logs, 'body_metrics': metrics,
                 'readiness': readiness, 'legacy_readiness': legacy, 'prescription_versions': versions,
                 'journals': journals, 'saved_review': json.loads(archived['review_json']) if archived else None,
                 'questionnaire': {'status': questionnaire['status'], 'payload': json.loads(questionnaire['payload']),
@@ -699,31 +792,34 @@ class Store:
             if db.execute('PRAGMA user_version').fetchone()[0] != 5:
                 raise RuntimeError('Unsupported database version. No data was changed.')
         self.snapshot()
+        clause, args = self._mine()
         with self.connect() as db:
             db.execute('BEGIN IMMEDIATE')
             if db.execute('PRAGMA user_version').fetchone()[0] != 5:
                 raise RuntimeError('Unsupported database version. No data was changed.')
-            active = db.execute("SELECT id FROM cycles WHERE status='active'").fetchone()
+            active = db.execute(f"SELECT id FROM cycles WHERE status='active'{clause}", args).fetchone()
             source = self._review_source(db, active['id']) if active else None
-            if source is None or digest(source) != expected_source_id:
+            current_id = digest(source) if source else self.EMPTY_SOURCE_ID
+            if current_id != expected_source_id:
                 raise ReadOnlyError('Current cycle or records changed. Preview again before importing.')
             meta = plan['meta']
             if db.execute('SELECT 1 FROM cycles WHERE id=?', (meta['planId'],)).fetchone():
                 raise ReadOnlyError('Cycle ID already exists. Existing cycles cannot be overwritten.')
-            old_id = source['cycle']['id']
             stamp = timestamp()
-            event = {'action': 'import', 'from': old_id, 'to': meta['planId'], 'plan_sha256': digest(plan)}
-            db.execute('INSERT INTO records_journal(cycle_id,kind,key,payload,created_at) VALUES(?,?,?,?,?)',
-                       (old_id, 'import', meta['planId'], json.dumps(event), stamp))
-            db.execute("UPDATE cycles SET status='archived' WHERE id=?", (old_id,))
-            archived_source = self._review_source(db, old_id)
-            as_of = calendar_state(source['plan'], source['logs'])['date']
-            review = build_review(archived_source, stamp, app_version, as_of)
-            db.execute('INSERT INTO archives VALUES(?,?,?,?)',
-                       (old_id, old_id, json.dumps(review, ensure_ascii=False, allow_nan=False), stamp))
+            old_id = source['cycle']['id'] if source else None
+            if source:
+                event = {'action': 'import', 'from': old_id, 'to': meta['planId'], 'plan_sha256': digest(plan)}
+                db.execute('INSERT INTO records_journal(cycle_id,kind,key,payload,created_at) VALUES(?,?,?,?,?)',
+                           (old_id, 'import', meta['planId'], json.dumps(event), stamp))
+                db.execute("UPDATE cycles SET status='archived' WHERE id=?", (old_id,))
+                archived_source = self._review_source(db, old_id)
+                as_of = calendar_state(source['plan'], source['logs'])['date']
+                review = build_review(archived_source, stamp, app_version, as_of)
+                db.execute('INSERT INTO archives VALUES(?,?,?,?)',
+                           (old_id, old_id, json.dumps(review, ensure_ascii=False, allow_nan=False), stamp))
             encoded = json.dumps(plan, ensure_ascii=False, allow_nan=False)
-            db.execute('INSERT INTO cycles VALUES(?,?,?,?,?,?)',
-                       (meta['planId'], meta['name'], meta['startDate'], meta['endDate'], 'active', plan['schemaVersion']))
+            self._root_insert(db, 'cycles', ('id', 'name', 'start_date', 'end_date', 'status', 'schema_version'),
+                              (meta['planId'], meta['name'], meta['startDate'], meta['endDate'], 'active', plan['schemaVersion']))
             db.execute('INSERT INTO plans VALUES(?,?,?,?,?)',
                        (meta['planId'], meta['planId'], encoded, plan['schemaVersion'], stamp))
             db.execute('INSERT INTO prescription_versions VALUES(?,?,?,?)',

@@ -89,14 +89,15 @@ class AccessGateTests(unittest.TestCase):
                     self.assertEqual(reg.status_code, 200)
                     self.assertEqual(reg.json()['username'], 'Lifter_2')
                     self.assertTrue(client.get('/api/session').json()['authenticated'])
-                    self.assertEqual(client.get('/api/plan').status_code, 200)
+                    self.assertEqual(client.get('/api/cycle').json(), {'active_cycle_id': None, 'cycles': []}, 'a new account starts with an empty ledger')
+                    self.assertEqual(client.get('/api/plan').status_code, 404)
                     out = client.post('/api/logout')
                     self.assertEqual(out.status_code, 200)
                     self.assertFalse(client.get('/api/session').json()['authenticated'])
                     self.assertEqual(client.get('/api/plan').status_code, 401)
                     ok = client.post('/api/login', json={'username': 'lifter_2', 'password': 'barbell-2018'})
                     self.assertEqual(ok.status_code, 200)
-                    self.assertEqual(client.get('/api/plan').status_code, 200)
+                    self.assertEqual(client.get('/api/cycle').status_code, 200)
                     self.assertEqual(client.post('/api/login', json={'username': 'Lifter_2', 'password': 'nope'}).status_code, 401)
 
     def test_register_validation_and_conflict(self):

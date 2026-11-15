@@ -4,17 +4,20 @@ import MuscleMap from './MuscleMap.vue';
 import WeekCapacity from './WeekCapacity.vue';
 import CapacityBoard from './CapacityBoard.vue';
 import TrendView from './TrendView.vue';
+import LockedFeature from './LockedFeature.vue';
 
 const props = defineProps({
   plan: { type: Object, required: true },
   analysis: { type: Object, required: true },
-  geometry: { type: Object, required: true },
+  geometry: { type: Object, default: null },
+  capabilities: { type: Array, default: () => [] },
   performance: { type: Object, default: null },
   currentWeek: { type: Number, default: 1 },
   mode: { type: String, default: 'plan' },
   logs: { type: Object, default: () => ({}) },
 });
 const emit = defineEmits(['week', 'mode']);
+const can = capability => props.capabilities.includes(capability);
 const tab = ref('overview');
 const tabs = [
   { k: 'overview', l: 'Overview' },
@@ -197,6 +200,9 @@ const blocks = computed(() => props.plan.blocks.map(block => {
       </section>
     </template>
 
+    <LockedFeature v-else-if="tab === 'lifts' && !can('lift_register')" label="Lift register & trends" tier="plus" />
+    <LockedFeature v-else-if="tab === 'muscle' && !can('muscle_map')" label="Muscle-group map" tier="plus" />
+    <LockedFeature v-else-if="tab === 'trend' && !can('lift_register')" label="Lift register & trends" tier="plus" />
     <template v-else-if="tab === 'lifts'">
       <section class="lift-grid" aria-label="Per-lift analysis">
         <article v-for="lift in lifts" :key="lift.code" class="lift-card" :class="`lift-${lift.code}`">

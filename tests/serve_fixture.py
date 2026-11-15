@@ -67,7 +67,7 @@ with tempfile.TemporaryDirectory(prefix='roastraw-browser-') as directory:
         historical['meta']['name'] = 'Historical cycle fixture'
         meta = historical['meta']
         with store.connect() as db:
-            db.execute('INSERT INTO cycles VALUES(?,?,?,?,?,?)',
+            db.execute('INSERT INTO cycles(id,name,start_date,end_date,status,schema_version,account_id) VALUES(?,?,?,?,?,?,(SELECT account_id FROM cycles ORDER BY rowid LIMIT 1))',
                        (meta['planId'], meta['name'], meta['startDate'], meta['endDate'], 'archived', historical['schemaVersion']))
             db.execute('INSERT INTO plans VALUES(?,?,?,?,?)',
                        (meta['planId'], meta['planId'], json.dumps(historical), historical['schemaVersion'], '2026-11-01T00:00:00+00:00'))

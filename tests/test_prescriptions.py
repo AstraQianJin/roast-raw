@@ -464,7 +464,7 @@ class PrescriptionTests(unittest.TestCase):
         archived_revision = canonical_id(archived)
         meta = archived['meta']
         with open_db(self.path) as db:
-            db.execute('INSERT INTO cycles VALUES(?,?,?,?,?,?)',
+            db.execute('INSERT INTO cycles(id,name,start_date,end_date,status,schema_version,account_id) VALUES(?,?,?,?,?,?,(SELECT account_id FROM cycles ORDER BY rowid LIMIT 1))',
                        (archived_id, meta['name'], meta['startDate'], meta['endDate'], 'archived', archived['schemaVersion']))
             db.execute('INSERT INTO plans VALUES(?,?,?,?,?)',
                        (archived_id, archived_id, json.dumps(archived), archived['schemaVersion'], '2026-01-01T00:00:00+00:00'))
@@ -706,9 +706,11 @@ class PrescriptionMigrationTests(unittest.TestCase):
             expected['invites'] = []
             expected['invite_redemptions'] = []
             expected['sessions'] = []
+            expected['cycles'] = [tuple(row) + (0,) for row in after['cycles']]
+            expected['ledger_meta'] = [('open_ledger', '0')]
             self.assertEqual(database_rows(path), expected)
             migrated_backups = backups(path) - stable_backups
-            self.assertEqual(len(migrated_backups), 4, 'v4 questionnaire, v5 AI, additive accounts and membership migrations must each snapshot once')
+            self.assertEqual(len(migrated_backups), 5, 'v4 questionnaire, v5 AI, additive accounts, membership and per-account ledger migrations must each snapshot once')
             snapshot_versions = set()
             for backup in migrated_backups:
                 with open_db(backup) as db:

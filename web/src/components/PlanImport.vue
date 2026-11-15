@@ -2,6 +2,7 @@
 import { computed, getCurrentInstance, onBeforeUnmount, ref, shallowRef } from 'vue';
 
 const prefix = `plan-import-${getCurrentInstance().uid}`;
+const emit = defineEmits(['activated']);
 const maxBytes = 2_000_000;
 const file = shallowRef(null);
 const preview = shallowRef(null);
@@ -31,14 +32,22 @@ const issueFields = [
   ['field', 'Field'], ['expected', 'Expected'],
 ];
 const validPreview = computed(() => !!preview.value && preview.value.file === file.value);
+const firstCycle = computed(() => {
+  if (validPreview.value) return preview.value.payload.current === null;
+  if (success.value) return !success.value.archived_cycle_id;
+  return false;
+});
 const confirming = computed(() => pending.value === 'confirm');
 const canConfirm = computed(() => validPreview.value && acknowledged.value && !pending.value && !success.value);
-const columns = computed(() => validPreview.value ? [
+const columns = computed(() => validPreview.value ? (firstCycle.value ? [
+  { key: 'candidate', title: 'First cycle', note: 'To become active', id: preview.value.payload.candidateId,
+    summary: preview.value.payload.candidate, plan: preview.value.payload.candidatePlan },
+] : [
   { key: 'current', title: 'Current cycle', note: 'To be archived · read-only',
     id: preview.value.payload.currentId, summary: preview.value.payload.current, plan: preview.value.payload.currentPlan },
   { key: 'candidate', title: 'New cycle', note: 'To become active',
     id: preview.value.payload.candidateId, summary: preview.value.payload.candidate, plan: preview.value.payload.candidatePlan },
-] : []);
+]) : []);
 
 function clearPreview() {
   preview.value = null;
@@ -111,9 +120,18 @@ function validatePreview(payload) {
     && countFields.every(([key]) => value[key] === null || (typeof value[key] === 'number'
       && Number.isFinite(value[key]) && value[key] >= 0));
   if (!object(payload) || !hexId(payload.currentId) || !hexId(payload.candidateId)
-    || !hexId(payload.sourceSha256) || !summary(payload.current) || !summary(payload.candidate)
-    || !object(payload.currentPlan) || !Object.keys(payload.currentPlan).length
-    || !object(payload.candidatePlan) || !Object.keys(payload.candidatePlan).length
+    || !hexId(payload.sourceSha256) || !summary(payload.candidate)
+    || !object(payload.candidatePlan) || !Object.keys(payload.candidatePlan).length) {
+    throw new Error('The server returned an incomplete or invalid comparison. Preview again before confirming.');
+  }
+  if (payload.current === null || payload.currentPlan === null) {
+    // A ledger with no cycle yet: the server reports no current source, so both must be null together.
+    if (!(payload.current === null && payload.currentPlan === null)) {
+      throw new Error('The server returned an incomplete or invalid comparison. Preview again before confirming.');
+    }
+    return;
+  }
+  if (!summary(payload.current) || !object(payload.currentPlan) || !Object.keys(payload.currentPlan).length
     || payload.current.cycleId === payload.candidate.cycleId) {
     throw new Error('The server returned an incomplete or invalid comparison. Preview again before confirming.');
   }
@@ -157,11 +175,12 @@ async function confirmImport() {
     }, context);
     if (!current(context)) return;
     if (payload?.saved !== true || payload.active_cycle_id !== selected.payload.candidate.cycleId
-      || payload.archived_cycle_id !== selected.payload.current.cycleId) {
+      || (payload.archived_cycle_id ?? null) !== (selected.payload.current?.cycleId ?? null)) {
       throw new Error('The server did not acknowledge the reviewed activation and archive.');
     }
     success.value = payload;
     clearPreview();
+    emit('activated', payload);
   } catch (failure) {
     if (!current(context)) return;
     clearPreview();
@@ -182,11 +201,11 @@ onBeforeUnmount(() => {
   <section class="plan-import" data-testid="plan-import" :aria-busy="!!pending" :aria-labelledby="`${prefix}-heading`">
     <header>
       <p class="kicker">CYCLE IMPORT</p>
-      <h2 :id="`${prefix}-heading`">A new cycle.<br><em>A preserved history.</em></h2>
-      <p class="reading-note">Upload a complete JSON plan for strict validation. Previewing does not activate it. Confirming archives the current cycle and activates the reviewed new plan without overwriting historical records.</p>
+      <h2 :id="`${prefix}-heading`">A new cycle.<br><em>{{ firstCycle ? 'Your first ledger.' : 'A preserved history.' }}</em></h2>
+      <p class="reading-note">{{ firstCycle ? 'Upload a complete JSON plan for strict validation. Previewing does not activate it. Confirming activates the reviewed plan as this account’s first cycle; nothing from other accounts is touched.' : 'Upload a complete JSON plan for strict validation. Previewing does not activate it. Confirming archives the current cycle and activates the reviewed new plan without overwriting historical records.' }}</p>
     </header>
 
-    <form class="upload-form" @submit.prevent="previewFile">
+    <form v-if="!success" class="upload-form" @submit.prevent="previewFile">
       <label :for="`${prefix}-file`">Plan JSON file</label>
       <input :id="`${prefix}-file`" data-testid="import-file" type="file" accept=".json,application/json"
         :disabled="confirming || !!success" :aria-describedby="`${prefix}-file-note`" @change="changeFile">
@@ -216,8 +235,8 @@ onBeforeUnmount(() => {
       <a v-if="error.uncertain" href="/cycle">Open the cycle to verify the active cycle</a>
     </section>
 
-    <section v-if="validPreview" class="comparison" data-testid="import-comparison" aria-label="Current and new plan comparison">
-      <h3>Review both cycles.</h3>
+    <section v-if="validPreview && !success" class="comparison" data-testid="import-comparison" aria-label="Current and new plan comparison">
+      <h3>{{ firstCycle ? 'Review the new plan.' : 'Review both cycles.' }}</h3>
       <p class="reading-note">Server-supplied plan values, not actual training statistics. Both complete plans are read-only below.</p>
       <div class="comparison-columns">
         <article v-for="column in columns" :key="column.key" class="cycle-column">
@@ -245,13 +264,13 @@ onBeforeUnmount(() => {
       <p class="source-id">Source SHA-256 (server reported)<br><code>{{ preview.payload.sourceSha256 }}</code></p>
     </section>
 
-    <div class="confirmation">
+    <div v-if="!success" class="confirmation">
       <label class="confirm-label" :class="{ unavailable: !validPreview || confirming || !!success }">
         <input v-model="acknowledged" data-testid="import-confirm-check" type="checkbox" :disabled="!validPreview || !!pending || !!success">
-        <span>I have reviewed both plans. I understand that the current cycle and its records will become a read-only archive, and the new plan will become active.</span>
+        <span>{{ firstCycle ? 'I have reviewed the new plan. I understand it will become this account’s active cycle.' : 'I have reviewed both plans. I understand that the current cycle and its records will become a read-only archive, and the new plan will become active.' }}</span>
       </label>
       <div class="actions">
-        <button type="button" class="confirm-button" data-testid="import-confirm" :disabled="!canConfirm" @click="confirmImport">{{ confirming ? 'Confirming activation…' : 'Archive current and activate new plan' }}</button>
+        <button type="button" class="confirm-button" data-testid="import-confirm" :disabled="!canConfirm" @click="confirmImport">{{ confirming ? 'Confirming activation…' : (firstCycle ? 'Activate this plan' : 'Archive current and activate new plan') }}</button>
         <button type="button" data-testid="import-cancel" :disabled="confirming || !!success" @click="cancel">Cancel preview</button>
       </div>
       <p class="reading-note">Cancelling clears the comparison and acknowledgement, retains your file, and sends no write request. Confirmation cannot be cancelled once sent.</p>
@@ -259,10 +278,10 @@ onBeforeUnmount(() => {
 
     <section v-if="success" class="import-success" data-testid="import-success" role="status">
       <h3>New cycle activated.</h3>
-      <p>The server acknowledged that the reviewed plan was saved and the previous cycle was archived.</p>
+      <p>{{ success.archived_cycle_id ? 'The server acknowledged that the reviewed plan was saved and the previous cycle was archived.' : 'The server acknowledged that the reviewed plan was saved as your first cycle.' }}</p>
       <dl class="identity">
         <div><dt>Active cycle</dt><dd><code>{{ success.active_cycle_id }}</code></dd></div>
-        <div><dt>Archived cycle · read-only</dt><dd><code>{{ success.archived_cycle_id }}</code></dd></div>
+        <div v-if="success.archived_cycle_id"><dt>Archived cycle · read-only</dt><dd><code>{{ success.archived_cycle_id }}</code></dd></div>
       </dl>
       <a href="/cycle" data-testid="import-open-plan">Open the new active cycle</a>
       <p class="reading-note">This link reloads the active plan from the server.</p>

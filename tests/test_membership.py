@@ -168,7 +168,7 @@ class MembershipTests(unittest.TestCase):
         self.assertEqual(len(sessions), membership.DEVICE_LIMIT)
         self.assertEqual([row['user_agent'] for row in sessions], [f'device-{index}' for index in range(1, 6)])
         self.assertEqual(clients[0].get('/api/plan').status_code, 401, 'the oldest device is signed out')
-        self.assertEqual(clients[5].get('/api/plan').status_code, 200)
+        self.assertEqual(clients[5].get('/api/cycle').status_code, 200)
         listed = clients[5].get('/api/membership/sessions').json()
         self.assertEqual((listed['limit'], len(listed['sessions'])), (5, 5))
         self.assertEqual(clients[5].delete(f"/api/membership/sessions/{listed['sessions'][0]['id']}").status_code, 200)

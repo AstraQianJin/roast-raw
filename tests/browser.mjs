@@ -1489,7 +1489,9 @@ try {
     await input('.auth-pass input', 'barbell-2018');
     await input('.auth-field input[placeholder="Repeat the password"]', 'barbell-2018');
     await click('.auth-submit');
-    await browser.waitFor('location.pathname === "/today" && Boolean(document.querySelector("[data-testid=today]"))');
+    await browser.waitFor('location.pathname === "/today" && Boolean(document.querySelector("[data-testid=empty-ledger]"))');
+    equal(await browser.evaluate('document.querySelector("[data-testid=empty-ledger] h1").textContent'), 'No cycle yet.', 'a new account opens on its own empty ledger, not the owner plan');
+    equal(await browser.evaluate('Boolean(document.querySelector("[data-testid=empty-ledger] .plan-import"))'), true, 'the empty ledger offers plan import');
     equal(await browser.evaluate('fetch("/api/session").then(r=>r.json()).then(s=>s.username)'), 'BrowserLifter', 'registered account is signed in');
     equal(await browser.evaluate('fetch("/api/session").then(r=>r.json()).then(s=>s.tier)'), 'plus', 'invite tier becomes the account tier');
     const expected401 = entry => entry.source === 'network' && ((entry.url.startsWith(`${gbase}/api/`) && entry.text.includes('401')) || (entry.url === `${gbase}/api/register` && entry.text.includes('422')));

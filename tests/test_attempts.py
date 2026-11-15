@@ -129,7 +129,7 @@ class AttemptAPITests(GeneratedPlanCase):
         plan = copy.deepcopy(self.seed)
         plan['meta']['planId'] = 'old-cycle'
         with open_db(self.db_path) as db:
-            db.execute('INSERT INTO cycles VALUES(?,?,?,?,?,?)',
+            db.execute('INSERT INTO cycles(id,name,start_date,end_date,status,schema_version,account_id) VALUES(?,?,?,?,?,?,(SELECT account_id FROM cycles ORDER BY rowid LIMIT 1))',
                        ('old-cycle', 'Old', plan['meta']['startDate'], plan['meta']['endDate'],
                         'archived', plan['schemaVersion']))
             db.execute('INSERT INTO plans VALUES(?,?,?,?,?)',
