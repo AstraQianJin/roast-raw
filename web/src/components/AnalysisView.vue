@@ -342,7 +342,7 @@ const blocks = computed(() => props.plan.blocks.map(block => {
 .block-strip-rows { display: grid; gap: 9px; margin-top: 14px; }
 .block-strip-row { display: grid; grid-template-columns: 22px minmax(0, 1.2fr) minmax(0, 1fr) auto; align-items: center; gap: 8px; }
 .strip-id { font: 700 10px var(--mono); }
-.strip-name { font-size: 10px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.strip-name { font-size: 10px; color: var(--muted); }
 .strip-bar { height: 7px; border-radius: 4px; background: var(--line-soft); overflow: hidden; }
 .strip-bar i { display: block; height: 100%; border-radius: 4px; }
 .strip-meta { font: 9px var(--mono); color: var(--muted); white-space: nowrap; }

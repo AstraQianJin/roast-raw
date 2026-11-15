@@ -11,7 +11,9 @@ const activeBlock = computed(() => props.blockId || '');
 const blockWeeks = computed(() => activeBlock.value ? props.weeks.filter(week => week.blockId === activeBlock.value) : props.weeks);
 const tone = id => {
   const type = (props.blocks.find(block => block.id === id)?.cycleType || '').toLowerCase();
-  return { hyper: 'var(--ct-hyper)', strength: 'var(--ct-strength)', transmute: 'var(--ct-transmute)', peak: 'var(--ct-peak)' }[type] || 'var(--ct-custom)';
+  // Literal colours, not var() references: a custom property that holds another
+  // var() does not always resolve to a usable background on the chip.
+  return { hyper: '#A81A12', strength: '#0D3FA8', transmute: '#6A2F9E', peak: '#7A5200' }[type] || '#55605C';
 };
 </script>
 
@@ -39,10 +41,10 @@ const tone = id => {
 .bw-blocks::-webkit-scrollbar { display: none; }
 .bw-all, .bw-block { flex: none; display: flex; align-items: center; gap: 7px; min-height: 38px; padding: 0 11px; border-radius: 10px; font: 700 9px var(--mono); letter-spacing: .06em; color: var(--muted); white-space: nowrap; }
 .bw-all { background: var(--panel2); }
-.bw-block b { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; background: var(--seg); color: #FFFFFF; font: 700 10px var(--mono); }
+.bw-block b { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; background: var(--seg, var(--ct-custom)); color: #FFFFFF; font: 700 10px var(--mono); }
 .bw-block span { text-transform: uppercase; }
 .bw-block.on, .bw-all.on { background: var(--ink); color: #FFFFFF; }
-.bw-block.on b { background: #FFFFFF; color: var(--seg); }
+.bw-block.on b { background: #FFFFFF; color: var(--ink); border: 1px solid var(--seg, var(--ink)); }
 .bw-weeks { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 3px; margin-top: 4px; }
 .bw-week { display: grid; place-items: center; gap: 2px; min-height: 40px; border-radius: 9px; font: 700 10px var(--mono); color: var(--muted); }
 .bw-week i { width: 5px; height: 5px; border-radius: 50%; background: var(--line); }

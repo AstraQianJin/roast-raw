@@ -340,6 +340,24 @@ try {
   assert.ok(day.gear, 'the plate cabinet is on the session day');
   assert.equal(day.overflow, 0, 'the session day does not scroll sideways');
   await shot('session-day');
+  // 0.44: the anatomy figure must be big enough to read. The week page carries the
+  // compact map; a fixture without geometry renders the locked panel instead.
+  await browser.navigate(`${base}/cycle/week/1`);
+  await browser.waitFor('Boolean(document.querySelector(".week-aside"))', 20000);
+  await delay(400);
+  const anatomy = await browser.evaluate(`(() => {
+    const svg = document.querySelector('.anatomy-grid svg');
+    if (!svg) return { rendered: false };
+    const box = svg.getBoundingClientRect();
+    return { rendered: true, height: Math.round(box.height), width: Math.round(box.width), stacked: document.querySelectorAll('.anatomy-grid figure').length };
+  })()`);
+  if (anatomy.rendered) {
+    assert.ok(anatomy.height >= 280, `the anatomy figure is tall enough to read (${anatomy.height} px)`);
+    await shot('anatomy-week');
+  }
+  ok('session page text unclipped and the anatomy figure is legible', anatomy);
+  await browser.navigate(`${base}/cycle/week/1/day/A`);
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=daily-record]"))', 20000);
   ok('session day renders', day);
 
   // ---- 4b. the calendar detail is that same session (0.43) ----------------
@@ -425,6 +443,76 @@ try {
   await browser.send('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
   assert.equal(signatures.filter(item => item === firstSignature).length, 10, 'ten reloads paint the same cycle structure');
   ok('cycle reloads deterministically', { reloads: 10, signatureLength: firstSignature.length, blocks: plan.blocks.length });
+
+  // ---- 4d. no clipped text, and muted labels stay readable (0.44) ---------
+  const sweep = `(() => {
+    const clipped = [];
+    const lowContrast = [];
+    const ctx = document.createElement('canvas').getContext('2d');
+    const normalize = value => { ctx.fillStyle = '#000000'; ctx.fillStyle = value; return ctx.fillStyle; };
+    const lum = value => {
+      const hex = normalize(value);
+      let parts;
+      if (hex[0] === '#') {
+        const digits = hex.length === 4
+          ? hex.slice(1).split('').map(d => parseInt(d + d, 16))
+          : [hex.slice(1, 3), hex.slice(3, 5), hex.slice(5, 7)].map(pair => parseInt(pair, 16));
+        parts = digits;
+      } else {
+        parts = hex.replace(/[^0-9.,]/g, ' ').trim().split(/[ ,]+/).map(Number).slice(0, 3);
+      }
+      const channel = value => { value /= 255; return value <= 0.03928 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4); };
+      return 0.2126 * channel(parts[0]) + 0.7152 * channel(parts[1]) + 0.0722 * channel(parts[2]);
+    };
+    const background = node => {
+      let current = node;
+      while (current && current !== document.documentElement) {
+        const style = getComputedStyle(current);
+        if (style.backgroundImage && style.backgroundImage !== 'none') return null;
+        const colour = style.backgroundColor;
+        if (colour && colour !== 'transparent') {
+          if (!/^rgba\\(/.test(colour)) return colour; // rgb() carries no alpha channel
+          const alpha = Number(colour.slice(colour.lastIndexOf(',') + 1).replace(')', '').trim());
+          if (alpha >= 0.95) return colour;
+        }
+        current = current.parentElement;
+      }
+      return 'rgb(241, 240, 235)';
+    };
+    for (const node of document.querySelectorAll('body *')) {
+      const style = getComputedStyle(node);
+      if (style.display === 'none' || style.visibility === 'hidden' || !node.clientWidth) continue;
+      const text = (node.textContent || '').trim();
+      if (!text || /(^| )(sr|sr-only|visually-hidden)( |$)/.test(node.className)) continue;
+      const hidden = /hidden|clip/.test(style.overflowX) || /hidden|clip/.test(style.overflow);
+      if (hidden && node.scrollWidth > node.clientWidth + 1 && !node.children.length) {
+        clipped.push({ cls: node.className, text: text.slice(0, 40), scrollWidth: node.scrollWidth, clientWidth: node.clientWidth });
+      }
+      if (!node.children.length && parseFloat(style.fontSize) <= 12) {
+        const paperColour = background(node);
+        if (!paperColour) continue; // a gradient or image: no reliable ratio here
+        const ink = lum(style.color);
+        const paper = lum(paperColour);
+        const ratio = (Math.max(ink, paper) + 0.05) / (Math.min(ink, paper) + 0.05);
+        if (ratio < 4.4) lowContrast.push({ cls: node.className, tag: node.tagName, html: node.outerHTML.slice(0, 160), parent: node.parentElement?.outerHTML.slice(0, 160), seg: getComputedStyle(node).getPropertyValue('--seg'), ink: style.color, paper: paperColour, ratio: Math.round(ratio * 100) / 100, text: text.slice(0, 30) });
+      }
+    }
+    return { clipped: clipped.slice(0, 10), lowContrast: lowContrast.slice(0, 10), checked: document.querySelectorAll('body *').length };
+  })()`;
+  const cycleSweep = await browser.evaluate(sweep);
+  assert.equal(cycleSweep.clipped.length, 0, `no clipped text on the cycle page (${JSON.stringify(cycleSweep.clipped)})`);
+  assert.equal(cycleSweep.lowContrast.length, 0, `small labels reach AA contrast (${JSON.stringify(cycleSweep.lowContrast)})`);
+  await browser.navigate(`${base}/cycle/week/1/day/A`);
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=daily-record]"))', 20000);
+  const daySweep = await browser.evaluate(sweep);
+  assert.equal(daySweep.clipped.length, 0, `no clipped text on the session page (${JSON.stringify(daySweep.clipped)})`);
+  assert.equal(daySweep.lowContrast.length, 0, `small labels reach AA contrast on the session page (${JSON.stringify(daySweep.lowContrast)})`);
+  await browser.navigate(`${base}/`);
+  const landingSweep = await browser.evaluate(sweep);
+  assert.equal(landingSweep.clipped.length, 0, `no clipped text on the landing page (${JSON.stringify(landingSweep.clipped)})`);
+  ok('no clipped text and AA contrast for small labels', { cycle: cycleSweep.checked, landing: landingSweep.checked });
+  await browser.navigate(`${base}/cycle`);
+  await browser.waitFor('Boolean(document.querySelector(".block-deck"))', 20000);
 
 
   // The logging check below expects the session day again.

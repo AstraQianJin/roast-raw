@@ -154,8 +154,8 @@ const RECOVERY_ITEMS = ['Morning resting heart rate', 'Sleep hours', 'HRV if tra
 .btn.ghost:hover { background: var(--accent-soft); }
 .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-content: start; }
 .fact { background: var(--inset); border: 1px solid var(--line-soft); border-radius: 11px; padding: 9px 10px; min-width: 0; }
-.fact .k { font-family: var(--mono); font-size: 8px; letter-spacing: .12em; color: var(--ink); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.fact .v { margin-top: 2px; font-family: var(--mono); font-size: 13.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fact .k { font-family: var(--mono); font-size: 8px; letter-spacing: .12em; color: var(--ink); text-transform: uppercase; }
+.fact .v { margin-top: 2px; font-family: var(--mono); font-size: 13.5px; font-weight: 700; }
 .fact .s { margin-top: 1px; font-family: var(--mono); font-size: 8px; color: var(--ink); letter-spacing: .06em; }
 .sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .sec-meta { font-family: var(--mono); font-size: 8.5px; letter-spacing: .1em; color: var(--muted); text-transform: uppercase; }
@@ -164,7 +164,7 @@ const RECOVERY_ITEMS = ['Morning resting heart rate', 'Sleep hours', 'HRV if tra
 .fs-list { display: grid; gap: 6px; margin-top: 10px; }
 .fs-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'copy load' 'plates plates'; gap: 5px 10px; align-items: center; padding: 9px 10px; border: 1px solid var(--line-soft); border-radius: 11px; background: var(--inset); }
 .fs-copy { grid-area: copy; display: grid; gap: 2px; min-width: 0; }
-.fs-copy b { font-family: var(--display); font-size: 12.5px; font-weight: 700; letter-spacing: .01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fs-copy b { font-family: var(--display); font-size: 12.5px; font-weight: 700; letter-spacing: .01em; }
 .fs-copy em { font-style: normal; font-family: var(--mono); font-size: 9px; letter-spacing: .04em; color: var(--muted); }
 .fs-load { grid-area: load; font-family: var(--mono); font-size: 14px; font-weight: 700; text-align: right; white-space: nowrap; }
 .fs-load small { font-size: 9px; font-weight: 500; color: var(--muted); margin-left: 2px; }

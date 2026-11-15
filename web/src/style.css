@@ -123,7 +123,7 @@ main { padding: 30px 0 48px; }
 .block-index a:nth-child(odd) { padding-right: 14px; border-right: 1px solid var(--line); }
 .block-index a:nth-child(even) { padding-left: 14px; }
 .block-index b { font: 700 11px var(--mono); }
-.block-index span { font-size: 10.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.block-index span { font-size: 10.5px; color: var(--muted); }
 .block-weeks { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
 .block-weeks li { border-bottom: 1px solid var(--line); }
 .block-weeks a { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: baseline; gap: 10px; min-height: 52px; padding: 10px 0; }
@@ -314,13 +314,13 @@ main { padding: 30px 0 48px; }
 .map-legend span { font: 9px var(--mono); color: var(--muted); }
 .map-legend i { display: block; height: 6px; margin-bottom: 7px; }
 .map-filters { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); margin: 16px 0; gap: 5px; }
-.map-filters button { font-size: 11px; }
+.map-filters button { font-size: 11px; color: var(--ink); }
 .anatomy-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; background: var(--card-grad); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 12px 7px; }
-.anatomy-grid svg { display: block; width: 100%; height: 330px; }
+.anatomy-grid svg { display: block; width: 100%; height: min(52vh, 400px); }
 .anatomy-grid path { stroke: var(--anatomy-separator); stroke-width: .6px; stroke-linejoin: round; }
 .plan-day { scroll-margin-top: 16px; }
 .muscle-map.compact .map-heading h2 { font-size: 27px; }
-.muscle-map.compact .anatomy-grid svg { height: 230px; }
+.muscle-map.compact .anatomy-grid svg { height: 300px; }
 .muscle-map.compact .muscle-detail { min-height: 0; }
 .muscle-map.compact .muscle-numbers b { font-size: 21px; }
 .muscle-selector { display: block; margin-top: 12px; font-size: 11px; color: var(--muted); }

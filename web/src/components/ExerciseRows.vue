@@ -86,7 +86,8 @@ const logSummary = row => {
 </template>
 
 <style scoped>
-.exercise { padding: 10px 0 8px; border: 0; border-top: 1px solid var(--line-soft); border-radius: 0; background: none; box-shadow: none; margin: 0; }
+.exercise { padding: 12px 8px 10px; border: 0; border-top: 1px solid var(--line-soft); border-radius: 0; background: none; box-shadow: none; margin: 0; }
+.exercise:nth-of-type(even) { background: var(--panel2); }
 .exercise:first-of-type { border-top: 1px solid var(--line2); }
 .ex-head { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: baseline; gap: 8px; }
 .ex-title { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
