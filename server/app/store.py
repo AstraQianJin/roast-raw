@@ -4,6 +4,9 @@ import hmac
 import json
 import secrets
 import sqlite3
+import threading
+import time
+from collections import OrderedDict
 from contextlib import closing, contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -29,10 +32,14 @@ class AiQuotaError(ValueError):
 
 
 class Store:
+    SCOPED_MAX = 64
+    SCOPED_TTL = 1800
+
     def __init__(self, path):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self._scoped = {}
+        self._scoped = OrderedDict()
+        self._scoped_lock = threading.Lock()
 
     @contextmanager
     def connect(self):
@@ -271,11 +278,27 @@ class Store:
         return int(row['value']) if row else 0
 
     def for_account(self, account_id):
-        if account_id not in self._scoped:
+        """Bounded view cache: 64 accounts, least-recently-used evicted, idle 30 minutes expired."""
+        now = time.monotonic()
+        with self._scoped_lock:
+            hit = self._scoped.pop(account_id, None)
+            if hit is not None:
+                scoped, _used = hit
+                self._scoped[account_id] = (scoped, now)
+                return scoped
+            for old_id, (_scoped, used) in list(self._scoped.items()):
+                if now - used > self.SCOPED_TTL:
+                    del self._scoped[old_id]
+            while len(self._scoped) >= self.SCOPED_MAX:
+                self._scoped.popitem(last=False)
             scoped = copy.copy(self)
             scoped.ledger = account_id
-            self._scoped[account_id] = scoped
-        return self._scoped[account_id]
+            # copy.copy shares mutable attributes with the base store; a scoped view must not
+            # ever be treated as a base for another account, so it starts with its own (empty) map.
+            scoped._scoped = OrderedDict()
+            scoped._scoped_lock = self._scoped_lock
+            self._scoped[account_id] = (scoped, now)
+            return scoped
 
     def _mine(self, alias=''):
         if self.ledger is None:

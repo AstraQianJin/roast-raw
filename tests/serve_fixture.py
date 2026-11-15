@@ -12,6 +12,9 @@ import tempfile
 os.environ.pop('RR_ACCESS_PASSWORD', None)
 os.environ.pop('RR_ACCESS_USERNAME', None)
 os.environ.pop('DEEPSEEK_API_KEY', None)
+# The fixture server is the only place allowed to run without an access password.
+os.environ['RR_ALLOW_OPEN_FIXTURE'] = '1'
+print('OPEN FIXTURE MODE - do not use in production', file=sys.stderr)
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))

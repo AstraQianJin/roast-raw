@@ -132,7 +132,7 @@ try {
     const drift = spawnSync(python, ['server/tools/export_membership.py', '--check'], { cwd: root, encoding: 'utf8', env: { ...process.env, PYTHONIOENCODING: 'utf-8' } });
     assert.equal(drift.status, 0, `web/src/membership.json drifted from server/app/membership.py: ${drift.stdout}${drift.stderr}`);
     console.log('PASS membership table: web/src/membership.json matches the server capability matrix');
-    const unit = spawnSync(python, ['-m', 'unittest', 'discover', '-s', 'tests', '-p', 'test_*.py', '-v'], { cwd: root, encoding: 'utf8', env: { ...process.env, PYTHONIOENCODING: 'utf-8', RR_ACCESS_PASSWORD: '', DEEPSEEK_API_KEY: '' }, timeout: 600000, maxBuffer: 5 * 1024 * 1024 });
+    const unit = spawnSync(python, ['-m', 'unittest', 'discover', '-s', 'tests', '-p', 'test_*.py', '-v'], { cwd: root, encoding: 'utf8', env: { ...process.env, PYTHONIOENCODING: 'utf-8', RR_ACCESS_PASSWORD: '', RR_ALLOW_OPEN_FIXTURE: '1', DEEPSEEK_API_KEY: '' }, timeout: 600000, maxBuffer: 5 * 1024 * 1024 });
     process.stdout.write(unit.stdout || '');
     process.stdout.write(unit.stderr || '');
     assert.equal(unit.status, 0, 'Python import/API/calendar/statistics regression failed');

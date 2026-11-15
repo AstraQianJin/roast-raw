@@ -26,7 +26,7 @@ from .store import AiQuotaError, InviteError, ReadOnlyError, Store, timestamp
 from .validation import Reject, validate_plan
 
 ROOT = Path(__file__).resolve().parents[2]
-OPEN_ACCOUNT = {'id': None, 'username': None, 'tier': 'ultra'}
+OPEN_ACCOUNT = {'id': None, 'username': None, 'tier': 'ultra', 'fixture': True}  # fixture-only identity; production refuses to start without a password
 CURRENT_STORE = ContextVar('rr_store')
 CURRENT_ACCOUNT = ContextVar('rr_account', default=None)
 
@@ -170,6 +170,11 @@ def create_app(db_path=None, plan_path=None):
     store = ScopedStore()
     access_password = os.environ.get('RR_ACCESS_PASSWORD', '')
     access_username = os.environ.get('RR_ACCESS_USERNAME', '')
+    # Fail-closed: without an access password the app refuses to start. Local fixtures opt in
+    # explicitly with RR_ALLOW_OPEN_FIXTURE=1 and must never do so on a deployed host.
+    allow_open_fixture = os.environ.get('RR_ALLOW_OPEN_FIXTURE') == '1'
+    if not access_password and not allow_open_fixture:
+        raise RuntimeError('RR_ACCESS_PASSWORD is not set. Refusing to start without an access password.')
 
     @asynccontextmanager
     async def lifespan(app):
@@ -217,7 +222,8 @@ def create_app(db_path=None, plan_path=None):
         request.state.account = None
         if path.startswith('/api/'):
             request.state.account = base.session_account(request.cookies.get('rr_session')) or basic_account(request)
-            if request.state.account is None and not access_password:
+            if request.state.account is None and allow_open_fixture and not access_password:
+                # Fixture-only identity. A deployed host always has a password, so this branch stays shut.
                 request.state.account = dict(OPEN_ACCOUNT)
             account = request.state.account
             ledger = account['id'] if account and account.get('id') is not None else getattr(app.state, 'open_ledger', 0)
@@ -273,7 +279,8 @@ def create_app(db_path=None, plan_path=None):
         account = request.state.account
         if account is None:
             return {'authenticated': False, 'username': None, 'gate': True}
-        return {'authenticated': True, 'username': account['username'], 'gate': bool(access_password), **membership_view(account)}
+        return {'authenticated': True, 'fixture': bool(account.get('fixture')), 'username': account['username'],
+                'gate': bool(access_password), **membership_view(account)}
 
     def _session_response(account, request):
         response = JSONResponse(content={'ok': True, 'username': account['username'], **membership_view(account)})

@@ -93,15 +93,15 @@ const chain = [
   { n: '01', k: 'CYCLE PLAN', d: 'Fixed weeks, phase-coloured blocks, deload and test marked. Import or export the whole cycle.' },
   { n: '02', k: 'DAILY PRESCRIPTION', d: 'Main lifts, variations and accessories list sets, intensity and load row by row.' },
   { n: '03', k: 'PLATE MATH', d: 'Barbells, pin machines, loaded plates, dumbbells and bodyweight land on a load you can pick up.' },
-  { n: '04', k: 'SET-BY-SET LOG', d: 'Check-offs, rest timer and the day summary share one screen. No upload step.' },
+  { n: '04', k: 'SET-BY-SET LOG', d: 'Check-offs and the day summary share one screen. No upload step.' },
   { n: '05', k: 'CAPACITY', d: 'Working sets, SBD equivalents and reference bands on one track.' },
-  { n: '06', k: 'EXPORT & SHARE', d: 'CSV, XLSX, JSON and a 1080 × 1440 session card, with no watermark.' },
+  { n: '06', k: 'EXPORT & SHARE', d: 'JSON export and a 1080 × 1440 session card, with no watermark.' },
 ];
 
 const personas = [
   { n: '01', k: 'ATHLETE', title: 'Powerlifters', d: 'The three SBD lifts, cycles and meet peaks. You need your cycle plan connected to each day’s prescription — not another social app.', tags: ['Cycle & sessions', 'Today', 'Meet peak'] },
   { n: '02', k: 'COACH', title: 'Coaches', d: 'Running several lifters makes mismatched spreadsheets the biggest risk. One shared plan keeps copies, edits and exports on the same numbers.', tags: ['Plan reuse', 'Cell edits', 'Export check'] },
-  { n: '03', k: 'SELF-COACHED', title: 'Self-coached lifters', d: 'No account, subscription or cloud coach wanted. Data stays on the device and leaves whenever you export it; fully usable without signing in.', tags: ['Zero account', 'Local ledger', 'Open export'] },
+  { n: '03', k: 'SELF-COACHED', title: 'Self-coached lifters', d: 'No cloud coach and no vendor lock-in. The ledger lives on your own server and leaves whenever you export it.', tags: ['Own server', 'Open export', 'No vendor lock-in'] },
 ];
 
 const demoWeeks = ['hyper', 'hyper', 'hyper', 'hyper', 'strength', 'strength', 'strength', 'deload', 'transmute', 'transmute', 'peak', 'deload', 'test'];
@@ -192,7 +192,7 @@ onBeforeUnmount(() => cleanup());
     </section>
 
     <section class="wl-sec" id="share">
-      <div class="wl-sec-head rv"><span class="wl-num">03 /</span><h2>A session is already a card.</h2><p class="wl-deck">One tap on a day page renders the session as a 1080 × 1440 card: one print finish, English or Chinese, no watermark and no account.</p></div>
+      <div class="wl-sec-head rv"><span class="wl-num">03 /</span><h2>A session is already a card.</h2><p class="wl-deck">One tap on a day page renders the session as a 1080 × 1440 card: one print finish, no watermark.</p></div>
       <div class="wl-two rv">
         <div class="wl-share-wrap"><div class="wl-share-card">
           <p class="wl-share-k">ROAST RAW · W05 · DAY B</p>
@@ -204,7 +204,7 @@ onBeforeUnmount(() => cleanup());
         <div class="wl-note">
           <span class="wl-note-k">EXPORT, NOT A FEED</span>
           <p>The card reads the block you ran, not the block you planned. Share it, keep it, or ignore it — the ledger does not change either way.</p>
-          <ul><li>1080 × 1440 PNG</li><li>No account required</li><li>Same numbers as the day page</li></ul>
+          <ul><li>1080 × 1440 PNG</li><li>No watermark</li><li>Same numbers as the day page</li></ul>
         </div>
       </div>
     </section>
@@ -258,7 +258,7 @@ onBeforeUnmount(() => cleanup());
     </section>
 
     <section class="wl-sec" id="chain">
-      <div class="wl-sec-head rv"><span class="wl-num">08 /</span><h2>Six links, plan to review.</h2><p class="wl-deck">Every link works on your server. The network is used only by the optional AI and backup you turn on.</p></div>
+      <div class="wl-sec-head rv"><span class="wl-num">08 /</span><h2>Six links, plan to review.</h2><p class="wl-deck">Six routes served by one FastAPI process. The network is used only by the optional AI you turn on.</p></div>
       <div class="wl-chain rv">
         <div v-for="item in chain" :key="item.n" class="wl-link"><span>{{ item.n }}</span><div><b>{{ item.k }}</b><p>{{ item.d }}</p></div></div>
       </div>
