@@ -414,8 +414,12 @@ class ReviewTests(unittest.TestCase):
         self.assertEqual(completion['planned'], planned)
         self.assertEqual(completion['actual'],
                          {bucket: planned[bucket] * factors[bucket] for bucket in BUCKETS})
-        self.assertEqual([completion[key] for key in ('main', 'var', 'acc')], [200, 300, 100])
-        self.assertEqual(review['attainment']['completion'], 210)
+        # Every row is over-recorded, so the credited work is the plan itself: 100% per
+        # class, while the raw actuals and the surplus stay visible.
+        self.assertEqual([completion[key] for key in ('main', 'var', 'acc')], [100, 100, 100])
+        self.assertEqual(completion['extra'], {'main': planned['main'], 'var': 2 * (planned['sbdVar'] + planned['nonSbdVar']),
+                                               'acc': 0})
+        self.assertEqual(review['attainment']['completion'], 100)
         self.assertEqual(review['attainment']['bodyweight'], 50)
         self.assert_unknown_goal(review)
         for key in source['logs']:

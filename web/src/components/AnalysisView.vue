@@ -189,7 +189,7 @@ const blocks = computed(() => props.plan.blocks.map(block => {
       <section class="kpi-grid" aria-label="Cycle totals">
         <div class="kpi"><span>CYCLE TONNAGE</span><strong>{{ display(cycle.tonnageKg / 1000) }}<small> t</small></strong><em>prescribed segment loads</em></div>
         <div class="kpi"><span>WORKING SETS</span><strong>{{ display(cycle.total) }}</strong><em>{{ cycle.sessions }} sessions across {{ plan.meta.weeks }} weeks</em></div>
-        <div class="kpi"><span>COMPLETION</span><strong>{{ display(completion.main) }}<small>%</small></strong><em>main · var {{ display(completion.var) }}% · acc {{ display(completion.acc) }}%</em></div>
+        <div class="kpi"><span>COMPLETION</span><strong>{{ display(completion.main) }}<small>%</small></strong><em>main · var {{ display(completion.var) }}% · acc {{ display(completion.acc) }}% · {{ completion.sessions?.elapsed ?? 0 }} sessions elapsed, {{ completion.sessions?.reviewed ?? 0 }} reviewed</em></div>
         <div class="kpi"><span>TOP INTENSITY</span><strong>{{ display(topIntensity) }}<small>%</small></strong><em>highest planned top set</em></div>
       </section>
 

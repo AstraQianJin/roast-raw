@@ -89,6 +89,17 @@ Plan skeleton: `GOAL` (one judgeable sentence), `STEPS` (numbered, each naming i
 - `PUT /api/test-results` sits behind the `test_week` capability, rejects unknown items, needs `load` on a 0.5 kg step for lifting items and `duration_s` for the run. `GET /api/test-results` and `GET /api/export/tests.csv` are read-open on every tier, including a downgraded account.
 - Any new cycle-scoped table must carry `account_id`, hang off `(account_id, cycle_id)` and be added to `server/tools/audit_orphans.py` `LINKS` in the same commit.
 
+### Completion policy (R5, 0.35)
+
+- `server/app/stats/completion.py` is the only implementation. The denominator is the prescribed sets whose session date has arrived in Asia/Shanghai; a group counts up to `min(actual, planned)`; an explicit zero stays in the denominator, adds nothing and marks its session reviewed; main, variation and accessory are reported separately and over-prescription is `extra`.
+- `engine.analyze(..., today=)` passes the date through. The plan and log views use today; a review uses the cycle end date, so a review always judges the whole cycle.
+- Never re-derive a percentage in a component: read `completion` from the API.
+
+### Evidence location (0.35)
+
+- Screenshots no longer live in the repository. `tests/browser.mjs` writes them to `SHOTS_DIR` (default `..\RR\shots\<release>`), and `docs/shots/` is ignored. Six `old-ref-*.png` reference stills stay in `docs/ref-shots/` because the aesthetic notes cite them.
+- `tests/browser.mjs` is a green baseline again: gated fixture server, wrong password plus owner login, a logged row read back after reload, a battery item, the collar switch, the share card, 320 px, and an empty console after sign-in. `--sabotage` must exit 1.
+
 ### What counts as evidence
 
 Evidence is a value someone else can re-obtain. Feelings, tool-call counts and a model's own assessment are not evidence.
@@ -109,4 +120,4 @@ A local build is never a deployment. A green suite is never human acceptance. Ne
 - `ASK` — the owner must rule first: scope, order, credentials, statistical policy.
 - `HUMAN` — only the owner can do it: aesthetic acceptance, real-environment sign-off.
 
-`tests/browser.mjs` has been a red baseline since 0.21 (theme toggle removed, register page changed) and is rewritten in 0.35; until then it is never green-light evidence.
+`tests/browser.mjs` is a green baseline as of 0.35; it is never aesthetic acceptance and never a substitute for the owner's look.

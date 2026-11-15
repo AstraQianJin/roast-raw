@@ -291,7 +291,12 @@ class PrescriptionTests(unittest.TestCase):
             self.assertEqual(week['total'], original['total'])
             self.assertEqual(week['groups'], original['groups'])
             self.assertEqual(week['leaves'], original['leaves'])
-        self.assertEqual(analysis['completion']['var'], 0)
+        # R5 completion is a percentage over the sets that have already fallen due, so the
+        # expected value follows the denominator: None before the cycle starts, 0 after.
+        var = analysis['completion']['classes']['var']
+        self.assertEqual(var['credited'], 0)
+        self.assertEqual(var['extra'], 0)
+        self.assertEqual(analysis['completion']['var'], None if var['planned'] == 0 else 0)
         row = self.first_row('Pull-Up', applied)
         response = self.client.put('/api/log', json={
             'cycle_id': self.cycle, 'week': row['week'], 'day': row['day'], 'seq': row['seq'],

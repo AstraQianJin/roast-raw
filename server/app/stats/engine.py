@@ -125,9 +125,10 @@ def _leaves(volume):
             for key in volume['leaves']}
 
 
-def analyze(plan, logs=None, mode='plan'):
+def analyze(plan, logs=None, mode='plan', today=None):
     if mode not in ('plan', 'log'):
         raise ValueError('mode must be plan or log')
+    from .completion import completion
     logs = logs or {}
     policy = plan.get('prescription', {}).get('version')
     from .variations import classification
@@ -158,7 +159,7 @@ def analyze(plan, logs=None, mode='plan'):
             'total': volume['sets'], 'roles': volume['roles'], 'lifts': volume['lifts'], 'equivalent': _equivalent(volume),
             'groups': {key: {'d': volume['groups'][key], 'w': volume['groupsWeighted'][key]}
                        for key in C.MUSCLE_GROUPS},
-            'leaves': _leaves(volume), 'tonnageKg': r1(volume['kg']),
+            'leaves': _leaves(volume), 'tonnageKg': volume['kg'],
             'topPct': meta.get('topPct'), 'topPctByLift': meta.get('topPctByLift'),
         })
     for week in per_week:
@@ -170,12 +171,6 @@ def analyze(plan, logs=None, mode='plan'):
                     'band': min(4, math.ceil(share * 4)) if share > 0 else 0,
                     'percent': min(100, max(0, share * 100)),
                 }
-    completion = {
-        'planned': planned, 'actual': actual,
-        'main': _pct(actual['main'], planned['main']),
-        'var': _pct(actual['sbdVar'] + actual['nonSbdVar'], planned['sbdVar'] + planned['nonSbdVar']),
-        'acc': _pct(actual['accessory'], planned['accessory']),
-    }
     return {
         'schema': 'RPL-Analysis-v1', 'mode': mode, 'weeks': len(plan['weeks']),
         'deload': [week['n'] for week in plan['weeks'] if week['kind'] == 'deload'],
@@ -189,7 +184,8 @@ def analyze(plan, logs=None, mode='plan'):
             'leaves': _leaves(cycle), 'tonnageKg': r1(cycle['kg']),
             'auxSets': cycle['roles']['accessory'], 'sessions': plan['meta']['sessions'],
         },
-        'completion': completion, 'ranges': ranges(), 'leafOrder': library()['leaf_order'],
+        'completion': completion(plan, logs if mode == 'log' else {}, today=today, mode=mode),
+        'ranges': ranges(), 'leafOrder': library()['leaf_order'],
         'groups': C.MUSCLE_GROUPS, 'unresolved': sorted(unresolved),
         'tonnageBasis': 'Prescribed segment loads; logged rows estimate tonnage from the last working set.' if mode == 'log' else plan['meta']['tonnageBasis'],
     }

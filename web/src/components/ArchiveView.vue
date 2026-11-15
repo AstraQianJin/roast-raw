@@ -79,7 +79,7 @@ const roleLabels = [
   { key: 'acc', label: 'Accessories', weight: '15%' },
 ];
 const completionCounts = computed(() => object(completion.value)
-  ? Object.fromEntries(Object.entries(completion.value).filter(([key]) => !['main', 'var', 'acc'].includes(key)))
+  ? Object.fromEntries(Object.entries(completion.value).filter(([key]) => ['planned', 'actual', 'credited', 'extra', 'sessions'].includes(key)))
   : null);
 const historySections = computed(() => review.value ? [
   { key: 'readiness', title: 'Readiness history', note: 'Recorded inputs and server-supplied evaluations. Legacy fatigue retains its original meaning; it is not Muscle Recovery and is not rescored here.' },
@@ -453,7 +453,7 @@ onBeforeUnmount(() => {
       <section class="report-section" aria-label="Review attainment">
         <div class="section-kicker"><span>ATTAINMENT</span><span>API VALUES · NO FRONTEND SCORING</span></div>
         <h2>Three components.<br><em>One explicit basis.</em></h2>
-        <p class="reading-note">Composite weights: goal 40% / bodyweight 40% / completion 20% (40/40/20). Completion weights: main 60% / variations 25% / accessories 15% (60/25/15). Values may exceed 100%; they are not capped here. Missing weights are never redistributed.</p>
+        <p class="reading-note">Composite weights: goal 40% / bodyweight 40% / completion 20% (40/40/20). Completion weights: main 60% / variations 25% / accessories 15% (60/25/15). Completion counts only planned sets whose session has arrived, credits at most the prescription, and reports any surplus as extra.</p>
         <dl class="score-grid">
           <div v-for="score in scoreLabels" :key="score.key" class="score-reading" :class="{ composite: score.key === 'composite' }" :data-testid="`review-score-${score.key}`">
             <dt>{{ score.label }}</dt>

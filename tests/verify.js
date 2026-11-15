@@ -223,6 +223,44 @@ function testPlanCheck() {
   same(schema.properties.testPlan.properties.tests.items.enum, ['sbd', 'tier1', 'tier2', 'fivekm'], 'schema group names');
   console.log(`PASS test battery: 9 items on ${sbd}, groups ${testPlan.tests.join('/')}`);
 }
+function completionCheck() {
+  // R5 policy (0.35): the denominator is only the prescribed sets whose session has
+  // arrived. The expected numbers below are summed here from plan.json, not read
+  // back out of the engine under test.
+  const plan = json('data/plan.json');
+  const asOf = '2026-12-31';
+  const classes = { main: 'main', sbdVar: 'var', nonSbdVar: 'var', accessory: 'acc' };
+  const planned = { main: 0, var: 0, acc: 0 };
+  const sessionDates = new Map();
+  plan.workouts.forEach(row => {
+    if (!sessionDates.has(`${row.week}|${row.day}`)) sessionDates.set(`${row.week}|${row.day}`, row.date);
+    if (row.date <= asOf) planned[classes[row.bucket]] += row.sets;
+  });
+  const elapsedSessions = [...sessionDates.values()].filter(date => date <= asOf).length;
+  const result = runPython(`import json
+from server.app.stats import engine
+p = json.load(open('data/plan.json', encoding='utf-8'))
+c = engine.analyze(p, None, 'plan', today='${asOf}')['completion']
+print(json.dumps({'classes': c['classes'], 'planned': c['planned'], 'actual': c['actual'],
+                  'credited': c['credited'], 'extra': c['extra'], 'sessions': c['sessions'],
+                  'policy': c['policy'], 'asOf': c['asOf']}))`);
+  assert.match(result.policy, /^R5/, 'completion names the R5 policy it follows');
+  checks++;
+  same(result.asOf, asOf, 'completion honours the injected as-of date');
+  ['main', 'var', 'acc'].forEach(key => {
+    same(result.classes[key].planned, planned[key], `${key} denominator is the elapsed side only`);
+    same(result.classes[key].credited, 0, `${key} has nothing credited without logs`);
+    same(result.classes[key].extra, 0, `${key} records no extra sets without logs`);
+    same(result.classes[key].pct, planned[key] ? 0 : null, `${key} completion starts at zero, not fourteen weeks early`);
+  });
+  same(result.sessions.elapsed, elapsedSessions,
+    `elapsed sessions count only the ${elapsedSessions} sessions whose date arrived`);
+  same(result.sessions.reviewed, 0, 'nothing is reviewed before a single zero is logged');
+  same(result.sessions.untouched, elapsedSessions, 'every elapsed session is untouched');
+  same(result.planned.main + result.planned.accessory + result.planned.sbdVar + result.planned['nonSbdVar'],
+    planned.main + planned.var + planned.acc, 'raw bucket totals add up to the class totals');
+  console.log(`PASS completion R5: as of ${asOf} main ${planned.main} / var ${planned.var} / acc ${planned.acc} planned sets, ${elapsedSessions} sessions elapsed`);
+}
 function planCalendarCheck() {
   const plan = json('data/plan.json');
   const meta = plan.meta;
@@ -298,6 +336,7 @@ try {
     landingFactsCheck();
     planCalendarCheck();
     testPlanCheck();
+    completionCheck();
     governanceCheck();
     const drift = spawnSync(python, ['server/tools/export_membership.py', '--check'], { cwd: root, encoding: 'utf8', env: { ...process.env, PYTHONIOENCODING: 'utf-8' } });
     assert.equal(drift.status, 0, `web/src/membership.json drifted from server/app/membership.py: ${drift.stdout}${drift.stderr}`);

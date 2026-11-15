@@ -252,7 +252,14 @@ class APITests(GeneratedPlanCase):
         })
         self.assertEqual(logged['completion']['planned'], planned['completion']['planned'])
         main_planned = sum(row['sets'] for row in self.seed['workouts'] if row['bucket'] == 'main')
-        self.assertEqual(logged['completion']['main'], rounded_tenth(payload['sets'] / main_planned * 100))
+        # Nothing has arrived by 2026-11-15 in this seeded cycle, so the denominator is
+        # empty and the percentage is explicitly unknown rather than a dressed-up zero.
+        self.assertIsNone(logged['completion']['main'])
+        self.assertEqual(logged['completion']['sessions']['elapsed'], 0)
+        self.assertEqual(logged['completion']['classes']['main']['credited'], 0)
+        self.assertEqual(logged['completion']['policy'].split(':')[0], 'R5')
+        self.assertEqual(logged['completion']['actual']['main'], payload['sets'])
+        self.assertEqual(logged['completion']['planned'], planned['completion']['planned'])
         self.assertEqual(self.get_json('/api/plan'), self.seed)
         # Completion changes in either mode, but prescribed volumes do not.
         unchanged = self.get_json('/api/analysis', params={'mode': 'plan'})

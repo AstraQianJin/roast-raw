@@ -190,7 +190,9 @@ def build_review(source, exported_at, app_version, as_of):
     baseline = profile.get('init_bw_kg') if isinstance(profile, dict) else None
     target = profile.get('target_bw_kg') if isinstance(profile, dict) else None
     progress = bodyweight_progress(baseline, target, bodyweight['value'])
-    completion = copy.deepcopy(engine.analyze(plan, logs, 'log')['completion'])
+    # A review judges the whole cycle, not today: the as-of date is the cycle end, so
+    # every prescribed session is inside the R5 denominator even on an empty cycle.
+    completion = copy.deepcopy(engine.analyze(plan, logs, 'log', today=plan['meta']['endDate'])['completion'])
     attained = engine.attainment(completion, goal=None, bodyweight=progress)
     attained['version'] = 'goal-bw-completion-v1'
     mode = None

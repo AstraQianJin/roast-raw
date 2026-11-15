@@ -49,7 +49,7 @@ npm --prefix web run build
 node tests/browser.mjs
 ```
 
-`verify.js` covers statistics, contracts, imports, restarts and sabotage; `browser.mjs` currently carries a stale contract from before 0.21 and is rewritten in 0.35 — until then a red result there is expected and is never used as green-light evidence. Browser tests launch isolated loopback servers with temporary databases, use CDP device emulation rather than window dimensions, and write screenshots under `docs/shots/` (moving to the agent folder as part of the layout cleanup). `RR_PYTHON` and `CHROME_PATH` override the test Python and Chrome.
+`verify.js` covers statistics, contracts, imports, restarts and sabotage; `browser.mjs` is a green baseline as of 0.35 and exits non-zero if one of its checks breaks — run it with `--sabotage` to see the harness fail on purpose. Browser tests launch isolated loopback servers with temporary databases, use CDP device emulation rather than window dimensions, and write screenshots to `SHOTS_DIR` (default `..\RR\shots\<release>`); nothing lands in the repository. `RR_PYTHON`, `CHROME_PATH`, `RR_DEVICE_WIDTH` and `SHOTS_DIR` override the test Python, Chrome, capture width and output folder.
 
 ## Notes
 

@@ -54,11 +54,25 @@ class StatisticsTests(unittest.TestCase):
         self.assertIsNone(non_sbd['pct'])
 
     def test_missing_log_falls_back_but_is_not_completed(self):
-        planned = analyze(self.plan)
-        logged = analyze(self.plan, mode='log')
+        planned = analyze(self.plan, today='2027-12-31')
+        logged = analyze(self.plan, mode='log', today='2027-12-31')
         self.assertEqual(logged['cycle'], planned['cycle'])
         self.assertEqual(logged['completion']['actual'], dict.fromkeys(planned['completion']['planned'], 0))
         self.assertEqual(logged['completion']['main'], 0)
+        # The denominator is every planned session by that date, and none of them was touched.
+        self.assertEqual(logged['completion']['sessions']['elapsed'], self.plan['meta']['sessions'])
+        self.assertEqual(logged['completion']['sessions']['untouched'], self.plan['meta']['sessions'])
+        self.assertEqual(logged['completion']['sessions']['reviewed'], 0)
+
+    def test_future_sessions_are_outside_todays_denominator(self):
+        early = analyze(self.plan, today=self.plan['meta']['startDate'])['completion']
+        day_two = analyze(self.plan, today=self.plan['weeks'][1]['dateStart'])['completion']
+        self.assertLessEqual(early['sessions']['elapsed'], day_two['sessions']['elapsed'])
+        self.assertEqual(early['sessions']['elapsed'], 1, 'only the start-day session has arrived')
+        self.assertGreater(day_two['classes']['main']['planned'], early['classes']['main']['planned'])
+        before_start = analyze(self.plan, today='2026-01-01')['completion']
+        self.assertEqual(before_start['sessions']['elapsed'], 0)
+        self.assertIsNone(before_start['main'])
 
     def test_zero_sets_replaces_plan_instead_of_falling_back(self):
         row = self.plan['workouts'][0]
@@ -77,10 +91,16 @@ class StatisticsTests(unittest.TestCase):
         self.assertEqual(actual['kg'], 607.5)
         self.assertEqual(actual['sets'], 2)
 
-    def test_completion_uncapped_and_null_components(self):
-        row = self.plan['workouts'][0]
-        logs = {f"{row['week']}|{row['day']}|{row['seq']}": {'sets': 1000, 'reps': 1, 'load': 1}}
-        self.assertGreater(analyze(self.plan, logs, 'log')['completion']['main'], 100)
+    def test_over_prescription_is_credited_once_and_listed_as_extra(self):
+        row = next(row for row in self.plan['workouts'] if row['bucket'] == 'main')
+        logs = {f"{row['week']}|{row['day']}|{row['seq']}": {'sets': row['sets'] + 3, 'reps': 1, 'load': 1}}
+        completion = analyze(self.plan, logs, 'log', today='2027-12-31')['completion']
+        # Credited work never exceeds the prescription; the surplus is reported separately.
+        self.assertEqual(completion['credited']['main'], row['sets'])
+        self.assertEqual(completion['extra']['main'], 3)
+        self.assertEqual(completion['actual']['main'], row['sets'] + 3)
+        self.assertEqual(completion['classes']['main']['pct'],
+                         round(row['sets'] / completion['planned']['main'] * 100, 1))
         self.assertIsNone(attainment({'main': 100, 'var': 100, 'acc': 100})['composite'])
         self.assertEqual(attainment({'main': 120, 'var': 120, 'acc': 120}, 120, 120)['composite'], 120)
 

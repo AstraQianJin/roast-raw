@@ -14,3 +14,4 @@ data/*.sqlite*
 data/*.db*
 data/backups/
 .qoder-credits/
+docs/shots/

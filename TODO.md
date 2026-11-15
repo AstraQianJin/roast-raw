@@ -6,17 +6,17 @@
 
 ---
 
-## 0 · 状态快照（2026-11-15 · 0.34 收工）
+## 0 · 状态快照（2026-11-15 · 0.35 收工）
 
 | 项 | 值 |
 |---|---|
-| 版本 | `web/package.json` = **0.0.34**；0.29–0.34 均已本地提交，未 push、未部署 |
+| 版本 | `web/package.json` = **0.0.35**；0.29–0.35 均已本地提交，未 push、未部署 |
 | 工作树 | 以本节所在提交为准 |
 | 最近提交 | 见 `git log --oneline -3` |
-| 门禁 | `node tests/verify.js` **325** 用例 / **6615** 检查、exit 0（sabotage 子进程仍按预期红）；`npm --prefix web run build` exit 0（dist `index-CbJFUypE.js` 394.86 kB）；`check_skill.py --root .` PASS |
-| 红基线 | `tests/browser.mjs` 自 0.21 起失效（删主题切换、注册页改四输入，旧断言过时）；**0.35 重写后才可作绿灯证据** |
+| 门禁 | `node tests/verify.js` **334** Python 用例 / **6633** 检查、exit 0（sabotage 子进程仍按预期红：`fixture weekly chest W1: 15.70 != 14.8`）；`npm --prefix web run build` exit 0（dist `index-DE_0T18J.js` 394.99 kB / css 150.04 kB）；`node tests/browser.mjs` exit 0（11 项断言、7 张截图），`--sabotage` exit 1；`check_skill.py --root .` PASS |
+| 红基线 | 无：`tests/browser.mjs` 自 0.35 起重写为绿灯基线（门控夹具 + 错/对密码 + 日志回读 + 测试周写入 + 赛扣持久化 + 分享卡 + 320 底线 + 控制台零错误） |
 | 部署 | 线上仍是 0.20 版 `http://82.157.146.30/`（公开落地页 + 账户门控 journal）。本轮**不 push、不部署**（用户 2026-11-15 裁定） |
-| 证据落点 | `RR\shots\0.29\`、`RR\shots\0.30\`（`prestart-evidence.json` + 五宽截图）、`RR\shots\0.31\`（`about-evidence.json`、`free-readonly-evidence.json` + 三宽 about / 免费档只读截图）、`RR\shots\0.33\`（`r4-evidence.json` + 12 张实机宽截图，脚本 `RR\scratch\shot-033.mjs`）、`RR\shots\0.34\`（`testweek-evidence.json` + 7 张截图，脚本 `RR\scratch\shot-034.mjs`；分享卡底行另由 `RR\scratch\share-probe-034.mjs` 量到 1080×1440 画布上 1091 个金色像素）；0.32/0.34 的迁移证据在 `RR\scratch\migrate-live-032.py` / `migrate-live-034.py` 的输出与 `tests/test_ledger.py`、`tests/test_test_results.py` 的旧库升级用例 |
+| 证据落点 | `RR\shots\0.29\`、`RR\shots\0.30\`、`RR\shots\0.31\`、`RR\shots\0.33\`（`r4-evidence.json` + 12 张）、`RR\shots\0.34\`（`testweek-evidence.json` + 7 张）、`RR\shots\0.35\`（7 张截图：`landing` / `session-day` / `test-week` / `assay-completion` / `gear-collars` / `share-card` / `narrow-320`，均由 `tests/browser.mjs` 经 `SHOTS_DIR` 写出）；旧 183 张截图已迁 `RR\shots\archive\` |
 | 老项目 | 两个老项目已迁 `RR\ref-projects\`（`roast-powerlifting`、`rplref`）；`rplref` 2026-11-15 瘦身 2243.6 MB，依据与恢复路径见 `RR\ref-projects\rplref\_repo\MIRROR_SLIMMED.md` |
 
 **长期边界**：只做 Web（Vue 3 + Vite + Motion One + FastAPI + SQLite）；界面英文、对话中文；`Ref/` 与两个老项目只读；不手改 `data/plan.json` 与 `web/dist/`；不弱化断言、不中和 sabotage。
@@ -34,11 +34,17 @@
 
 ---
 
-## 1 · 下一动作：0.35 完成率口径 + 浏览器回归重写
+## 1 · 下一动作：0.36 首页会员矩阵 + 老站效果补齐
 
-**接手指令**：`docs\agent-prompt-0.29-0.39.md` 的 0.35 行（`R5`：完成率收进单一函数；`tests/browser.mjs` 重写为绿灯基线；`P1` 清理清单）。规格见 §4 `R5` 与 §4 `P1`。
+**接手指令**：0.36 = `R6`（首页会员对比矩阵）+ `R7`（老站首页效果补齐），规格见 §4 `R6` 与 `RR\notes\prompt-0.33-0.39.md` 的 0.36 段。`R7` 先做「老站有 / 新站有没有 / 怎么处理」清单写进 `docs\审美回炉清单.md`，再补缺。
 
-按序执行，一步一提交。提交前跑门禁，回执按 `AGENTS.md` 五字段。
+按序执行，一步一提交。提交前跑门禁（`verify.js` + `npm --prefix web run build` + `tests/browser.mjs` + `check_skill.py`），回执按 `AGENTS.md` 五字段。
+
+**0.35 留下的既成事实**（后续版本必须遵守）：
+
+- 完成率只有一个实现：`server/app/stats/completion.py`。`engine.analyze(plan, logs, mode, today=)` 透传日期，计划/日志视图用「今天」（`server/app/calendar.py` 的 `SHANGHAI`），review 用周期结束日（整周期口径）。组件不再自己算百分比。
+- `perWeek` 的 `tonnageKg` 现在给未四舍五入的原值，周期总数仍是 `r1` 后的一个数；页面上的 `139.6 t` 与周卡相加不再出现 `139.5`。
+- 截图不进仓库：`tests/browser.mjs` 写 `SHOTS_DIR`（默认 `..\RR\shots\<release>`），`docs/shots/` 已进 `.gitignore`，6 张 `old-ref-*.png` 留在 `docs/ref-shots/`。
 
 
 ---
@@ -53,7 +59,7 @@
 | ~~0.32~~ ✅ | T4 迁移 | 复合主键 + 14 张表重建 + `user_version=6` | 已交付 `0809155`；旧库行数零差、孤儿 0 |
 | ~~0.33~~ ✅ | R4 视觉欠账 | GEAR 小片与单侧配片、Sheiko 热身（只给主项）、比赛三盏裁判灯、测试周四组 UI、赛扣开关 | 已交付 `556e88f`；实机 421/320/1280 无横向溢出，四交互各实点一次 |
 | ~~0.34~~ ✅ | R4b 测试周真存 | 新表 `test_results`：八项变式 + 5km 入库；ASSAY 可对比、导出/分享卡带出 | 已交付 `745dba0`；八项 + 5km 写入读回一致（132.5 kg ×1 / 24:30），三档无横向溢出 |
-| **0.35** | R5 + P1 | 完成率单函数；重写 `tests/browser.mjs`；P1 清单清理 | `verify.js` 与 `browser.mjs` 都 exit 0；每个改写断言做一次故意破坏 |
+| ~~0.35~~ ✅ | R5 + P1 | 完成率单函数、重写 `tests/browser.mjs`、P1 复核与清理、`docs/shots` 迁出 | 已交付；`verify.js` 334 用例 / 6633 检查 exit 0，`browser.mjs` 11 项 exit 0、`--sabotage` exit 1 |
 | **0.36** | R6 + R7 | 首页会员对比矩阵；老站首页效果补齐 | 320/360/390/412/1280 无横向溢出；折叠/币种/动效各一张 |
 | **0.37** | R8 | 账户内会员面板（档位、Pro 到期、设备 5、兑换码） | 兑换升档、续期、过期回落都在界面走通 |
 | **0.38** | 独立审查 | 未写代码的会话审 0.29–0.37，含详单 §12 推断项逐条实测 | 审查清单逐条关闭；0.29 遗留的 P0-01 缺陷在此复核 |
@@ -71,6 +77,7 @@
 | 0.32 | `0809155` | `cycles` 复合主键、14 张表复合外键重建、写入/读取全线按账户过滤、导入 409 改「同账号占用」、审计扩到 29 条链接 | `RR\scratch\migrate-live-032.py` 输出 + `tests/test_ledger.py` |
 | 0.33 | `556e88f` | 杠铃片算术抽成 `web/src/plate-load.js`（小片带数值标签、单侧配片、缺量上报）；`GearPlates` 小片柜进 GEAR；热身只列主项且无主项日不留空位；比赛三盏裁判灯（2 白 GOOD / 2 红 MISS）；测试周 SBD 三组 + 计划真实行第四组，各带独立输入；赛扣开关（设置内，默认关，设备本地）贯穿配片、分享卡与起跑页 | `RR\shots\0.33\` |
 | 0.34 | `745dba0` | `testPlan` 补齐九项（一级四变式 / 二级四变式 / 5km）且全部落在证据测试日；`test_results` v7 表 + `upgrade_test_results()`；`GET/PUT /api/test-results`（写需 `test_week`、举重项 0.5kg 步进、跑步项要用时）与 `/api/export/tests.csv`；AttemptBoard 九行真存（44px 控件）、ASSAY 按 SBD 锚点算百分比、分享卡带「已记录/总数」一行；`test_results.py` 8 个新用例 | `RR\shots\0.34\` |
+| 0.35 | 见 `git log` | R5 完成率收进 `server/app/stats/completion.py`（到期才进分母、`min(实际, 计划)`、显式零标 reviewed、三类分报、超额记 `extra`）；`engine.analyze(..., today=)` 透传，review 用周期结束日；`tests/test_completion.py` 8 用例 + `verify.js` 新增 `completionCheck()`（今天的分母由 plan.json 手算）；`tests/browser.mjs` 重写为绿灯基线（10 组断言 + `--sabotage`）并支持 `SHOTS_DIR`；`docs/shots` 183 张迁 `RR\shots\archive\`、6 张老参考留 `docs/ref-shots\`；P1 复核：吨数改由未四舍五入的周值相加、TrendView 不再显示 `S.Main|…` 内部标识，其余项复现不到 | `RR\shots\0.35\` |
 
 **仍生效的生成物契约**（改生成器时守住，别再抄第二份）：
 
@@ -120,13 +127,13 @@ GEAR 小片与单侧配片；Sheiko 热身（只给主项）；比赛三盏裁�
 - `test_results` 存在每账户每周期的独立表里，SBD 试举仍在 `attempts`；读与导出全档开放，写要 `test_week`，降档后旧结果照样可读可导出。
 - 界面：AttemptBoard 九行各带独立 Save（举重项 Load/Reps，5km 项 Time/Avg HR/Note，控件高 44px）；ASSAY Overview 新增 TEST DAY 区块，用对应 SBD 锚点算百分比；分享卡多一行 `TEST BATTERY n / 9 RECORDED`。
 
-### R5 · 完成率口径（0.35，用户已同意审查推荐）
+### R5 · 完成率口径（已完成 0.35：`server/app/stats/completion.py` + `engine.analyze(today=)` + `tests/test_completion.py` 8 用例 + `verify.js` 的 `completionCheck()`）
 
 - 分母只算**到今天（Asia/Shanghai）已到期的计划组**，未来计划不进分母。
 - 每组：有实际记录算完成；超额组取 `min(实际组, 计划组)`，不把完成率推过 100%。
 - 显式记 0 组 = 有意跳过：进分母、不计完成，该场标「已回顾」，与「没打开」区分。
 - 主项 / 变式 / 辅项**三类分开报**，不合加权总数；计划外加练单列 `extra`，不进完成率。
-- 只在一个统计函数里实现，ASSAY Overview、动作 register、周卡共用；单测覆盖未来日、超额组、显式零、计划外动作。
+- 只在一个统计函数里实现，ASSAY Overview、动作 register、周卡共用。计划视图与日志视图按当天算；review 把 as-of 设成周期结束日，所以空周期评审给出 0% 而不是 `null`。
 
 ### R6 · 首页会员对比（0.36，重点）
 
@@ -158,9 +165,17 @@ Ultra 横条（表格正下方）：墨底纸字，左 `ULTRA` 等宽小字 + �
 
 VAULT 账户区（`#account`）：当前档位（豆子 + 档名）、永久档、Pro 到期日（北京时间）、已登录设备 x/5（可逐个登出）。`Redeem a code` 输入框：成功即时刷新并解除锁定态，失败提示与注册页一致。`/register` 支持 `?code=` 预填（输入框在用户名之上）。首页右上不加档位徽章；应用内顶栏右侧可显示很小档位字样。
 
-### P1 清理清单（并入 0.35）
+### P1 清理清单（0.35 已逐项复核）
 
-处方重复、显示版本号不显示哈希、内部标识 `S.Main\|…`、自重 `KG TOP 0`、吨数 139.5/139.6、`FEB13/FEB14`、CTA 闪烁。逐项截图。
+| 项 | 复核结果 | 处置 |
+|---|---|---|
+| 处方重复 | 当天两行同名主项是计划的真实结构（`1×3` 工作行 + `1×6` TOP / `2×6` BACK-OFF 行），各带独立 LOG；真正重复的整块热身已在 0.33 由 `mainWarmups` 过滤掉 | 不动（不是重复渲染） |
+| 显示版本号不显示哈希 | 落地页页脚、账户页、review 头都显示 `0.35` 这类版本号 | 已随版本消失 |
+| 内部标识 `S.Main\|…` | `TrendView.vue` 的下拉曾把 `S.Main\|low-bar squat` 整串当选项文本 | 已修：选项只显示动作名（`movementLabel()` 去掉命名空间），完整 ID 仍留在详情行的「Exact movement ID」 |
+| 自重 `KG TOP 0` | 实测渲染里没有 `TOP 0` / `0 KG`；自重动作走 `system-load` 文案 | 已随版本消失 |
+| 吨数 139.5/139.6 | `engine.py` 的 `perWeek.tonnageKg` 曾先 `r1` 再被页面相加 | 已修：周值给原值，页面相加仍得 `139.6`（`verify.js` 与 `browser.mjs` 两侧都有断言） |
+| `FEB13/FEB14` | 已无（0.30 改日历后消失） | 已随版本消失 |
+| CTA 闪烁 | 落地页 CTA 为静态 `<a>`，无动画/无透明度过渡；实测 `opacity: 1`、`transform: none` | 复现不到，不动 |
 
 ### 档位与邀请码（0.27/0.28 已实现，留作口径）
 
@@ -271,9 +286,9 @@ C:\Users\Astra\Desktop\RR\
 2. `shots\` 版本目录名用 **`0.21`**（不用 `v0.21`），与 `TODO` 版本号一致。
 3. 两个老项目深层（`RPLRef\_repo\mirror`、`Roast PowerLifting` 深层）**不再逐文件扫**；在治理提交里记一句「仅扫索引层，深层未逐文件扫，只读不执行」。
 
-### 7.6 · 后续（与 0.35 绑定的仓库内整理）
+### 7.6 · 截图与测试布局（0.35 已完成）
 
-`docs/shots` 183 张（33.9 MB，被 git 跟踪）迁 `RR\shots\archive`，**6 张 `old-ref-*.png` 留仓**到 `docs/ref-shots/`；`.gitignore` 加 `docs/shots/`；`tests/browser.mjs` 输出目录改可配置 `SHOTS_DIR`（默认 `RR/shots/<ver>`）。`docs/` 内部分层 `spec/` `handoffs/` `licenses/` `ref-shots/`。只从 HEAD 移除，历史 blob 仍在；要真瘦需重写历史（单独授权，本轮不做）。
+`docs/shots` 183 张已迁 `RR\shots\archive`，**6 张 `old-ref-*.png` 留仓**在 `docs/ref-shots/`；`.gitignore` 已加 `docs/shots/`；`tests/browser.mjs` 的输出目录改可配置 `SHOTS_DIR`（默认 `..\RR\shots\<release>`）。只从 HEAD 移除，历史 blob 仍在；要真瘦需重写历史（单独授权，本轮不做）。`docs/` 内部分层 `spec/` `handoffs/` `licenses/` `ref-shots/` 仍待做（不影响 0.36–0.39）。
 
 ---
 
@@ -285,18 +300,18 @@ C:\Users\Astra\Desktop\RR\
 - P0-01 若 30s 内未出现计划内容：记缺陷、进 0.38 清单，**不阻塞开周**（起点仍 11-23）。
 - `landing-facts.json` 与 plan 漂移由 verify 两条断言拦截，不允许「先改 JSON 再说」。
 - 0.30 重算若波及线上已播种周期：先快照再迁移，归档旧周期；线上 owner 记录极少，风险可控。
-- `browser.mjs` 在 0.35 前始终是红基线，**不得**拿来当绿灯证据；`verify.js` 绿也不证明任何界面渲染。
+- `browser.mjs` 自 0.35 起是绿灯基线；它证明界面机制，不证明审美，也不能替代 `verify.js`。
 - **扫描类脚本禁止把输出写进被扫描目录**：2026-11-15 一次全盘普查把结果文件放在 `RR\` 内又递归扫到自己，逻辑体积滚到 62 GB（已删除，见 `RR` 现状）；此类脚本输出一律写系统临时目录，且必须带 `-Depth` 或显式排除自身。
 
 ---
 
 ## 9 · 未决问题（需要用户一句话）
 
-**已闭环**：`planId` 已于 0.30 定为 `rpl-raw-2026-11-23`（旧周期已归档）；`pct` 缺失即删字段已按 `meta.anchors` 落地（0.29 verify 覆盖）；§7.5 三点默认值已执行并入 §7。
+**已闭环**：`planId` 已于 0.30 定为 `rpl-raw-2026-11-23`（旧周期已归档）；`pct` 缺失即删字段已按 `meta.anchors` 落地（0.29 verify 覆盖）；§7.5 三点默认值已执行并入 §7；`docs/shots` 183 张已于 0.35 迁出仓库（`RR\shots\archive\`，6 张老参考留 `docs/ref-shots\`）。
 
 仍悬着、且影响后续版本的：
 
-1. **线上怎么迁**：`http://82.157.146.30/` 还是 0.20 旧 schema（v1 期），本地库已到 v6。要上线必须整库替换或对线上库跑同一条迁移链，两种都要先停服务 + 备份。需用户推翻 2026-11-15 的「不 push、不部署」裁定才动手。
+1. **线上怎么迁**：`http://82.157.146.30/` 还是 0.20 旧 schema（v1 期），本地库已到 v7。要上线必须整库替换或对线上库跑同一条迁移链，两种都要先停服务 + 备份。需用户推翻 2026-11-15 的「不 push、不部署」裁定才动手。
 2. **`days[3].titleEn` 里的 `(W13 TEST)`**：属源模板文本，0.30 保留了它。若判定为文案回退，需把清理固化进 `gen_data.py` 而不是手改 `plan.json`。
 
 （原第 3 条「0.33 四宽取哪四个」已由用户 2026-11-15 裁定：以实机荣耀 500 Pro 视口为准、宽度不写死，见 §4 `R4c`。）
@@ -335,7 +350,7 @@ server\.venv\Scripts\python.exe -m unittest discover -s tests -p "test_*.py" -k 
 
 **已知会骗人的地方**
 
-- `tests/verify.js` 绿不代表界面能渲染；`tests/browser.mjs` 自 0.21 起是红基线，0.35 重写前**不能当证据**。
+- `tests/verify.js` 绿不代表界面能渲染；`tests/browser.mjs` 自 0.35 起是绿灯基线（登录前那一条 401 是门控探针，已按基线过滤）。
 - `verify.js` 日志里出现 `FAIL: fixture weekly chest W1` 是 sabotage 子进程的**预期红**，不是失败。
 - `tests/cdp.mjs` 曾经没 `Network.enable`，`requestLog` 恒空（0.31 已修）；引用「没有某请求」的网络证据前先确认该事件真的在采样。
 - 探针必须过滤预期的 `403 (Forbidden)` console 行，否则 exit 1。

@@ -21,6 +21,9 @@ const estimateLabel = record => record.estimated === true
   ? 'Estimated'
   : record.estimated === false ? 'Actual single' : 'Estimate status not supplied';
 
+// Internal ids look like `S.Main|low-bar squat`. The namespace before the bar is plumbing,
+// never interface copy: show the movement name and keep the full id in the detail line.
+const movementLabel = id => String(id).split('|').pop().replace(/\b\w/g, letter => letter.toUpperCase());
 const capacityWeeks = computed(() => Array.isArray(props.analysis?.perWeek)
   ? props.analysis.perWeek.filter(week => week && validWeek(week.n)) : []);
 const movements = computed(() => Array.isArray(props.performance?.movements)
@@ -210,7 +213,7 @@ const performanceDescription = computed(() =>
         <span>Recorded movement</span>
         <select v-model="selectedId" data-testid="performance-movement" :disabled="!movements.length">
           <option v-if="!movements.length" value="">No recorded movements</option>
-          <option v-for="movement in movements" :key="movement.id" :value="movement.id">{{ movement.name || movement.id }} · {{ movement.id }}</option>
+          <option v-for="movement in movements" :key="movement.id" :value="movement.id">{{ movement.name || movementLabel(movement.id) }}</option>
         </select>
       </label>
       <div v-if="selectedMovement" class="movement-context">
