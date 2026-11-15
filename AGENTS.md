@@ -2,7 +2,7 @@
 
 ## Entry and authority
 
-Read [.qoder/skills/roast-raw-agent/SKILL.md](.qoder/skills/roast-raw-agent/SKILL.md), then [TODO.md](TODO.md) current work and approved decisions. The Skill owns the complete workflow; this file is its entry and safety summary, not a competing specification. [README.md](README.md) owns setup/API/recovery; [docs/项目交接.md](docs/项目交接.md) owns detailed product contracts. Read relevant headings only. User's latest explicit instruction outranks old prose; tests are evidence, not product decisions.
+Read the project Skill at `C:\Users\Astra\Desktop\RR\skills\roast-raw-agent\SKILL.md` (agent folder, outside this repo), then [TODO.md](TODO.md) current work and approved decisions. The Skill owns the complete workflow; this file is its entry and safety summary, not a competing specification. [README.md](README.md) owns setup/API/recovery; [docs/项目交接.md](docs/项目交接.md) owns detailed product contracts. Read relevant headings only. User's latest explicit instruction outranks old prose; tests are evidence, not product decisions.
 
 After entry or compression, from the Roast Raw root run:
 

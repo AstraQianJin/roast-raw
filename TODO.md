@@ -326,7 +326,7 @@
 - GitHub：AstraQianJin/roast-raw，私有；同名存在先检查、不覆盖。每0.10整倍数推送，其间本地新提交。推送坑：本机 git credential.helper=helper-selector 会弹 GUI 劫持认证并报 "User cancelled dialog"，需禁用弹窗 + GIT_ASKPASS 注入 GH_TOKEN。允许必要的合规开发工具（MIT/Apache/BSD、报告体积），不允许新运行时UI框架或MPL例外。
 - 新服务器82.157.146.30，SSH ubuntu（roast-raw alias）、sudo；旧49.233.196.202用户2026-11-14授权完全自由（覆盖前带时间戳备份）；0.20后保留老站+首页友链指向新站。仅本地0.20验证后部署；先公网HTTP，域名/TLS后续。访问口径2026-11-14再更新（用户裁定，效仿老站）：落地/发布页公开无登录，新增注册/登录页与 MyPlan 入口；仅 journal API（/api/* 除 health/login/register/logout/session）需账户会话。owner 由环境变量 RR_ACCESS_USERNAME（默认 Astra）/RR_ACCESS_PASSWORD 注入播种（值不入仓/文档/bundle）；用户名不区分大小写、密码区分大小写（PBKDF2-SHA256），HttpOnly SameSite=Lax 会话 cookie 30 天，改密码即全员登出；~~注册开放额外账户共用同一本训记~~（2026-11-15 作废：改为邀请码分档注册+每账户独立账本，见本轮路线 R1–R3）。这是访问控制非传输加密，不宣称 HTTPS。
 - AI/GitHub仅进程环境 DEEPSEEK_API_KEY/GH_TOKEN；部署AI放 /etc/roastraw.env，经systemd EnvironmentFile读取，不进源码或前端。凭据存在与用户报告不替代实际验证；不重复ACL修复。
-- 部署前整库一致快照、每日备份保留30份、恢复演练；不覆盖未知服务。Agent.skill只含Skill源和脚本，不含Ref/凭据/数据/截图。
+- 部署前整库一致快照、每日备份保留30份、恢复演练；不覆盖未知服务。打包件与 Skill 库不入仓，存 `RR\builds` 与 `RR\skills`，只含 Skill 源和脚本，不含 Ref/凭据/数据/截图。
 
 ## 可选后续（不在本轮）
 
@@ -350,7 +350,7 @@
 
 ## 目录治理（下一版次群待办，2026-11-15 立项，未执行）
 
-**目标**：根目录回到「4 个可见文件 + 5 个可见目录」。现状为 5 个被跟踪文件（`AGENTS.md` `README.md` `TODO.md` `Agent.skill` `.gitignore`）与 8 个目录（`.git` `.qoder` `data` `docs` `Ref` `server` `tests` `web`），其中真正的问题是三类东西混住：文档、截图证据、打包产物。
+**目标**：根目录回到「4 个可见文件 + 5 个可见目录」。立项时现状（任务四已完成，此处保留为记录）：5 个被跟踪文件（`AGENTS.md` `README.md` `TODO.md` `Agent.skill` `.gitignore`）与 8 个目录（`.git` `.qoder` `data` `docs` `Ref` `server` `tests` `web`），真正的问题是三类东西混住：文档、截图证据、打包产物。
 
 **结论先定死（已核实，不再讨论）**：
 
@@ -358,13 +358,13 @@
 |---|---|---|
 | `docs/` | 留仓库内，只做内部分层 + 搬走截图 | `AGENTS.md:5`、`SKILL.md:10/41`、`check_skill.py:31`、`TODO.md:3` 全指向 `docs/项目交接.md`；移出仓库则 clone 后无产品规格 |
 | `tests/` | 留根目录，不并入 `data/`、不迁 RR | `verify.js` 跑 `unittest discover -s tests`；测试用 `Path(__file__).parents[1]` 推仓库根；`serve_fixture.py`/`browser.mjs`/`cdp.mjs` 是 Python+Vue 共用的证据层 |
-| `.qoder/` | 留原地（隐藏目录） | `AGENTS.md:5` 入口指针、`check_skill.py:8` 硬编码该路径、`SKILL.md:104` 的打包结构以它为源 |
+| `.qoder/` | 已迁出（任务四）：Skill 源到 `RR\skills`，仓库内删除 | 原入口指针、`check_skill.py` 硬编码、打包源均在该目录，四处已同步改完 |
 | `Ref/` | 留（21 文件 / 1.56 MB） | Skill 事实路由表多处指针，迁出收益不抵风险 |
 | `.git` | 不删 | 43 提交 + GitHub 远程；删了丢 0.20 基线、0.27–0.29 回滚点与 diff 复核能力；222.6 MB 主因是历史里的截图 |
 
-### 任务一 · `Agent.skill` 移出仓库
+### 任务一 · `Agent.skill` 移出仓库（已完成 2026-11-15）
 
-- 动作：`git rm` 根级 `Agent.skill`，文件移到 `C:\Users\Astra\Desktop\RR\builds\Agent.skill`。
+- 动作：根级 `Agent.skill` 已移到 `C:\Users\Astra\Desktop\RR\builds\Agent.skill`，索引同步删除（历史仍可查）。
 - 改动 3 处：`TODO.md`（交付边界那条“Agent.skill 只含 Skill 源和脚本”改为“打包产物不入仓，见 RR/builds”）、`docs/项目交接.md:38`、`.qoder/skills/roast-raw-agent/SKILL.md:104`（打包输出路径）。
 
 ### 任务二 · `docs/shots` 移出仓库（183 张 / 33.9 MB）
@@ -384,9 +384,16 @@
 
 `variations.digest()` 是规范化 plan JSON 的 sha256、`sourceSha256` 是上传原文件字节的 sha256、`gen_data.py:45` 对数据文件字节做 sha256、`store.py` 的口令/会话/邀请码哈希——全是内容摘要，与路径无关。只有 0.30 重新生成 plan 才会变，属预期变化。
 
+### 任务四 · Skill 库外迁至 Agent 区（已完成 2026-11-15）
+
+- 布局：`RR\skills\roast-raw-agent\`（`SKILL.md` + `scripts\check_skill.py`）、`RR\skills\INDEX.md`（技能索引）；打包件 `RR\builds\Agent.skill`；仓库内 `.qoder\` 已删除。
+- `check_skill.py` 改为按脚本自身位置定位 Skill 目录（原硬编码 `.qoder/skills/roast-raw-agent`），所以技能库搬到哪都能跑；`--root` 仍只用于校验项目指针。
+- 指针改动 5 处：`AGENTS.md:5`、`SKILL.md`（工作区措辞 / 自检命令 / 打包输出）、`docs\项目交接.md:38`、`docs\agent-prompt-0.29-0.30.md:14`、`TODO.md` 交付边界。
+- 已知代价：仓库 clone 后不再自带 Skill；`AGENTS.md` 用本机绝对路径指向 RR，换机器要改这一行。
+
 ### 执行顺序与验收
 
-1. `chore: move Agent.skill out of repo`（3 处）；
+1. ~~`chore: move Agent.skill out of repo`（3 处）~~ 已随任务四完成；
 2. `chore: move docs/shots out, keep 6 reference samples`（7 处，含 `browser.mjs`，跑一次 build + `verify.js`）；
 3. `chore: split docs into spec/handoffs/licenses`（12 处，跑 `check_skill.py` + `verify.js`）。
 - 每个提交只做一件事；三条命令都要退出 0；`browser.mjs` 仍是红基线，不作绿灯，但截图路径改动后至少证明它能把文件写到新目录。

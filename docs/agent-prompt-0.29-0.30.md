@@ -11,7 +11,7 @@
 开工前必须按顺序读，不许凭记忆：
 
 1. `C:\Users\Astra\Desktop\Roast Raw\AGENTS.md`（治理与回执契约）
-2. `C:\Users\Astra\Desktop\Roast Raw\.qoder\skills\roast-raw-agent\SKILL.md`（流程、证据分层、提交纪律）
+2. `C:\Users\Astra\Desktop\RR\skills\roast-raw-agent\SKILL.md`（流程、证据分层、提交纪律）
 3. `TODO.md` 的「当前执行」「本轮路线」「0.29 施工详单」「0.30 施工详单」「已确认决策」「落地方案：关键代码 · 关键数据 · 审美」
 
 四条绝对边界：不 push、不部署（用户 2026-11-15 裁定暂停「停即部署预览」）；不改 `git config`（提交用 `git -c user.name=Astra -c user.email=astra@local commit`）；不手改 `data/plan.json` 与 `web/dist`；UI 文案英文，与你沟通用简体中文。
