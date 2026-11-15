@@ -333,6 +333,11 @@ try {
   await browser.waitFor('Boolean(document.querySelector(".plan-metrics"))', 20000);
   const blockMetric = await browser.evaluate(`[...document.querySelectorAll('.plan-metrics .metric')].map(n => n.innerText.replace(/\\s+/g, ' ').trim()).find(text => /BLOCK TONNAGE/.test(text))`);
   assert.ok(blockMetric.includes(`${handBlockT} t`), 'the block page shows the same sub-total as the block card');
+  const blockTestLine = await browser.evaluate(`[...document.querySelectorAll('.load .note')].map(n => n.innerText.trim()).find(text => /test/i.test(text)) || ''`);
+  assert.equal(blockTestLine, 'No test in this block', 'B1 shows no test day: the test week belongs to another block');
+  const blockPageText = await browser.evaluate(`document.querySelector('.load').innerText.replace(/\\s+/g, ' ')`);
+  const testDate = plan.testPlan?.dates?.sbd;
+  assert.ok(!blockPageText.includes('2027'), `the block page does not print the global test day ${testDate}`);
   const weekCard = await browser.evaluate(`[...document.querySelectorAll('.week-card')].find(n => n.innerText.includes('W01')).querySelector('.week-stats').innerText.replace(/\\s+/g, ' ').trim()`);
   assert.ok(weekCard.includes(`${handWeekT} t`), 'the week card tonnage carries two decimals');
   assert.ok(new RegExp(`\\b${handWeekSets}\\b`).test(weekCard), 'the week card counts the same sets as its rows');
@@ -342,6 +347,26 @@ try {
   assert.ok(weekHead.includes(`${handWeekT} t`), 'the week header tonnage matches the week card to 0.01 t');
   await shot('totals-week');
   ok('one number on every page', { day: `${handDaySets} sets`, week: `${handWeekSets} sets / ${handWeekT} t`, cycle: `${handCycleSets} sets / ${handCycleT} t`, block: `${handBlockT} t` });
+
+  // ---- 4c. the cycle page reloads deterministically (0.42) ---------------
+  // Ten reloads on a throttled link must paint the same structure every time: no
+  // card or button that appears on the first load and vanishes afterwards.
+  await browser.navigate(`${base}/cycle`);
+  await browser.waitFor('Boolean(document.querySelector(".block-deck"))', 20000);
+  await browser.send('Network.emulateNetworkConditions', { offline: false, latency: 150, downloadThroughput: 375000, uploadThroughput: 375000 });
+  const signature = () => browser.evaluate(`JSON.stringify([...document.querySelectorAll('.primary-nav a, main h1, main .eyebrow, main .plan-metrics, main .block-card')].map(n => (n.className || '') + '|' + n.innerText.replace(/\\s+/g, ' ').trim()))`);
+  const firstSignature = await signature();
+  const signatures = [firstSignature];
+  for (let i = 0; i < 9; i += 1) {
+    await browser.send('Page.reload', { ignoreCache: false });
+    await browser.waitFor('document.readyState === "complete"', 30000);
+    await browser.waitFor('Boolean(document.querySelector(".block-deck"))', 30000);
+    signatures.push(await signature());
+  }
+  await browser.send('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+  assert.equal(signatures.filter(item => item === firstSignature).length, 10, 'ten reloads paint the same cycle structure');
+  ok('cycle reloads deterministically', { reloads: 10, signatureLength: firstSignature.length, blocks: plan.blocks.length });
+
 
   // The logging check below expects the session day again.
   await browser.navigate(`${base}/cycle/week/1/day/A`);

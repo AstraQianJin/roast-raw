@@ -171,6 +171,15 @@ const blockMeta = computed(() => plan.value?.blocks.find(block => block.id === r
 const blockWeeks = computed(() => blockMeta.value ? plan.value.weeks.filter(item => item.blockId === blockMeta.value.id) : []);
 const blockPerWeek = computed(() => analysis.value ? blockWeeks.value.map(item => analysis.value.perWeek.find(row => row.n === item.n)).filter(Boolean) : []);
 const blockTonnage = computed(() => blockWeeks.value.reduce((sum, item) => sum + weekTonnage(item.n), 0));
+// A block shows its own test day or nothing at all: the global SBD date belongs to
+// the block that owns the test week, and only to it.
+const blockTestDate = computed(() => {
+  const testWeek = blockWeeks.value.find(week => week.kind === 'test');
+  const testDate = plan.value?.testPlan?.dates?.sbd;
+  if (!testWeek || !testDate) return null;
+  if (testWeek.dateStart && testWeek.dateEnd && !(testWeek.dateStart <= testDate && testDate <= testWeek.dateEnd)) return null;
+  return testDate;
+});
 const blockTopPct = computed(() => Math.max(0, ...blockPerWeek.value.map(row => row.topPct || 0), 0));
 const weekGpp = computed(() => (plan.value?.gpp || []).filter(item => item.week === currentWeek.value));
 function blockInfo(blockId) {
@@ -422,7 +431,7 @@ watch([() => route.fullPath, loading], async () => {
             <div class="eyebrow">BLOCK {{ blockMeta?.id }} · {{ (blockMeta?.cycleType || 'custom').toUpperCase() }}</div><h1 class="plan-title">{{ blockMeta?.nameEn }}</h1><p class="hero-subtitle">W{{ String(blockWeeks[0]?.n || 0).padStart(2, '0') }} — W{{ String(blockWeeks.at(-1)?.n || 0).padStart(2, '0') }} · {{ blockWeeks.length }} WEEKS</p>
             <div class="plan-metrics"><div class="metric"><span class="section-label">SESSIONS</span><strong>{{ blockWeeks.reduce((sum, item) => sum + (item.sessions || 0), 0) }}</strong><small>ACROSS THIS BLOCK</small></div><div class="metric"><span class="section-label">BLOCK TONNAGE</span><strong>{{ displayT2(blockTonnage / 1000) }} t</strong><small>PLANNED WORK</small></div><div class="metric"><span class="section-label">TOP %1RM</span><strong>{{ display(blockTopPct) }}%</strong><small>{{ (blockMeta?.cycleType || 'custom').toUpperCase() }} CEILING</small></div></div>
             <BlockWeekNav :blocks="plan.blocks" :weeks="plan.weeks" :block-id="blockMeta?.id || ''" :current-week="Number(calendar?.week || 0)" />
-            <LoadProfile :weeks="blockWeeks" :blocks="plan.blocks" :per-week="blockPerWeek" :test-date="plan.testPlan?.dates?.sbd" />
+            <LoadProfile :weeks="blockWeeks" :blocks="plan.blocks" :per-week="blockPerWeek" :test-date="blockTestDate" scope="block" />
             <div class="section-head"><div class="eyebrow">WEEKS IN THIS BLOCK</div><p class="annotation">A week is the unit you actually train. Each card carries its load, its sessions and its phase.</p></div>
             <section class="week-deck" aria-label="Weeks in this block">
               <RouterLink v-for="week in blockWeeks" :key="week.n" :to="`/cycle/week/${week.n}`" class="week-card" :class="week.kind">

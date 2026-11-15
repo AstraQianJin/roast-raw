@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
-const props = defineProps({ weeks: Array, blocks: Array, perWeek: Array, testDate: String });
+const props = defineProps({ weeks: Array, blocks: Array, perWeek: Array, testDate: String, scope: { type: String, default: 'cycle' } });
 const go = ref(false);
 onMounted(() => {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) go.value = true;
@@ -32,7 +32,7 @@ const deloadWeeks = computed(() => rows.value.filter(row => row.kind === 'deload
 const peakNote = computed(() => `Peak weeks ${peakWeeks.value.join(', ')} — ${peak.value} sets`);
 const deloadNote = computed(() => deloadWeeks.value.length ? `Deloads ${deloadWeeks.value.join(', ')}` : 'No deloads in this cycle');
 const longDate = iso => new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Shanghai' }).format(new Date(`${iso}T00:00:00+08:00`));
-const testLine = computed(() => props.testDate ? `Test day ${longDate(props.testDate)}` : 'Test day: not scheduled');
+const testLine = computed(() => props.testDate ? `Test day ${longDate(props.testDate)}` : props.scope === 'block' ? 'No test in this block' : 'Test day: not scheduled');
 const summary = computed(() => {
   const first = rows.value[0]?.top || 0;
   const last = rows.value.at(-1)?.top || 0;

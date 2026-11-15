@@ -10,13 +10,13 @@
 
 | 项 | 值 |
 |---|---|
-| 版本 | `web/package.json` = **0.0.41**；未部署、未 push（本批 0.45 才发布） |
+| 版本 | `web/package.json` = **0.0.42**；未部署、未 push（本批 0.45 才发布） |
 | 工作树 | 以本节所在提交为准 |
-| 最近提交 | 见 `git log --oneline -3` |
-| 门禁 | `node tests/verify.js` exit 0（355 Python 用例 / 6798 检查）；`npm --prefix web run build` exit 0；`node tests/browser.mjs` exit 0（17 项、7 张图 × 421/1280），`--sabotage` exit 1 |
+| 最近提交 | 见 `git log --oneline -3`（0.41 `772d4a9`） |
+| 门禁 | 0.41：`verify.js` exit 0（355 用例 / 6798 检查）；0.42：exit 0（6803 检查）；`npm --prefix web run build` exit 0；`browser.mjs` 18 项 exit 0，`--sabotage` exit 1 |
 | 红基线 | 无 |
-| 部署 | 线上仍是 0.0.40 `http://82.157.146.30/`。0.41–0.44 **不 push、不部署**（本批裁定） |
-| 证据落点 | `RR\shots\0.41\`（`totals-evidence.json` + 7 张 421 px + 7 张 1280 px） |
+| 部署 | 线上仍是 0.0.40 `http://82.157.146.30/`。0.42–0.44 **不 push、不部署**（本批裁定） |
+| 证据落点 | `RR\shots\0.41\`（`totals-evidence.json`）、`RR\shots\0.42\`（`determinism-evidence.json`） |
 | 老项目 | 两个老项目已迁 `RR\ref-projects\`；`rplref` 瘦身记录见 `RR\ref-projects\rplref\_repo\MIRROR_SLIMMED.md` |
 
 **长期边界**：只做 Web（Vue 3 + Vite + Motion One + FastAPI + SQLite）；界面英文、对话中文；`Ref/` 与两个老项目只读；不手改 `data/plan.json` 与 `web/dist/`；不弱化断言、不中和 sabotage。
@@ -91,7 +91,7 @@
 | 版本 | 主题 | 报告项 | 关键判据（一句话） |
 |---|---|---|---|
 | ~~0.41~~ ✅ | 训练数字单源 | P0-1 | 六处显示同值，且都等于明细逐行展开值 |
-| 0.42 | 确定性 Cycle 页 + 块测试日 | P0-3 | 10 次重载结构相同；B1 不出现别的块的测试日 |
+| ~~0.42~~ ✅ | 确定性 Cycle 页 + 块测试日 | P0-3 | 10 次重载结构相同；B1 不出现别的块的测试日 |
 | 0.43 | P1 逻辑 | P1-4/5/6/7 | 日历逐行对拍、试举取整单测、全站无死链、强制失败有错误态 |
 | 0.44 | P1 审美 | P1-8/9 | 421/320/1280 三宽无截断缺字、次要标签 WCAG AA |
 | 0.45 | P2 文案与账户 + 发布 | P2-10/11/12 | 文案清单零残留、试举行可区分、能退出登录；部署成功 + 重评分达标 |
@@ -128,6 +128,8 @@
 5. `browser.mjs`：`/cycle/block/B1` 断言不出现测试日字符串；`/cycle` 断言 Group 参数与重载后一致。
 
 **完成判据**：10 次重载结构哈希相同；B1 页无 2027-02 的日期；`/cycle` 首屏即含 Current Week 卡，无需二次刷新。
+
+**0.42 已交付**：根因是 `App.vue` 把全局 `plan.testPlan.dates.sbd` 传给**每个** `LoadProfile`；改为 `blockTestDate`（只有拥有 `kind==='test'` 周的块才给日期，并校验日期落在该周区间内），非测试块渲染 `No test in this block`。重载确定性用 10 次 3M/150ms 节流重载的结构快照断言。**报告里的「Current Week 卡 / Review Active Cycle / How Do I Read This?」在 0.41 源码中不存在**（全仓只搜到 ArchiveView 的 Review active cycle 链接），那一段复现不到；因此改用结构快照把「有元素在首屏出现、重载后消失」这个失败模式钉死。证据 `RR\shots\0.42\determinism-evidence.json`。
 
 **证据**：`RR\shots\0.42\`、`reload-determinism.json`（10 条哈希 + 每次 `window.innerWidth`）。
 

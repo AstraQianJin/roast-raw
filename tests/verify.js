@@ -440,6 +440,29 @@ function calendarViewCheck() {
   checks++;
   console.log('PASS calendar projection: /calendar with week/month/agenda, half-open range, read-only');
 }
+function blockTestDateCheck() {
+  // One cycle has one test week and one block owns it. The block page passes that
+  // block's own date, never the global SBD date to every block (0.42).
+  const plan = json('data/plan.json');
+  const sbd = plan.testPlan?.dates?.sbd;
+  const testWeeks = plan.weeks.filter(week => week.kind === 'test');
+  same(testWeeks.length, 1, 'the cycle holds exactly one test week');
+  const owners = plan.blocks.filter(block => testWeeks.some(week => week.blockId === block.id));
+  same(owners.map(block => block.id), [testWeeks[0].blockId], 'exactly one block owns the test week');
+  assert.ok(testWeeks[0].dateStart <= sbd && sbd <= testWeeks[0].dateEnd, 'the test day falls inside its own week');
+  const others = plan.blocks.filter(block => block.id !== owners[0].id);
+  assert.ok(others.every(block => !plan.weeks.some(week => week.blockId === block.id && week.kind === 'test')),
+    'no other block carries a test week');
+  checks++;
+  const app = readFileSync(join(root, 'web', 'src', 'App.vue'), 'utf8');
+  assert.ok(app.includes(':test-date="blockTestDate"'), 'the block page reads its own test date from blockTestDate');
+  assert.ok(!app.includes(':per-week="blockPerWeek" :test-date="plan.testPlan?.dates?.sbd"'),
+    'the block view no longer receives the global SBD date');
+  assert.ok(app.includes('const blockTestDate = computed'), 'the block-scoped date exists as one computed value');
+  checks += 2;
+  console.log(`PASS block test day: ${sbd} belongs to ${testWeeks[0].blockId} / W${testWeeks[0].n}; ${others.map(block => block.id).join(', ')} show no test day`);
+}
+
 function totalsReconcileCheck() {
   // One calculation (server/app/stats/totals.py) rendered everywhere: cycle page,
   // week cards, day header, calendar, Assay and the landing chart. The expected
@@ -557,6 +580,7 @@ try {
     await shareCheck();
     landingFactsCheck();
     totalsReconcileCheck();
+    blockTestDateCheck();
     planCalendarCheck();
     testPlanCheck();
     completionCheck();
