@@ -186,7 +186,7 @@ const RECOVERY_ITEMS = ['Morning resting heart rate', 'Sleep hours', 'HRV if tra
   .hero-row { gap: 20px; }
   .ring { width: 132px; height: 132px; }
   .ring .num { font-size: 46px; }
-  .actions { max-width: 420px; }
+  .actions { grid-template-columns: 1fr; max-width: 260px; }
   .facts { grid-template-columns: 1fr; gap: 0; padding: 6px 16px; align-content: center; }
   .fact { background: none; border: 0; border-bottom: 1px solid var(--line-soft); border-radius: 0; padding: 11px 0; }
   .fact:last-child { border-bottom: 0; }
