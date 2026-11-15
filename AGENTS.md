@@ -95,6 +95,15 @@ Plan skeleton: `GOAL` (one judgeable sentence), `STEPS` (numbered, each naming i
 - `engine.analyze(..., today=)` passes the date through. The plan and log views use today; a review uses the cycle end date, so a review always judges the whole cycle.
 - Never re-derive a percentage in a component: read `completion` from the API.
 
+### Landing surface (R6/R7, 0.36)
+
+- `web/src/membership.json` is the only copy of tiers, prices and capability labels; it is exported from `server/app/membership.py` by `server/tools/export_membership.py`. `MembershipMatrix.vue` renders it and must not type a price or a capability name; `verify.js` `membershipMatrixCheck()` fails if it does.
+- Four tiers take a table column; Ultra is a strip under the table, never a column. Cells carry `aria-label`, not just a glyph.
+- The collapsed rows stay in the document and reveal through `grid-template-rows: 0fr → 1fr`; no fixed `max-height`. Ticks are visible by default so `prefers-reduced-motion` still shows them.
+- `.wl-top` height is measured (`ResizeObserver`) into `--topH`; sticky content reads that variable instead of a pixel value.
+- The screenshot tour is scroll driven (`wl-tour`, `62vh × shots`). Do not reintroduce a drag deck beside it.
+- Share is `navigator.share` → clipboard → textarea `execCommand`, with `Link copied` feedback; a clipboard rejection must not end the action.
+
 ### Evidence location (0.35)
 
 - Screenshots no longer live in the repository. `tests/browser.mjs` writes them to `SHOTS_DIR` (default `..\RR\shots\<release>`), and `docs/shots/` is ignored. Six `old-ref-*.png` reference stills stay in `docs/ref-shots/` because the aesthetic notes cite them.

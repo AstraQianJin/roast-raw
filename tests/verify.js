@@ -261,6 +261,35 @@ print(json.dumps({'classes': c['classes'], 'planned': c['planned'], 'actual': c[
     planned.main + planned.var + planned.acc, 'raw bucket totals add up to the class totals');
   console.log(`PASS completion R5: as of ${asOf} main ${planned.main} / var ${planned.var} / acc ${planned.acc} planned sets, ${elapsedSessions} sessions elapsed`);
 }
+function membershipMatrixCheck() {
+  // The landing matrix must read the exported table, not a second copy typed into Vue.
+  const members = json('web/src/membership.json');
+  const vue = readFileSync(join(root, 'web', 'src', 'components', 'MembershipMatrix.vue'), 'utf8');
+  const welcome = readFileSync(join(root, 'web', 'src', 'components', 'WelcomeView.vue'), 'utf8');
+  same(members.columns, ['free', 'lite', 'plus', 'pro'], 'four columns; Ultra never takes a column');
+  same(members.tiers.length, 5, 'five tiers exist');
+  assert.ok(vue.includes("import membership from '../membership.json'"), 'the matrix imports the exported table');
+  ['¥', 'US$', '19.9', '69.9', '198', '98'].forEach(text => {
+    assert.ok(!vue.includes(`'${text}`), `no typed-in price (${text}) in the component`);
+  });
+  members.capabilities.forEach(item => {
+    assert.ok(!vue.includes(item.label), `capability label "${item.label}" is not copied into the component`);
+  });
+  assert.ok(vue.includes('<table') && vue.includes('<th scope="col"'), 'a real table with scoped headers');
+  assert.ok(vue.includes('<th scope="row"'), 'row headers name each capability');
+  assert.ok(vue.includes('aria-label'), 'included/not-included cells carry a label, not just a glyph');
+  assert.ok(vue.includes("'0fr'") || vue.includes('grid-template-rows'), 'the collapsed rows animate through grid rows');
+  assert.ok(vue.includes('ResizeObserver'), 'the sticky offset is measured, not hardcoded');
+  assert.ok(vue.includes('prefers-reduced-motion'), 'reduced motion turns the reveal off');
+  assert.ok(welcome.includes('<MembershipMatrix />'), 'the landing page renders the matrix');
+  assert.ok(welcome.includes('data-testid="wl-share"') && welcome.includes('Link copied'), 'the share control and its feedback exist');
+  assert.ok(!welcome.includes('no tiers'), 'the old "no tiers" copy is gone');
+  assert.ok(welcome.includes('data-testid="wl-tour"') && welcome.includes('--tour-p'), 'the screenshot tour is scroll driven');
+  assert.ok(welcome.includes('wl-tour-dots') && welcome.includes('is-prev'), 'dots jump and passed figures stay behind');
+  assert.ok(!welcome.includes('wl-shots') && !welcome.includes('onDown'), 'the drag deck is gone, not running beside the tour');
+  checks++;
+  console.log(`PASS membership matrix: ${members.capabilities.length} capabilities from membership.json, four columns plus the Ultra strip`);
+}
 function planCalendarCheck() {
   const plan = json('data/plan.json');
   const meta = plan.meta;
@@ -337,6 +366,7 @@ try {
     planCalendarCheck();
     testPlanCheck();
     completionCheck();
+    membershipMatrixCheck();
     governanceCheck();
     const drift = spawnSync(python, ['server/tools/export_membership.py', '--check'], { cwd: root, encoding: 'utf8', env: { ...process.env, PYTHONIOENCODING: 'utf-8' } });
     assert.equal(drift.status, 0, `web/src/membership.json drifted from server/app/membership.py: ${drift.stdout}${drift.stderr}`);

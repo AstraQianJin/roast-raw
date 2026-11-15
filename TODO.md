@@ -6,18 +6,18 @@
 
 ---
 
-## 0 · 状态快照（2026-11-15 · 0.35 收工）
+## 0 · 状态快照（2026-11-15 · 0.36 收工）
 
 | 项 | 值 |
 |---|---|
-| 版本 | `web/package.json` = **0.0.35**；0.29–0.35 均已本地提交，未 push、未部署 |
+| 版本 | `web/package.json` = **0.0.36**；0.29–0.36 均已本地提交，未 push、未部署 |
 | 工作树 | 以本节所在提交为准 |
 | 最近提交 | 见 `git log --oneline -3` |
-| 门禁 | `node tests/verify.js` **334** Python 用例 / **6633** 检查、exit 0（sabotage 子进程仍按预期红：`fixture weekly chest W1: 15.70 != 14.8`）；`npm --prefix web run build` exit 0（dist `index-DE_0T18J.js` 394.99 kB / css 150.04 kB）；`node tests/browser.mjs` exit 0（11 项断言、7 张截图），`--sabotage` exit 1；`check_skill.py --root .` PASS |
-| 红基线 | 无：`tests/browser.mjs` 自 0.35 起重写为绿灯基线（门控夹具 + 错/对密码 + 日志回读 + 测试周写入 + 赛扣持久化 + 分享卡 + 320 底线 + 控制台零错误） |
-| 部署 | 线上仍是 0.20 版 `http://82.157.146.30/`（公开落地页 + 账户门控 journal）。本轮**不 push、不部署**（用户 2026-11-15 裁定） |
-| 证据落点 | `RR\shots\0.29\`、`RR\shots\0.30\`、`RR\shots\0.31\`、`RR\shots\0.33\`（`r4-evidence.json` + 12 张）、`RR\shots\0.34\`（`testweek-evidence.json` + 7 张）、`RR\shots\0.35\`（7 张截图：`landing` / `session-day` / `test-week` / `assay-completion` / `gear-collars` / `share-card` / `narrow-320`，均由 `tests/browser.mjs` 经 `SHOTS_DIR` 写出）；旧 183 张截图已迁 `RR\shots\archive\` |
-| 老项目 | 两个老项目已迁 `RR\ref-projects\`（`roast-powerlifting`、`rplref`）；`rplref` 2026-11-15 瘦身 2243.6 MB，依据与恢复路径见 `RR\ref-projects\rplref\_repo\MIRROR_SLIMMED.md` |
+| 门禁 | `node tests/verify.js` exit 0（334 Python 用例 / 6636 检查，新增 membership 段；sabotage 子进程仍按预期红）；`npm --prefix web run build` exit 0（dist `index-CtglPJcm.js` 407.54 kB / css 161.02 kB）；`node tests/browser.mjs` exit 0（13 项断言、7 张截图），`--sabotage` exit 1；`check_skill.py --root .` PASS |
+| 红基线 | 无：browser 自 0.35 起为绿灯基线，0.36 追加会员矩阵与滚动 tour 断言 |
+| 部署 | 线上仍是 0.20 版 `http://82.157.146.30/`。本轮**不 push、不部署**（用户 2026-11-15 裁定） |
+| 证据落点 | `RR\shots\0.29`–`0.35`；0.36 = `RR\shots\0.36\`（`membership-1280-{cny,usd,expanded,focus,reduced}`、`membership-390-{cards,plus}`、`membership-320`、`tour-1280-{start,mid}`、`tour-390`、`landing-share-390` + `membership-evidence.json`，脚本 `RR\scratch\shot-036.mjs`）；旧截图在 `RR\shots\archive\` |
+| 老项目 | 两个老项目已迁 `RR\ref-projects\`；`rplref` 瘦身记录见 `RR\ref-projects\rplref\_repo\MIRROR_SLIMMED.md` |
 
 **长期边界**：只做 Web（Vue 3 + Vite + Motion One + FastAPI + SQLite）；界面英文、对话中文；`Ref/` 与两个老项目只读；不手改 `data/plan.json` 与 `web/dist/`；不弱化断言、不中和 sabotage。
 
@@ -34,11 +34,11 @@
 
 ---
 
-## 1 · 下一动作：0.36 首页会员矩阵 + 老站效果补齐
+## 1 · 下一动作：0.37 账户内会员面板（R8）
 
-**接手指令**：0.36 = `R6`（首页会员对比矩阵）+ `R7`（老站首页效果补齐），规格见 §4 `R6` 与 `RR\notes\prompt-0.33-0.39.md` 的 0.36 段。`R7` 先做「老站有 / 新站有没有 / 怎么处理」清单写进 `docs\审美回炉清单.md`，再补缺。
+**接手指令**：0.37 = `R8`（账户内会员面板），规格见 §4 `R8`。要点：当前档位（豆子 + 档名）、永久档标记、Pro 到期日（北京时间）、已登录设备 x/5（可逐个登出）、`Redeem a code` 输入框成功即时刷新并解除锁定、失败提示与注册页一致、`/register` 支持 `?code=` 预填。首页不加档位徽章；应用顶栏右侧可显示很小档位字样。
 
-按序执行，一步一提交。提交前跑门禁（`verify.js` + `npm --prefix web run build` + `tests/browser.mjs` + `check_skill.py`），回执按 `AGENTS.md` 五字段。
+**0.36 已交付（R6 + R7）**：`web/src/components/MembershipMatrix.vue` 从 `web/src/membership.json` 渲染四列（Ultra 不占列）；桌面真 `<table>` + `<th scope>`、Plus 列 `RECOMMENDED`、CNY/USD 翻牌、前 6 行默认展开其余 `grid-template-rows: 0fr → 1fr`、悬停整列聚焦、`ResizeObserver` 实测 `--topH`；手机 `scroll-snap` 四张档位卡 + 每行四档标联动；Ultra 墨底条带上沿扫光。`WelcomeView.vue` 新增 sticky `.wl-top`（`wl-share` + `wl-toast`，`navigator.share` → 剪贴板 → `execCommand` 兜底），deck 拖拽换成滚动驱动 tour（`wl-tour` sticky stage、`is-on`/`is-prev`、`--tour-p` 进度线、44px 圆点跳转）。R7 对照清单写进 `docs\审美回炉清单.md`（中英切换/暗色/Mini-Max/APK 明确不搬，Friends 互链因目标地址不可核验不加）。
 
 **0.35 留下的既成事实**（后续版本必须遵守）：
 
@@ -60,7 +60,7 @@
 | ~~0.33~~ ✅ | R4 视觉欠账 | GEAR 小片与单侧配片、Sheiko 热身（只给主项）、比赛三盏裁判灯、测试周四组 UI、赛扣开关 | 已交付 `556e88f`；实机 421/320/1280 无横向溢出，四交互各实点一次 |
 | ~~0.34~~ ✅ | R4b 测试周真存 | 新表 `test_results`：八项变式 + 5km 入库；ASSAY 可对比、导出/分享卡带出 | 已交付 `745dba0`；八项 + 5km 写入读回一致（132.5 kg ×1 / 24:30），三档无横向溢出 |
 | ~~0.35~~ ✅ | R5 + P1 | 完成率单函数、重写 `tests/browser.mjs`、P1 复核与清理、`docs/shots` 迁出 | 已交付；`verify.js` 334 用例 / 6633 检查 exit 0，`browser.mjs` 11 项 exit 0、`--sabotage` exit 1 |
-| **0.36** | R6 + R7 | 首页会员对比矩阵；老站首页效果补齐 | 320/360/390/412/1280 无横向溢出；折叠/币种/动效各一张 |
+| ~~0.36~~ ✅ | R6 + R7 | 首页会员对比矩阵；老站首页效果补齐（`--topH`、分享、滚动 tour） | 已交付；`verify.js` 334 用例 / 6636 检查 exit 0，`browser.mjs` 13 项 exit 0、`--sabotage` exit 1；1280 四列两币种、390 四卡、320 无溢出 |
 | **0.37** | R8 | 账户内会员面板（档位、Pro 到期、设备 5、兑换码） | 兑换升档、续期、过期回落都在界面走通 |
 | **0.38** | 独立审查 | 未写代码的会话审 0.29–0.37，含详单 §12 推断项逐条实测 | 审查清单逐条关闭；0.29 遗留的 P0-01 缺陷在此复核 |
 | **0.39** | 发布 | 部署 + push（**只在用户另行下令后**） | `deploy.py` 访问契约全 PASS + 公网探测 + `/api/ai/status` `configured: true` |
@@ -78,6 +78,7 @@
 | 0.33 | `556e88f` | 杠铃片算术抽成 `web/src/plate-load.js`（小片带数值标签、单侧配片、缺量上报）；`GearPlates` 小片柜进 GEAR；热身只列主项且无主项日不留空位；比赛三盏裁判灯（2 白 GOOD / 2 红 MISS）；测试周 SBD 三组 + 计划真实行第四组，各带独立输入；赛扣开关（设置内，默认关，设备本地）贯穿配片、分享卡与起跑页 | `RR\shots\0.33\` |
 | 0.34 | `745dba0` | `testPlan` 补齐九项（一级四变式 / 二级四变式 / 5km）且全部落在证据测试日；`test_results` v7 表 + `upgrade_test_results()`；`GET/PUT /api/test-results`（写需 `test_week`、举重项 0.5kg 步进、跑步项要用时）与 `/api/export/tests.csv`；AttemptBoard 九行真存（44px 控件）、ASSAY 按 SBD 锚点算百分比、分享卡带「已记录/总数」一行；`test_results.py` 8 个新用例 | `RR\shots\0.34\` |
 | 0.35 | 见 `git log` | R5 完成率收进 `server/app/stats/completion.py`（到期才进分母、`min(实际, 计划)`、显式零标 reviewed、三类分报、超额记 `extra`）；`engine.analyze(..., today=)` 透传，review 用周期结束日；`tests/test_completion.py` 8 用例 + `verify.js` 新增 `completionCheck()`（今天的分母由 plan.json 手算）；`tests/browser.mjs` 重写为绿灯基线（10 组断言 + `--sabotage`）并支持 `SHOTS_DIR`；`docs/shots` 183 张迁 `RR\shots\archive\`、6 张老参考留 `docs/ref-shots\`；P1 复核：吨数改由未四舍五入的周值相加、TrendView 不再显示 `S.Main|…` 内部标识，其余项复现不到 | `RR\shots\0.35\` |
+| 0.36 | 见 `git log` | `MembershipMatrix.vue`：数据只读 `web/src/membership.json`（`verify.js` 断言无手抄价格/能力文案）、四列 + Ultra 条、Plus `RECOMMENDED`、CNY/USD 翻牌、`0fr → 1fr` 折叠、整列聚焦、`ResizeObserver` 写 `--topH`；手机 `scroll-snap` 四卡 + 四档标联动；`WelcomeView.vue` sticky 顶栏 + `wl-share`/`wl-toast`（share → clipboard → execCommand）与滚动驱动 `wl-tour`（sticky stage、`is-prev`、`--tour-p`、44px 圆点）；`docs/审美回炉清单.md` 补老站对照表；`browser.mjs` 增会员矩阵/手机卡/tour 三组断言 | `RR\shots\0.36\` |
 
 **仍生效的生成物契约**（改生成器时守住，别再抄第二份）：
 
@@ -135,31 +136,13 @@ GEAR 小片与单侧配片；Sheiko 热身（只给主项）；比赛三盏裁�
 - 主项 / 变式 / 辅项**三类分开报**，不合加权总数；计划外加练单列 `extra`，不进完成率。
 - 只在一个统计函数里实现，ASSAY Overview、动作 register、周卡共用。计划视图与日志视图按当天算；review 把 as-of 设成周期结束日，所以空周期评审给出 0% 而不是 `null`。
 
-### R6 · 首页会员对比（0.36，重点）
+### R6 · 首页会员对比（已完成 0.36）
 
-位置：`WelcomeView.vue` 截图 deck / 三类用户之后、下载段之前；编号顺延（`09 / Membership`，下载改 `10 / Download`，末段 `11 / Friends`）。单主题（ex 暖纸），只用 `tokens.css` 现有令牌，手写 CSS，不引 UI 库。
+落地：`web/src/components/MembershipMatrix.vue`（约 340 行）。数据只从 `web/src/membership.json` 取，`verify.js` 的 `membershipMatrixCheck()` 断言四列、五档、11 项能力、组件内无手抄价格与能力文案、真 `<th scope>`、`ResizeObserver`、`prefers-reduced-motion`。桌面：Plus 列 `RECOMMENDED` 胶囊 + 深半档 + 两侧墨线、CNY/USD 180ms 翻牌、前 6 行默认展开其余 `grid-template-rows: 0fr → 1fr` 240ms（行始终在文档里，折叠时 `aria-hidden`）、悬停/键盘整列聚焦、勾号默认可见（描边动画只叠加，减动效下仍可见）。手机：`scroll-snap` 四张卡（`data-tier` / `aria-current`）+ 每行四档标 `.on` 联动 + 深层折叠。Ultra 墨底条进视口扫光一次。`WelcomeView.vue` 插在 `08 /` 与下载段之间，编号 `09 / Membership`、下载改 `10 /`。
 
-文案（英文为准）：小标 `09 / Membership`；标题 `Five tiers, with Free as the base.`；导语 `An invite code sets your tier. Higher tiers include everything below them. When a tier lapses you drop a tier, not your data.`；表下 `Pricing is published. Checkout opens soon. Registration needs an invite code.`
+### R7 · 老站首页效果补齐（已完成 0.36）
 
-桌面（≥861px）：
-1. 表头四列 Free / Lite / Plus / Pro，Ultra 不占列。每列三层：档名（展示衬线大字）、主价格（大号等宽数字）、计费说明（小号等宽大写 `ONE-TIME` / `MONTHLY`）。档名上方用 `BeanMark` 咖啡豆个数表示档位（Free 0、Lite 1、Plus 2、Pro 3）。
-2. 币种切换 `CNY | USD`，默认 CNY；切换时价格 180ms 上下翻牌，表格高度不跳。
-3. 推荐列：Plus 表头上一枚 `RECOMMENDED` 胶囊，整列底色深半档、两侧 1px 墨线、表头用现有硬投影令牌。
-4. 列聚焦：悬停任一格整列高亮 + 表头上浮 2px，其余列不变暗；键盘 Tab 同样生效。
-5. 粘性表头：`ResizeObserver` 实测顶栏高度写入 `--topH`，不写死像素。
-6. 能力行：前 6 行（价格、计费、设备数、记录与处方、计划视图、导入导出）默认展开，其余折叠；表底 `Show every row ↓` / `Show fewer rows ↑`（带 `aria-expanded`），`grid-template-rows: 0fr → 1fr` 240ms，不用固定 max-height；无 JS 时全部显示。
-7. 对勾入场：首次进入视口时 ✓ 用 SVG 描边逐行画出（错开 30ms，总时长 ≤600ms），— 只淡入，仅播一次。
-8. 阶梯标记：能力行左侧细竖线标出从哪一档开始包含（Lite 起 / Plus 起 / Pro 起）。
-
-Ultra 横条（表格正下方）：墨底纸字，左 `ULTRA` 等宽小字 + 金色描边咖啡豆，中 `Invite only · includes every Pro capability`，右 `Have a code? Register →`；进入视口时上沿细光左→右扫一次 900ms。
-
-手机（<861px，不横向滚动）：顶部四档改可左右拖的档位卡（复用首页 deck 跟手拖拽 + 吸附），每卡：豆子、档名、价格、计费、该档新增 2–3 项能力，Plus 带 `RECOMMENDED`；卡下能力清单每项一行四档小标（`Free ✓ Lite ✓ Plus — Pro —`）；拖到哪档，该档列加粗高亮联动；深层能力同样默认折叠。
-
-统一要求：`prefers-reduced-motion: reduce` 关全部动效；能力行名与格子内容来自 R3 能力表导出的静态 JSON，不在 Vue 手抄；表格用真 `<table>` / `<th scope>`，✓/— 带 `aria-label`，开关可键盘操作。截图验收：1280 折叠/展开/列聚焦/USD；390 档位卡拖到 Plus 并联动；320 无溢出；减少动效一张。
-
-### R7 · 老站首页效果补齐（0.36）
-
-先逐条对比老站 `Ref/06_Publish_Reference/hub_index.html` 与当前 `WelcomeView.vue`，列「老站有 / 新站有没有 / 处理」清单进 `docs/审美回炉清单.md`，再补缺。已知要核对：滚动驱动截图 tour（滚动决定图层、已过图层抬起变暗、底部 `--tour-p` 进度线、圆点跳转）、分享按钮（系统面板否则复制链接 + `Link copied`）、`--topH` 实测、`.rv` 滚动入场、Friends 段互链。**不搬**：中英切换、暗色主题、Mini/Max 密度、Android APK 下载（两端均 Coming Soon）。
+对照表在 `docs/审美回炉清单.md`。已补：`--topH` 实测（`ResizeObserver` 观察 `.wl-top`）、分享（`navigator.share` → 剪贴板 → `execCommand`，成功 `Link copied` 1900ms）、滚动驱动 tour（`wl-tour` `62vh × 4` 容器 + sticky stage、`is-on`/`is-prev` 抬起变暗、`--tour-p` 1px 进度线、44px 圆点 `scrollTo`、rAF 节流），deck 手势代码已删除。不搬：中英切换、暗色、Mini/Max、APK、第三方友链（目标地址不可核验）。
 
 ### R8 · 账户内会员面板（0.37）
 

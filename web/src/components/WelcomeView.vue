@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import packageInfo from '../../package.json';
 import BeanMark from './BeanMark.vue';
+import MembershipMatrix from './MembershipMatrix.vue';
 import landingFacts from '../landing-facts.json';
 const [major, , patch] = packageInfo.version.split('.');
 const releaseVersion = `${major}.${patch.padStart(2, '0')}`;
@@ -21,14 +22,10 @@ const sampleDate = (() => {
 
 const root = ref(null);
 const index = ref(0);
-const track = ref(null);
-const dragX = ref(0);
-const dragging = ref(false);
+const tour = ref(null);
+const tourP = ref(0);
 let cleanup = () => {};
-let startX = 0;
-let startY = 0;
-let activePointer = null;
-let axis = null;
+let tourFrame = 0;
 
 const shots = [
   { src: '/shots/today-390-light.png', k: 'TODAY', title: 'Prescribed loads, recorded sets and the working body on one page.' },
@@ -36,40 +33,28 @@ const shots = [
   { src: '/shots/analysis-390-light.png', k: 'ANALYSIS', title: 'Weekly working sets, SBD equivalents and reference bands.' },
   { src: '/shots/archive-390-light.png', k: 'ARCHIVE', title: 'Past cycles stay readable, exportable and comparable.' },
 ];
-function step(delta) { index.value = (index.value + delta + shots.length) % shots.length; }
-function offset(i) { const n = shots.length; let d = (i - index.value + n) % n; if (d > n / 2) d -= n; return d; }
-function cardStyle(i) {
-  const o = offset(i); const a = Math.abs(o);
-  return {
-    transform: `translateX(${o * 58}%) scale(${1 - Math.min(a, 3) * .06}) rotate(${o * 1.8}deg)`,
-    opacity: a > 2 ? 0 : 1 - a * .3,
-    zIndex: 20 - a,
-  };
+// The tour is driven by scroll position, not by a drag gesture: the section is taller
+// than the stage, and how far it has been read sets the progress line and the figure.
+function clamp01(value) { return Math.max(0, Math.min(1, value)); }
+function readTour() {
+  tourFrame = 0;
+  const el = tour.value;
+  if (!el) return;
+  const span = el.offsetHeight - window.innerHeight * 0.9;
+  const progress = span > 0 ? clamp01(-el.getBoundingClientRect().top / span) : 0;
+  tourP.value = progress;
+  index.value = Math.min(shots.length - 1, Math.floor(progress * shots.length + 0.0001));
 }
-function onDown(event) {
-  if (event.pointerType === 'mouse' && event.button !== 0) return;
-  activePointer = event.pointerId; startX = event.clientX; startY = event.clientY; axis = null; dragging.value = true; dragX.value = 0;
+function onScroll() {
+  if (!tourFrame) tourFrame = requestAnimationFrame(readTour);
 }
-function onMove(event) {
-  if (!dragging.value || event.pointerId !== activePointer) return;
-  const dx = event.clientX - startX; const dy = event.clientY - startY;
-  if (!axis) {
-    if (Math.abs(dx) < 7 && Math.abs(dy) < 7) return;
-    axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
-    if (axis === 'x') track.value?.setPointerCapture?.(activePointer);
-  }
-  if (axis !== 'x') return;
-  dragX.value = dx;
-}
-function onUp(event) {
-  if (!dragging.value || (event && event.pointerId !== activePointer)) return;
-  const dx = dragX.value; const width = track.value?.clientWidth || 390;
-  if (Math.abs(dx) > Math.max(44, width * 0.16)) step(dx < 0 ? 1 : -1);
-  dragging.value = false; dragX.value = 0; activePointer = null; axis = null;
-}
-function onKey(event) {
-  if (event.key === 'ArrowLeft') { event.preventDefault(); step(-1); }
-  if (event.key === 'ArrowRight') { event.preventDefault(); step(1); }
+function jumpTo(i) {
+  const el = tour.value;
+  if (!el) return;
+  const top = el.getBoundingClientRect().top + window.scrollY;
+  const span = el.offsetHeight - window.innerHeight * 0.9;
+  window.scrollTo({ top: top + (i / shots.length) * span + 2, behavior: 'smooth' });
+  index.value = i; tourP.value = i / shots.length;
 }
 
 const phases = ['hyper', 'hyper', 'hyper', 'deload', 'strength', 'strength', 'strength', 'deload', 'transmute', 'transmute', 'peak', 'deload', 'test'];
@@ -120,23 +105,76 @@ const personas = [
 
 const demoWeeks = ['hyper', 'hyper', 'hyper', 'hyper', 'strength', 'strength', 'strength', 'deload', 'transmute', 'transmute', 'peak', 'deload', 'test'];
 
+// Share the landing page: the native sheet where the browser has one, clipboard otherwise.
+// No third-party script, no tracking parameter, no upload.
+const shareNote = ref('');
+let shareTimer;
+async function copyLink() {
+  const url = location.origin + location.pathname;
+  // The Clipboard API is the first choice, but a denied permission must not end the
+  // action: fall back to the selection route the old page used.
+  if (navigator.clipboard?.writeText) {
+    try { await navigator.clipboard.writeText(url); return true; } catch { /* fall through */ }
+  }
+  try {
+    const field = document.createElement('textarea');
+    field.value = url; field.setAttribute('readonly', ''); field.style.position = 'fixed'; field.style.top = '-1000px';
+    document.body.appendChild(field); field.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(field);
+    return ok;
+  } catch { return false; }
+}
+async function shareSite() {
+  const url = location.origin + location.pathname;
+  if (navigator.share) {
+    try { await navigator.share({ title: document.title, url }); return; }
+    catch (error) { if (error?.name === 'AbortError') return; }
+  }
+  const ok = await copyLink();
+  shareNote.value = ok ? 'Link copied' : 'Copy failed — select the address bar instead';
+  clearTimeout(shareTimer);
+  shareTimer = setTimeout(() => { shareNote.value = ''; }, 1900);
+}
+
 onMounted(() => {
   const el = root.value;
-  if (!el || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (!el) return;
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll, { passive: true });
+  readTour();
+  cleanup = () => {
+    window.removeEventListener('scroll', onScroll);
+    window.removeEventListener('resize', onScroll);
+    if (tourFrame) cancelAnimationFrame(tourFrame);
+    document.documentElement.classList.remove('wl-open');
+  };
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   el.classList.add('js');
   const targets = [...el.querySelectorAll('.rv')];
   const io = new IntersectionObserver(entries => {
     entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('in'); io.unobserve(entry.target); } });
   }, { rootMargin: '0px 0px -8% 0px' });
   targets.forEach(node => io.observe(node));
-  cleanup = () => { io.disconnect(); document.documentElement.classList.remove('wl-open'); };
+  const base = cleanup;
+  cleanup = () => { io.disconnect(); base(); };
 });
-onBeforeUnmount(() => cleanup());
+onBeforeUnmount(() => { clearTimeout(shareTimer); cleanup(); });
 </script>
 
 <template>
   <div ref="root" class="welcome" data-testid="welcome">
-    <section class="wl-hero">
+    <header class="wl-top">
+      <a class="wl-top-brand" href="#top"><BeanMark class="wl-bean" /> <b>Roast Raw</b><span>Training journal</span></a>
+      <nav class="wl-top-nav" aria-label="Landing sections">
+        <a href="#capacity">Capacity</a>
+        <a href="#membership">Membership</a>
+        <a href="#download">Download</a>
+      </nav>
+      <button type="button" class="wl-share" data-testid="wl-share" @click="shareSite">Share</button>
+    </header>
+    <p v-if="shareNote" class="wl-toast" role="status" data-testid="wl-toast">{{ shareNote }}</p>
+    <section class="wl-hero" id="top">
       <div class="wl-hero-grid">
         <div class="wl-copy">
           <p class="wl-kicker">ROAST RAW <span>·</span> POWERLIFTING TRAINING JOURNAL</p>
@@ -241,19 +279,25 @@ onBeforeUnmount(() => cleanup());
       </div>
     </section>
 
-    <section class="wl-sec" id="screens">
-      <div class="wl-sec-head rv"><span class="wl-num">06 /</span><h2>The journal, on the record.</h2><p class="wl-deck">Captured at phone width from the current build. Drag the deck, or use the slider, to move through the set.</p></div>
-      <div ref="track" class="wl-shots rv" :class="{ grabbing: dragging }" :style="dragX ? { transform: `translate3d(${dragX}px,0,0)` } : null" tabindex="0" role="region" aria-roledescription="carousel" aria-label="Product screenshots" @pointerdown="onDown" @pointermove="onMove" @pointerup="onUp" @pointercancel="onUp" @keydown="onKey">
-        <figure v-for="(shot, i) in shots" :key="shot.src" class="wl-card" :class="{ front: offset(i) === 0 }" :style="cardStyle(i)" :aria-hidden="offset(i) !== 0">
-          <img :src="shot.src" :alt="`${shot.k} page screenshot`" loading="lazy" draggable="false">
-        </figure>
+    <section class="wl-sec wl-tour-sec" id="screens" :style="{ '--tour-p': tourP }">
+      <div class="wl-sec-head rv"><span class="wl-num">06 /</span><h2>The journal, on the record.</h2><p class="wl-deck">Captured at phone width from the current build. Scroll and the figure changes: the frame you have passed lifts, dims and stays behind.</p></div>
+      <div ref="tour" class="wl-tour" data-testid="wl-tour" :style="{ height: `${shots.length * 62}vh` }">
+        <div class="wl-tour-stage">
+          <div class="wl-tour-frames">
+            <figure v-for="(shot, i) in shots" :key="shot.src" class="wl-tshot" :class="{ 'is-on': i === index, 'is-prev': i < index }" :aria-hidden="i !== index">
+              <img :src="shot.src" :alt="`${shot.k} page screenshot`" loading="lazy" draggable="false">
+            </figure>
+          </div>
+          <div class="wl-tour-caption" aria-live="polite">
+            <nav class="wl-tour-dots" aria-label="Screenshot position">
+              <button v-for="(shot, i) in shots" :key="`d-${shot.src}`" type="button" :aria-label="`Jump to ${shot.k}`" :aria-current="index === i ? 'true' : 'false'" @click="jumpTo(i)"><i></i></button>
+            </nav>
+            <p class="wl-cap-name">Figure {{ index + 1 }} · {{ shots[index].k }}</p>
+            <p class="wl-cap-desc">{{ shots[index].title }}</p>
+          </div>
+          <div class="wl-tour-rail" aria-hidden="true"><i :style="{ width: `${tourP * 100}%` }"></i></div>
+        </div>
       </div>
-      <div class="wl-slider" aria-label="Screenshot position">
-        <i class="wl-slider-rail" aria-hidden="true"></i>
-        <i class="wl-slider-thumb" aria-hidden="true" :style="{ left: `${index / shots.length * 100}%`, width: `${100 / shots.length}%` }"></i>
-        <button v-for="(shot, i) in shots" :key="`t-${shot.src}`" type="button" :aria-label="`Show ${shot.k}`" :aria-current="index === i ? 'true' : 'false'" @click="index = i"></button>
-      </div>
-      <div class="wl-caption" aria-live="polite"><p class="wl-cap-name">Figure {{ index + 1 }} · {{ shots[index].k }}</p><p class="wl-cap-desc">{{ shots[index].title }}</p></div>
     </section>
 
     <section class="wl-sec" id="who">
@@ -275,8 +319,10 @@ onBeforeUnmount(() => cleanup());
       </div>
     </section>
 
+    <MembershipMatrix />
+
     <section class="wl-sec wl-enter rv" id="download">
-      <span class="wl-num">09 /</span>
+      <span class="wl-num">10 /</span>
       <h2>Get it now.</h2>
       <p class="wl-deck">The web ledger is live. There are no phone apps to download: the buttons below stay closed until an app actually ships.</p>
       <div class="wl-enter-grid">
@@ -284,17 +330,28 @@ onBeforeUnmount(() => cleanup());
         <span class="wl-cta ghost disabled">Android APK<br><small>COMING SOON</small></span>
         <span class="wl-cta ghost disabled">iOS<br><small>COMING SOON</small></span>
       </div>
-      <p class="wl-enter-f">GitHub repository: <a href="https://github.com/AstraQianJin/roast-raw" rel="noopener">AstraQianJin/roast-raw</a> · License: single-user release, no tiers.</p>
+      <p class="wl-enter-f">GitHub repository: <a href="https://github.com/AstraQianJin/roast-raw" rel="noopener">AstraQianJin/roast-raw</a> · Five tiers, invite codes only · no payment processing yet.</p>
     </section>
 
     <footer class="wl-foot">
       <div class="wl-foot-brand"><BeanMark class="wl-bean" /> <b>Roast Raw</b><span>Training journal</span></div>
-      <div class="wl-foot-links"><RouterLink to="/plan">Cycle</RouterLink><a href="https://github.com/AstraQianJin/roast-raw" rel="noopener">GitHub</a><a href="#download">Download</a><span>{{ releaseVersion }}</span></div>
-    </footer>
+      <div class="wl-foot-links"><RouterLink to="/plan">Cycle</RouterLink><a href="https://github.com/AstraQianJin/roast-raw" rel="noopener">GitHub</a><a href="#download">Download</a><span>{{ releaseVersion }}</span></div>    </footer>
   </div>
 </template>
 
 <style scoped>
+.wl-top { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; padding: 8px 0; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line-soft); }
+.wl-top-brand { display: flex; align-items: baseline; gap: 6px; color: var(--ink); text-decoration: none; }
+.wl-top-brand .wl-bean { width: 12px; height: 12px; }
+.wl-top-brand b { font: 500 14px var(--serif); }
+.wl-top-brand span { font: 8px var(--mono); letter-spacing: .08em; color: var(--muted); text-transform: uppercase; }
+.wl-top-nav { display: flex; gap: 16px; }
+.wl-top-nav a { font: 700 8.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); text-decoration: none; border-bottom: 1px solid transparent; padding-bottom: 2px; }
+.wl-top-nav a:hover { color: var(--ink); border-bottom-color: var(--line); }
+.wl-share { min-height: 44px; padding: 0 14px; border: 1px solid var(--line2); background: transparent; color: var(--ink); font: 700 9px var(--mono); letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
+.wl-share:hover { border-color: var(--ink); }
+.wl-toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: 22px; z-index: 40; margin: 0; padding: 10px 16px; background: var(--ink); color: var(--bg); font: 700 9px var(--mono); letter-spacing: .08em; }
+@media (max-width: 560px) { .wl-top-nav { display: none; } }
 .welcome {
   --ease: cubic-bezier(.22, 1, .36, 1);
   --hair: rgba(17, 17, 17, .28);
@@ -430,16 +487,21 @@ onBeforeUnmount(() => cleanup());
 .wl-browser-rows div { display: grid; grid-template-columns: 30px minmax(0, 1fr) 28px; align-items: center; gap: 8px; font: 9px var(--mono); color: var(--muted); }
 .wl-browser-rows i { height: 10px; border-radius: 3px; background: var(--ct-strength); opacity: .7; }
 .wl-browser-rows b { text-align: right; color: var(--ink); }
-.wl-shots { position: relative; overflow: hidden; height: clamp(420px, 64vh, 640px); max-width: 860px; margin: 26px auto 0; touch-action: pan-y; cursor: grab; transition: transform .5s var(--ease); user-select: none; }
-.wl-shots.grabbing { cursor: grabbing; transition: none; }
-.wl-card { position: absolute; inset: 0; margin: auto; height: 100%; width: auto; aspect-ratio: 390 / 844; overflow: hidden; border: 1px solid var(--hair); border-radius: 18px; background: var(--panel2); box-shadow: 0 24px 60px rgba(17, 17, 17, .18); transition: transform .68s var(--ease), opacity .6s var(--ease); will-change: transform, opacity; pointer-events: none; }
-.wl-card.front { box-shadow: 0 34px 80px rgba(17, 17, 17, .24); }
-.wl-card img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top center; -webkit-user-drag: none; }
-.wl-slider { position: relative; display: flex; width: min(184px, 48vw); height: 22px; margin: 18px auto 0; }
-.wl-slider-rail { position: absolute; left: 0; right: 0; top: 10px; height: 1px; background: var(--hair); }
-.wl-slider-thumb { position: absolute; top: 8px; height: 5px; background: var(--ink); transition: left .38s var(--ease), width .38s var(--ease); }
-.wl-slider button { position: relative; z-index: 2; flex: 1; min-width: 0; height: 22px; min-height: 22px; padding: 0; border: 0; border-radius: 0; background: none; }
-.wl-caption { text-align: center; margin: 14px auto 0; max-width: 34em; }
+.wl-tour { position: relative; max-width: 860px; margin: 20px auto 0; }
+.wl-tour-stage { position: sticky; top: calc(var(--topH, 0px) + 10px); display: grid; grid-template-rows: minmax(0, 1fr) auto auto; height: clamp(460px, 74vh, 700px); }
+.wl-tour-frames { display: grid; place-items: center; min-height: 0; }
+.wl-tshot { grid-area: 1 / 1; height: 100%; width: auto; aspect-ratio: 390 / 844; margin: 0; overflow: hidden; border: 1px solid var(--hair); border-radius: 18px; background: var(--panel2); box-shadow: 0 24px 60px rgba(17, 17, 17, .18); transition: transform .5s var(--ease), opacity .45s var(--ease), filter .45s var(--ease); }
+.wl-tshot.is-on { opacity: 1; transform: translateY(0) scale(1); box-shadow: 0 34px 80px rgba(17, 17, 17, .24); }
+.wl-tshot.is-prev { opacity: .28; transform: translateY(-26px) scale(.96); filter: grayscale(1); }
+.wl-tshot:not(.is-on):not(.is-prev) { opacity: 0; transform: translateY(26px) scale(.96); pointer-events: none; }
+.wl-tshot img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top center; -webkit-user-drag: none; }
+.wl-tour-rail { position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--hair); }
+.wl-tour-rail i { display: block; height: 1px; background: var(--ink); transition: width .2s linear; }
+.wl-tour-caption { text-align: center; margin: 10px auto 0; padding-bottom: 14px; max-width: 34em; }
+.wl-tour-dots { display: flex; justify-content: center; gap: 4px; margin-bottom: 10px; }
+.wl-tour-dots button { display: grid; place-items: center; width: 44px; height: 44px; min-height: 44px; padding: 0; border: 0; background: none; cursor: pointer; }
+.wl-tour-dots button i { display: block; width: 5px; height: 5px; background: var(--hair); transition: background .2s, transform .2s; }
+.wl-tour-dots button[aria-current="true"] i { background: var(--ink); transform: scale(1.4); }
 .wl-cap-name { font: 9.5px var(--mono); letter-spacing: .13em; text-transform: uppercase; color: var(--ink); }
 .wl-cap-desc { margin: 5px auto 0; font-family: var(--serif); font-size: 13px; line-height: 1.7; color: var(--muted); max-width: 38ch; }
 .wl-people { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--soft); border: 1px solid var(--soft); border-radius: 14px; overflow: hidden; margin-top: 26px; }
@@ -480,11 +542,12 @@ onBeforeUnmount(() => cleanup());
   .wl-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 600px) {
-  .wl-shots { height: clamp(360px, 62vh, 540px); }
+  .wl-tour-stage { height: clamp(360px, 62vh, 540px); }
   .wl-note p { font-size: 12.5px; }
   .wl-ai-row { gap: 6px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .wl-shots, .wl-card, .wl-slider-thumb, .js .rv, .js .rv.in { transition: none; opacity: 1; transform: none; }
+  .wl-tshot, .wl-tour-rail i { transition: none; }
+  .js .rv, .js .rv.in { transition: none; opacity: 1; transform: none; }
 }
 </style>

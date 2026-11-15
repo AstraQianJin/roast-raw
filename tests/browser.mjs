@@ -70,6 +70,79 @@ try {
   await shot('landing');
   ok(`landing renders and keeps a ${landing.width} px viewport without horizontal overflow`);
 
+  // ---- 1b. the membership matrix at a desk width -------------------------
+  await browser.viewport(1280, 900);
+  await browser.navigate(`${base}/`);
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=membership]"))', 20000);
+  await browser.evaluate(`document.querySelector('#membership').scrollIntoView({ block: 'start' }); true`);
+  await delay(600);
+  const matrix = await browser.evaluate(`(() => {
+    const section = document.querySelector('[data-testid=membership]');
+    const heads = [...section.querySelectorAll('thead th[data-tier]')].map(n => ({ tier: n.dataset.tier, text: n.innerText.replace(/\\s+/g, ' ').trim() }));
+    const table = section.querySelector('[data-testid=mm-table]');
+    return {
+      heads,
+      prices: [...table.querySelectorAll('[data-testid=mm-price]')].map(n => n.innerText.trim()),
+      rows: 6 + (section.querySelector('.mm-extra-wrap').getBoundingClientRect().height > 1 ? 7 : 0),
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    };
+  })()`);
+  assert.deepEqual(matrix.heads.map(head => head.tier), ['free', 'lite', 'plus', 'pro'], 'four tier columns, Ultra excluded');
+  assert.deepEqual(matrix.prices, ['¥0', '¥68', '¥198', '¥98/mo'], 'CNY prices come from the export, pro carries /mo');
+  assert.equal(matrix.rows, 6, 'six rows are shown before the fold');
+  assert.equal(matrix.overflow, 0, 'the matrix does not scroll sideways at 1280');
+  await browser.evaluate(`document.querySelector('[data-testid=mm-usd]').click(); true`);
+  await delay(300);
+  const usd = await browser.evaluate(`[...document.querySelectorAll('[data-testid=mm-price]')].map(n => n.innerText.trim())`);
+  assert.deepEqual(usd, ['US$0', 'US$19.9', 'US$69.9', 'US$19.9/mo'], 'switching currency flips every price');
+  await browser.evaluate(`document.querySelector('[data-testid=mm-more]').click(); true`);
+  await delay(400);
+  const expandedRows = await browser.evaluate(`6 + (document.querySelector('.mm-extra-wrap').getBoundingClientRect().height > 1 ? 7 : 0)`);
+  assert.equal(expandedRows, 13, 'showing every row reveals the whole capability list');
+  ok('membership matrix: four tiers, two currencies, expandable rows', { prices: matrix.prices, rowCount: expandedRows });
+
+  // ---- 1c. the same table on a phone ---------------------------------------
+  await browser.viewport(390, 844);
+  await browser.navigate(`${base}/`);
+  await delay(500);
+  const phoneMatrix = await browser.evaluate(`(() => {
+    const section = document.querySelector('[data-testid=membership]');
+    const rail = section.querySelector('[data-testid=mm-rail]');
+    return { cards: rail.querySelectorAll('.mm-card').length, list: section.querySelectorAll('[data-testid=mm-list] li').length,
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth };
+  })()`);
+  assert.equal(phoneMatrix.cards, 4, 'four tier cards on a phone');
+  assert.equal(phoneMatrix.overflow, 0, 'the card rail does not push the page sideways');
+  ok('membership cards on a phone', phoneMatrix);
+  await browser.viewport(WIDTH, 900);
+
+  // ---- 1d. the screenshot tour follows the scroll --------------------------
+  await browser.navigate(`${base}/`);
+  await delay(500);
+  const firstFigure = await browser.evaluate(`document.querySelector('.wl-cap-name').innerText`);
+  await browser.evaluate(`(() => {
+    const el = document.querySelector('[data-testid=wl-tour]');
+    const top = el.getBoundingClientRect().top + window.scrollY;
+    const span = el.offsetHeight - window.innerHeight * 0.9;
+    window.scrollTo({ top: top + span * 0.6, behavior: 'auto' });
+    return true;
+  })()`);
+  await delay(400);
+  const tourState = await browser.evaluate(`(() => ({
+    figure: document.querySelector('.wl-cap-name').innerText,
+    on: document.querySelectorAll('.wl-tshot.is-on').length,
+    prev: document.querySelectorAll('.wl-tshot.is-prev').length,
+    rail: document.querySelector('.wl-tour-rail i').style.width,
+    dot: [...document.querySelectorAll('.wl-tour-dots button')].map(b => b.getBoundingClientRect().height).sort((a, b) => a - b)[0],
+  }))()`);
+  assert.notEqual(tourState.figure, firstFigure, 'scrolling moved the figure');
+  assert.equal(tourState.on, 1, 'exactly one figure is in front');
+  assert.equal(tourState.prev, 2, 'passed figures stay behind the current one');
+  assert.ok(parseFloat(tourState.rail) > 50 && parseFloat(tourState.rail) < 70, `progress line follows the scroll (${tourState.rail})`);
+  assert.ok(tourState.dot >= 44, 'dots are at least 44 px');
+  ok('screenshot tour is scroll driven', tourState);
+
+
   // ---- 2. the gate answers, and a wrong password stays on the form --------
   await browser.navigate(`${base}/cycle`);
   await browser.waitFor('Boolean(document.querySelector("[data-testid=login]"))', 15000);
