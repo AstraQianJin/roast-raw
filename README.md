@@ -1,28 +1,30 @@
 # Roast Raw
 
-Agents: read [AGENTS.md](AGENTS.md) first, then the active requirements in [TODO.md](TODO.md). Do not rebuild or restore the repository from historical handoff snapshots. Current version comes only from `web/package.json`; its SemVer patch is the product’s hundredth-version label (for example `0.0.2` displays as `0.02`).
+A single-user powerlifting training journal: cycle plan, day-by-day prescription, logged sets, analysis, review export and a share card. Vue 3 + Vite + Motion One on the front end, FastAPI + SQLite on the back end. Web only — no Android app, no offline cache, no sync service.
 
-Web-only training journal foundation. Vue 3 + Vite + Motion One, FastAPI and SQLite. The release landing is public; account sign-in gates the journal API. No offline data cache, no synchronization service. Dates use Asia/Shanghai and missed sessions never shift the calendar.
+**Status (2026-11-15).** The live site is the 0.20 build at <http://82.157.146.30/>: public landing page, journal API behind account sign-in. Local development has reached `0.0.28` and version `0.29` (security and first-screen work) is in progress; nothing is pushed or deployed until the owner says so. The version label shown in the UI is the patch of `web/package.json` (`0.0.2` displays as `0.02`).
 
 ## Layout
 
 ```text
-AGENTS.md            Agent rules, evidence and source pointers
-TODO.md              Active user ideas, approved directions and open decisions
+AGENTS.md            Agent rules, evidence contract, environment facts
+TODO.md              Execution queue: next action, version order, approved decisions
 web/                 Vue source, design tokens, anatomy and capacity views
-server/app/          FastAPI, SQLite store, Beijing calendar, validation
-server/app/stats/    Shared classification, prescription and statistics engine
-server/tools/        Legacy adapter and arbitrary-length synthetic plans
-data/                Generated plan, movement library, geometry and ranges
-  schema/            RPL-Raw-v1 and independent RPL-Review-v1 contracts
-tests/               Fixture, import, API, restart and CDP browser regressions
-docs/shots/          Local screenshots, not old App screenshots
-Ref/                 Read-only reference inputs; permission files never ship
+server/app/          FastAPI app, SQLite store, Beijing calendar, strict validation
+server/app/stats/    Classification, prescription and statistics engine (one source)
+server/tools/        Plan generation, legacy adapter, deploy and invite tools
+data/                Generated plan, movement library, geometry, ranges
+  schema/            RPL-Raw-v1 and RPL-Review-v1 exchange contracts
+tests/               Fixture, import, API, restart, cache and CDP browser regressions
+docs/                Product contracts, aesthetics notes, licence, screenshots
+Ref/                 Read-only reference inputs (never ships credentials)
 ```
+
+Product contracts, statistical definitions and the full API surface live in [docs/项目交接.md](docs/项目交接.md) — this README deliberately keeps only what a person needs to run the app.
 
 ## Local setup
 
-Run from this directory in Git Bash on Windows (Python 3.13+, Node 22.12+ and Chrome). On macOS/Linux use `server/.venv/bin/python` instead of the Windows Python path.
+Run from this directory on Windows with Python 3.13+, Node 22.12+ and Chrome. On macOS/Linux use `server/.venv/bin/python` instead of the Windows Python path.
 
 ```sh
 python -m venv server/.venv
@@ -33,11 +35,11 @@ npm --prefix web run build
 server/.venv/Scripts/python.exe -m uvicorn server.app.main:app --host 127.0.0.1 --port 8000
 ```
 
-The Aliyun mirror is the default because pypi.org timed out from this machine; substitute `--index-url https://pypi.org/simple` where the official index is reachable.
+The Aliyun mirror is the default because pypi.org times out from this machine; substitute `--index-url https://pypi.org/simple` where the official index is reachable.
 
-Open <http://127.0.0.1:8000>. Built pages and API share one local origin; deep-link reloads return the Vue shell. For development, leave the API running and run `npm --prefix web run dev`, then open <http://127.0.0.1:5173> (Vite proxies `/api`). Never expose either development server to the public internet.
+Open <http://127.0.0.1:8000>. Built pages and API share one origin, and deep-link reloads return the Vue shell. For development, keep the API running and start `npm --prefix web run dev`, then open <http://127.0.0.1:5173> (Vite proxies `/api`). Never expose either development server to the internet.
 
-SQLite defaults to `data/roastraw.sqlite3`. Set `RR_DB_PATH` to choose a different database. The generated plan seeds an **empty** database only; regenerating JSON does not silently replace an existing live cycle. The full import/archive workflow is deferred. To preview another seed without discarding data, point `RR_DB_PATH` at a new database path.
+The app refuses to start without `RR_ACCESS_PASSWORD`; for a local fixture preview only, `tests/serve_fixture.py` sets `RR_ALLOW_OPEN_FIXTURE=1` and prints a warning — never set that variable on a deployed host. SQLite defaults to `data/roastraw.sqlite3`; set `RR_DB_PATH` to use another file. The generated plan seeds an **empty** database only, so regenerating JSON never replaces a live cycle.
 
 ## Verification
 
@@ -47,63 +49,11 @@ npm --prefix web run build
 node tests/browser.mjs
 ```
 
-`RR_PYTHON` overrides the test Python path; `CHROME_PATH` overrides Chrome. Browser tests launch isolated loopback servers and temporary databases, use CDP device emulation rather than window dimensions, and save screenshots in `docs/shots/`. They do not write test logs into the working database. Regular Today screenshots use the real Beijing date. Additional `today-training-*` screenshots use an explicitly fixed scheduled training-day clock; the date and session badge remain visible so fixture evidence cannot be confused with live Today.
+`verify.js` covers statistics, contracts, imports, restarts and sabotage; `browser.mjs` currently carries a stale contract from before 0.21 and is rewritten in 0.35 — until then a red result there is expected and is never used as green-light evidence. Browser tests launch isolated loopback servers with temporary databases, use CDP device emulation rather than window dimensions, and write screenshots under `docs/shots/` (moving to the agent folder as part of the layout cleanup). `RR_PYTHON` and `CHROME_PATH` override the test Python and Chrome.
 
-`verify.js` checks exact integer totals, six-group weekly raw values at 1e-9, cycle half-up display values, and 16-leaf weekly values within the supplied 0.1 tolerance. It tests 8/17/21-week plans and a separate child with a deliberately altered bench coefficient: the same fixture assertions must fail with exit code 1. Python tests include strict imports, calendar boundaries, API last-write-wins behavior and an actual server restart/readback.
+## Notes
 
-## API foundation
-
-- `GET /api/health`, `/api/cycle`, `/api/plan`, `/api/today`, `/api/geometry`
-- `GET /api/analysis?mode=plan` or `mode=log`
-- `GET /api/performance?cycle_id=...`: actual singles and explicitly estimated weekly movement performance; no planned fallback
-- `GET /api/archive`: read-only historical cycle summaries; excludes the active cycle
-- `GET /api/review?cycle_id=...`, `/api/review/export?cycle_id=...`: independent review and JSON download; exporting never archives the active cycle
-- `GET /api/log?cycle_id=...`
-- `PUT /api/log` with `cycle_id`, `week`, `day`, `seq`, `load`, `sets`, `reps`, `rpe`, `note`
-- `GET /api/readiness?cycle_id=...&date=YYYY-MM-DD&session_id=week|day`, `PUT /api/readiness`
-- `GET /api/body-metrics?cycle_id=...&date=YYYY-MM-DD`, `PUT /api/body-metrics`
-- `GET /api/prescription?cycle_id=...`: manual reference 1RMs, immutable versions and dated system-load adjustments
-- `POST /api/prescription/preview`: `cycle_id`, `current_id`, complete `references` map; no prescription write
-- `POST /api/prescription/apply`: same fields plus reviewed `preview_id`; rejects stale versions
-- `GET /api/prescription/version?cycle_id=...&revision_id=...`, `POST /api/prescription/restore` with `cycle_id`, `current_id`, `revision_id`
-- `POST /api/plan/validate`: strict validation only, **does not import or persist**
-- `POST /api/plan/import/preview`: `plan_json` (original UTF-8 JSON text), `filename` (display only); validated current/new plan comparison, no database write
-- `POST /api/plan/import/confirm`: same upload plus `current_id`, `candidate_id`, `confirm: true`; rejects stale records and existing cycle IDs
-- `GET /api/questionnaire?cycle_id=...`: saved draft/complete questionnaire or an explicit null skeleton
-- `PUT /api/questionnaire`: `cycle_id`, `status` (`draft`/`complete`), full `payload`; strict field validation, archived cycles rejected
-- `GET /api/attempts?cycle_id=...`: test-day SBD attempt state — reference 1RMs (questionnaire first, plan profile fallback), 92.5/100/102.5% suggestions floored to 2.5 kg, confirmed history
-- `PUT /api/attempts`: `cycle_id`, `lift`, `number` (1–3), `load` (positive multiple of 2.5 kg, ≤500), optional `result` (`good`/`miss`); attempts confirm in order, a miss repeats the same load, a good lift never lowers the next suggestion; archived cycles rejected
-- `GET /api/ai/status?cycle_id=...`, `GET /api/ai/call/{id}`, `GET /api/ai/export?cycle_id=...`: DeepSeek configuration, site-wide Beijing-day quota (20 calls, failures count, no auto-retry), call history and an external-AI export bundle (review + questionnaire + prompt)
-- `POST /api/ai/outlook`, `POST /api/ai/chat`: `cycle_id` (+ `message`/`conversation` for chat); quota is pre-reserved in a transaction; unconfigured servers return 503 with export guidance
-- `POST /api/archive/delete/prepare`: `cycle_id`; historical cycles only — downloads the complete forced export and issues a single-use deletion token
-- `DELETE /api/archive/{cycle_id}`: `token` + `confirm` (the exact cycle ID); snapshots the database, then removes the cycle with its logs, readiness, body metrics, prescription versions, journals, questionnaire, attempts and AI calls
-
-One log describes one prescribed exercise row. Unlogged rows retain planned volume in log mode, while completion counts only real logged sets. Zero sets explicitly replaces a planned row. Last-write-wins updates and the append-only log journal commit together. Actual tonnage uses recorded last-set load/reps × actual sets and is an estimate; planned tonnage follows segment loads with the legacy main/variation rounding rules.
-
-Recovery and body metrics have separate explicit saves. Recovery/arousal/nutrition use positive 1–7 ratings; joint pain is a separate warning. HRV and resting HR need 28 distinct valid prior dates per field; fewer than three scored inputs leaves the score and REC unknown. Missing values remain null. Bodyweight uses the same date or nearest past date, never a future record. Readiness only advises; it never rewrites prescriptions. A personal time-performance curve is not implemented because matched benchmark observations are not yet collected.
-
-Analysis reports working sets, SBD equivalent capacity and muscle allocation separately. Approved variation transfer factors discount only equivalent capacity; raw sets and completion are unchanged. Unknown transfer factors are excluded explicitly. Legacy prescriptions retain their original 1:1 capacity basis. Weekly MEV/MRV comparisons use equivalent capacity; cycle working-set totals remain raw. GPP/cardio and equipment details are collapsed reading views, not inferred training completion.
-
-Muscle heat uses the highest planned weekly muscle-weighted volume across the full cycle. Weeks, primary/secondary filters and plan/log modes share this fixed denominator. Color bands and bar widths saturate at 100%; raw values remain uncapped. Direct-set MEV/MRV references do not determine heat. Mobile Analysis reads anatomy, weekly summary, sixteen muscles, capacity and trends in that order.
-
-Recorded performance uses actual last-set loads only: singles retain their original load; ordinary 2–10 reps use an explicitly labelled Epley estimate (`load × (1 + reps / 30)`). Power Clean multi-rep and timed/unit rows have no estimate. Missing/zero logs remain null; charts break at missing weeks. Pull-up/dip observations use recorded total system weight, not external adjustment. Highest weekly values retain their source date/key and method. Neither estimates nor trends update reference 1RMs or goal attainment.
-
-Review exports preserve the plan, recorded logs, body metrics, positive readiness and separately labelled legacy fatigue, all prescription versions and append-only journal payloads. A single SQLite read transaction supplies the export; its SHA-256 covers canonical sorted JSON excluding `integrity`. Weekly comparisons use actual-only recorded sets rather than the analysis view's unlogged planned fallback. Missing actual rows remain null. Completion uses raw main/variation/accessory sets with 60/25/15 weights; composite uses goal/bodyweight/completion with 40/40/20 weights and never redistributes missing weights. Bodyweight cut/bulk progress is `(current − start) / (target − start) × 100`, uncapped. Maintenance within ±1% scores 100, then loses 10 points per additional percentage point down to zero. Only an explicit initial weight, target and same/prior actual dated reading can score. Ordinary singles/e1RM do not count as test-day goal attainment: until explicit test records are implemented, that component and the composite remain null. Downloading a review does not end a cycle; historical views contain no write controls. Destructive archive deletion is implemented as a trio: a forced complete export download issues a single-use token, the exact cycle ID must be typed to confirm, and the server snapshots the database before removing the cycle with its logs/readiness and all dependent records. The active cycle cannot be deleted.
-
-Reference 1RMs are manual, not estimated performance. Settings previews and explicitly applies the approved eight-variation policy; no startup recalculation occurs. Prescribed percentages take priority; missing percentages use the legacy `render_day.py` RTS reps/RPE lookup, labelled as an estimate, including Power Clean without Epley extrapolation. The legacy implementation rounds the lookup to whole percentages; its contradictory 3@9 comment is not used. Pull-up/dip weights are total system loads; external assistance or added load remains unknown without an action-date or prior bodyweight reading. The versioned plan retains its original validated `basePlan`; dates, sets, reps, target RPE, movement identity and muscle coefficients are unchanged. Other library variation 1RMs may be maintained but do not silently trigger additional recalculations.
-
-Settings imports Raw-v1 or legacy v4 JSON only. Duplicate keys, nonfinite numbers, unknown movements and contract failures are rejected with contextual field errors. The original upload hash includes its UTF-8 BOM, if present; v4 enters only through the adapter. Preview compares complete old/new plans without writing. Explicit confirmation checks the complete active source, including records and journals, inside `BEGIN IMMEDIATE`; intervening saves require a fresh preview. A consistent backup precedes the version-gated transaction that freezes the old review, archives its cycle, activates the new plan and seeds its prescription history. Existing cycle IDs never overwrite data. Old records and journals remain cycle-scoped and read-only; all record writes recheck active status inside their transaction. Failed transactions leave logical data unchanged; a lost confirmation response is not proof of rollback, so check the current cycle before previewing again. The database schema is unchanged by plan replacement.
-
-The seven-step next-cycle questionnaire (goal, schedule, personal, current level, sticking points, recovery, outlook) is cycle-scoped with draft and complete states. Missing values stay null; nothing is inferred from the plan or profile. Completing requires the basic facts, all three SBD 1RMs, a target bodyweight and a risk preference. Competition goals test SBD only on the competition date; non-competition goals choose 1–4 test groups and dates. Every save appends the records journal and replaces the current answer last-write-wins; archived cycles are read-only. The questionnaire is part of the review source, so saving one invalidates an older import preview, and frozen reviews carry it for later outlook generation. DeepSeek outlook generation and chat are implemented server-side (`DEEPSEEK_API_KEY` in the process environment only): three tiers (aggressive/stable/conservative) parsed from strict JSON, a site-wide quota of 20 calls per Beijing day pre-reserved in a transaction, failures counted without auto-retry, and an export bundle for an external AI when unconfigured. The test week shows an SBD attempt board with sequential good/miss confirmation.
-
-The store keeps `cycles`, `plans`, `logs`, legacy `readiness`, `archives`, `body_metrics`, `questionnaires`, `ai_calls`, `attempts`, `deletion_tokens`, `accounts`, immutable `prescription_versions`, and append-only journals. Positive recovery lives in `readiness_v2`; old fatigue is preserved without reinterpretation. Schema upgrades take a consistent SQLite snapshot in the database's sibling `backups/` directory before a transactional, version-gated migration; the additive `accounts` table snapshots once on first creation without bumping the schema version. Unsupported versions are rejected, not reset. To restore, stop the owned API process, preserve the current database and its WAL/SHM companions together, copy the selected snapshot to a new path, check SQLite integrity, then launch with `RR_DB_PATH` pointing to that copy. No migration from an older Roast product is attempted.
-
-## Scope and provenance
-
-Today/Plan include default-visible compact anatomy and weekly capacity. Analysis owns the full sixteen-muscle list, detailed reference context and cycle capacity board. Day deep links expand, scroll to and focus the selected day. Light/dark themes, genuine statistics and minimal persistence are implemented. Inline exercise logging and date-associated recovery/body-metric forms are implemented. Archive history and independent review export are available at `/archive` and `/archive/:cycleId`. Strict plan replacement is available in Settings. Questionnaire, AI outlook/chat, test-day attempts and guarded archive deletion are implemented; the formal 0.20 deployment is live at `http://82.157.146.30/` since 2026-11-14 20:40 (public landing, account-gated journal). When `RR_ACCESS_PASSWORD` is set in the server process environment, the SPA shell and release landing stay public while the journal API (`/api/*` except health, login, register, logout and session) requires a signed-in account. The owner is seeded from `RR_ACCESS_USERNAME` (default `Astra`) and that password; `/api/register` opens additional accounts onto the same single journal, `/api/login` issues an HttpOnly SameSite=Lax session cookie (30 days, HMAC-derived from the shared password so a password change signs everyone out), and HTTP Basic with a registered username/password still works for API clients. Usernames are case-insensitive and passwords case-sensitive (PBKDF2-SHA256). This is access control, not transport encryption; `RR_ALLOWED_HOSTS` adds comma-separated trusted hosts for deployment. The SPA shell is served `Cache-Control: no-store` so a returning browser always gets the shell matching the deployed hashed assets, which Caddy serves immutable. `server/tools/deploy.py` verifies the whole access contract from the public host after each deploy: public landing and assets, gated journal API, owner sign-in with any username casing, cookie flags and logout. Readiness values never auto-adjust loads. Unknown reference values stay null; back-group ranges are not presented as individual-muscle targets.
-
-Today and expanded Plan days carry a TopSet-style daily share card: a 1080×1440 PNG drawn on canvas, with session volume, volume by lift, completion and a barbell whose plates are solved from the day's final logged main-lift load including the 20 kg bar and 5 kg competition collars. Before the start date, Today shows the old App's pre-start screen ported to Vue: countdown ring, long start date, weeks/sessions/test-day facts and two actions (open the first session, or rebuild the plan in Outlook). The calendar stays fixed, so the ported note never promises date shifting. Plan always shows the ported LOAD PROFILE chart: weekly working-set bars coloured by block phase with hatched deloads and a solid test week, overlaid by the top-set %1RM line on a 50–110% axis, with peak/deload/test notes recomputed from the analysis.
-
-Anatomy paths are the supplied `Ref/02_Stats/muscle_geo.json`, derived from body-muscles 1.0.0 (Apache-2.0). Only coordinates are reused, not its React component; no React dependency is added. See `docs/body-muscles-LICENSE.txt` for upstream notice/license. Five fixed OKLCH bands encode volume relative to the cycle-wide planned weekly maximum, not recovery.
-
-Keys, environment files, databases, virtualenvs and build outputs are Git-ignored; the secret-free permissions `ACCESS.md` remains trackable. No secret is needed for local development. Check actual remote/publication state with `git remote -v` and the release evidence, not a frozen README claim. Local commits may happen between releases; remote pushes only happen at each 0.10 milestone after validation and destination approval. Deployment remains restricted to the milestones in AGENTS.md. The old project source remains read-only; the old server stays live and receives a friend link to the new site at the 0.20 milestone, after a timestamped backup.
+- Dates are fixed to Asia/Shanghai; missed sessions never shift the calendar. The cycle start moves only by whole weeks, and only through the plan generator.
+- Keys, environment files, databases, virtualenvs and build output are git-ignored. `Ref/07_Permissions/ACCESS.md` is the trackable, secret-free permission pointer.
+- The old app (`Roast PowerLifting`) and its reference index (`RPLRef`) are read-only historical sources; see [AGENTS.md](AGENTS.md) before touching either.
+- Where to read next: [TODO.md](TODO.md) for what happens next, [AGENTS.md](AGENTS.md) for how work is judged, [docs/项目交接.md](docs/项目交接.md) for product detail.

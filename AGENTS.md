@@ -2,7 +2,7 @@
 
 ## Entry and authority
 
-Read the project Skill at `C:\Users\Astra\Desktop\RR\skills\roast-raw-agent\SKILL.md` (agent folder, outside this repo), then [TODO.md](TODO.md) current work and approved decisions. The Skill owns the complete workflow; this file is its entry and safety summary, not a competing specification. [README.md](README.md) owns setup/API/recovery; [docs/项目交接.md](docs/项目交接.md) owns detailed product contracts. Read relevant headings only. User's latest explicit instruction outranks old prose; tests are evidence, not product decisions.
+Read the project Skill at `C:\Users\Astra\Desktop\RR\skills\roast-raw-agent\SKILL.md` (agent folder, outside this repo), then [TODO.md](TODO.md) for the execution queue and approved decisions. The Skill owns the workflow; this file is its entry and safety summary, not a competing specification. [README.md](README.md) owns setup and how to run; [docs/项目交接.md](docs/项目交接.md) owns detailed product contracts — read only the headings you need. The user's latest explicit instruction outranks old prose; tests are evidence, not product decisions.
 
 After entry or compression, from the Roast Raw root run:
 
@@ -16,130 +16,74 @@ No completed zero exit code means no all-green claim. UI changes also require bu
 
 ## Language and tone
 
-- **Talk to the owner in Simplified Chinese.** Every reply, progress note, question and receipt body is Chinese, regardless of the repository, code, commit messages or UI copy being English. Speaking English to the owner is a defect, not a style choice.
-- **Product copy stays English.** Interface strings, button labels, empty states and errors remain English by product ruling; Chinese belongs to conversation, documents and receipts.
-- **Terms: Chinese first, English identifier after.** One plain Chinese phrase, then the identifier in parentheses on first use; never open with a bare abbreviation.
+- **Talk to the owner in Simplified Chinese.** Every reply, progress note, question and receipt body is Chinese; repository text, code, commit messages and UI copy stay English.
+- **Terms: Chinese first, English identifier after.** One plain Chinese phrase, then the identifier in parentheses on first use.
 - **Short by default.** Conclusion first, evidence second; no preamble, no restating the request, no "next I will" inside a completion.
 
 ## Safety boundaries
 
-- Only Web: Vue/Vite/Motion One + FastAPI/SQLite. No Android/WebView/APK, offline training cache or sync service. English UI, handwritten CSS, anatomy default-visible. App pages reuse the old App visual language and keep no original decorative inventions beyond the barbell load UI and the muscle map (user ruling 2026-11-14); the landing keeps the ported release-page style. Light = old ex warm paper, Dark = old dark.
-- Ref and the old project source are read-only. Old Skills may be inspected; never run old build/deploy workflows. The old server is fully usable per user ruling 2026-11-14 (timestamped backup before any overwrite); after 0.20 keep the old site plus a friend link to the new site. The only approved Ref edit changes SSH root to ubuntu in Ref/07_Permissions/ACCESS.md.
-- Never print, commit or package keys/environment secrets/databases. AI/GitHub use process environment, SSH uses key/config. Never alter permissions or evade a denied operation. Credential steps are in Ref/07_Permissions/ACCESS.md; current TODO decisions override stale timings there.
-- Keep fail-closed imports, fixed Asia/Shanghai calendar, arbitrary weeks, actual-only completion and explicit zero sets. Preserve historical records/prescription versions. Back up before migration; do not reinterpret old fatigue.
-- Do not hand-edit generated data/dist, loosen tolerances, delete assertions or neutralize sabotage. Statistics, calendar, schemas and tokens each retain one source.
-- Keep raw sets, SBD equivalent capacity and muscle coefficients distinct. Consult current decisions before policy changes; retain legacy fixture verification.
-- Do not overwrite shared services/repositories, delete source data or perform destructive git operations. Git push to the private remote and the formal acceptance deployment happen only at 0.20 (destination scoped in TODO.md). Stop-and-deploy preview below is the standing exception for preview builds.
-- Stop-and-deploy preview (user ruling 2026-11-14): whenever work stops for any reason (batch close, blocker, waiting on a ruling), first create the local commit, then deploy the current build to the new server as an HTML preview so the owner can inspect it in a phone browser. The preview keeps the release landing public and gates the journal API behind account sign-in (owner seeded from the environment-injected username/password at deploy time, never written to repo, docs or bundle). Preview deploys reuse the same timestamped-backup pipeline as the formal deployment.
+- Only Web: Vue/Vite/Motion One + FastAPI/SQLite. No Android/WebView/APK, offline training cache or sync service. English UI, handwritten CSS, anatomy default-visible. App pages reuse the old App visual language; the landing keeps the ported release-page style. Light = old ex warm paper, Dark = old dark.
+- `Ref/` and the old project sources are read-only. Old Skills may be inspected; never run old build/deploy workflows. The old server stays usable for reference (timestamped backup before any overwrite); the old site keeps a friend link to the new one.
+- Never print, commit or package keys, environment files, databases or session tokens. AI/GitHub use process environment, SSH uses key/config. Never alter permissions or evade a denied operation.
+- Keep fail-closed imports, fixed Asia/Shanghai calendar, arbitrary weeks, actual-only completion and explicit zero sets. Preserve historical records and prescription versions; back up before migration; never reinterpret old fatigue as positive recovery.
+- Do not hand-edit generated data or `web/dist`, loosen tolerances, delete assertions or neutralize sabotage. Statistics, calendar, schemas and design tokens each retain one source.
+- Keep raw sets, SBD equivalent capacity and muscle coefficients distinct. Consult current decisions before policy changes; keep the legacy fixture chain intact.
+- Do not overwrite shared services or repositories, delete source data or run destructive git operations. **Push and deployment happen only when the owner explicitly orders them** (see the running rules below).
+- **Running rules for this round (owner ruling 2026-11-15)**: every 0.01 step ends in a local commit plus local build plus local screenshots; **no push, no formal deploy, and the earlier "stop-and-deploy preview" clause is suspended**. Stop-and-deploy resumes only when the owner says so. A stop without a preview is complete as long as the commit exists and `BOUNDARY` states "未部署".
 
 ## Permissions and environment (read before touching the live service)
 
 These facts are easy to forget and expensive to rediscover. They are pointers and rules, never secret values.
 
-- **Production host**: SSH alias `roast-raw` (identity `ubuntu`), service directory `/opt/roast-raw`, systemd unit `roast-raw`, environment file `/etc/roast-raw.env` (root-owned, mode 600), public URL `http://82.157.146.30/`. The landing is public; every `/api/*` journal route is account-gated.
-- **Deploy rewrites the environment file.** `server/tools/deploy.py` writes `/etc/roast-raw.env` from the *local process environment* on every run; it does not merge. `RR_ACCESS_USERNAME`, `RR_ACCESS_PASSWORD` are required. `DEEPSEEK_API_KEY` is only written when present locally, so a deploy without it silently deletes the AI key. Before any deploy, source the existing key from the server and pass it through the process environment; after deploy, call `/api/ai/status?cycle_id=…` and require `configured: true`. Never echo the key.
-- **Key locations**: owner credentials and DeepSeek live in user-level environment variables on this Windows host and in the server env file; GitHub uses `GH_TOKEN` (user environment) because `gh` is not installed — call the GitHub REST API with `Invoke-RestMethod`. `C:\Users\Astra\Desktop\RPLRef\_credentials` and `Ref/07_Permissions` are read-only pointers; never print, copy or commit their contents.
-- **Local preview is not production.** `tests/serve_fixture.py` runs without the access gate and without the DeepSeek key, so “DeepSeek is not configured” there is expected, not a defect. AI behaviour is only evidenced against the deployed host.
-- **Remote state is volatile.** The GitHub repository may be public while the remote branch lags local commits. Never infer push or deployment from a local build, and never push without an explicit owner ruling.
-- **Version and stop rules** live in the Skill and TODO; the version is read from `web/package.json`, never from this file.
-- **Never** print, paste into chat, commit, bundle or screenshot secrets, cookies, session tokens, database files or env files. If a command would print one, redirect or measure its length instead.
+- **Production host**: SSH alias `roast-raw` (identity `ubuntu`), service directory `/opt/roast-raw`, systemd unit `roast-raw`, environment file `/etc/roast-raw.env` (root-owned, mode 600), public URL `http://82.157.146.30/`. Landing is public; every `/api/*` journal route is account-gated. The running server is currently the 0.20 build.
+- **Deploy rewrites the environment file.** `server/tools/deploy.py` writes `/etc/roast-raw.env` from the local process environment on every run; it does not merge. `RR_ACCESS_USERNAME` and `RR_ACCESS_PASSWORD` are required; `DEEPSEEK_API_KEY` is only written when present locally, so a deploy without it silently deletes AI access. After any deploy call `/api/ai/status?cycle_id=…` and require `configured: true`. Never echo the key. Record the production worker count in this section when it is next measured — the scoped cache bound (64 views) is per worker and must not be re-derived from it.
+- **Key locations**: owner credentials and DeepSeek live in user-level environment variables on this Windows host and in the server env file; GitHub uses `GH_TOKEN` (user environment) because `gh` is not installed — call the GitHub REST API with `Invoke-RestMethod`. `RPLRef/_credentials` and `Ref/07_Permissions` are read-only pointers; never print, copy or commit their contents.
+- **Local preview is not production.** `tests/serve_fixture.py` runs without the access gate and without the DeepSeek key (fixture mode needs `RR_ALLOW_OPEN_FIXTURE=1`, which is never set on a deployment host), so "DeepSeek is not configured" locally is expected. AI behaviour is only evidenced against a deployed host.
+- **Old projects and references**: `Roast PowerLifting` (original app, read-only) and `RPLRef` (its index, read-only) sit next to this repo on the Desktop today; the planned relocation to `RR\ref-projects\` is recorded in TODO §7. `RPLRef/_repo/mirror` was slimmed on 2026-11-15 — the deletion record and restore paths are in `RPLRef/_repo/MIRROR_SLIMMED.md`. Absolute Desktop paths inside `Ref/` are pre-migration snapshots and stay unchanged on purpose.
+- **Remote state is volatile.** Never infer a push or a deployment from a local build. The version comes from `web/package.json`, never from this file.
 
 ## Work and handoff
 
-Delegate by exclusive file ownership; only main runs generation, gates and commits. Verify actual diffs. Ask about unresolved product/statistical/scope decisions; choose small reversible implementation details within confirmed goals. Update TODO every hundredth-version step; remove only verified work. Create local new commits between tenth-version remote milestones. Version comes only from web/package.json and matching lockfile.
+Delegate by exclusive file ownership; only main runs generation, gates, commits and deployments. Review actual diffs, not agent self-evaluation. Ask about unresolved product, statistical or scope decisions; resolve small implementation details yourself within confirmed goals.
 
-New requirements that do not belong to the current milestone go into the TODO backlog, never into the active version scope; re-prioritize unfinished and unassigned TODO items when adding them. Do not silently expand a milestone.
+New requirements that do not belong to the current milestone go into the TODO queue, never into the active version scope; re-prioritize unfinished items when adding them. Do not silently expand a milestone. Update TODO at each hundredth-version step; remove only verified work.
 
-Report through the receipt contract below. Do not claim human acceptance, tool availability, deployment or usage figures without evidence. Use status emoji only when explicitly requested; the receipt labels carry the structure without them.
+Commits: `git -c user.name=Astra -c user.email=astra@local commit` (the repo has no configured identity). Never `--amend`, `--no-verify`, or edit git config.
 
 ## Receipts
 
-A report is one of two kinds, and the reader must know which without guessing:
+A report is one of two kinds, and the reader must know which without guessing: **completion** (only what already happened and was verified) or **plan** (only what has not been executed). Never mix them in one block; when both are needed, completion first, then a lone `---` line, then the plan.
 
-- **Completion** — only what already happened and was verified.
-- **Plan** — only what has not been executed yet.
-
-Never mix them in one block. When both are needed, completion first, a lone `---` line, then the plan. A completion containing "next I will", or a plan containing "already fixed", is a defective receipt.
-
-### Completion skeleton
-
-Five fields, fixed order, one line each. The label may be the English key or its Chinese equivalent (结果 / 证据 / 范围 / 边界 / 下一步); choose one set for the whole receipt and keep the content in Simplified Chinese.
+Completion skeleton — five lines, fixed order. Labels may be the English keys or 结果 / 证据 / 范围 / 边界 / 下一步; pick one set and keep the body in Chinese.
 
 ```
 RESULT   one sentence: what changed, and whether it worked
-EVIDENCE only re-checkable values: exit code, PASS/FAIL counts, sha256, HTTP status, measured px, preview URL
+EVIDENCE only re-checkable values: exit code, PASS/FAIL counts, sha256, HTTP status, measured px, file path
 SCOPE    files, screens or layers actually touched
 BOUNDARY what was not done or not verified, and why — an empty BOUNDARY means the receipt is false
 NEXT     owner plus action, each tagged GO / ASK / HUMAN
 ```
 
-`RESULT` says FAIL when it failed. "Basically done", "should be fine" and "looks good" are not results. One line carries one fact; prefer a list over a table unless the rows are genuinely parallel data.
-
-### Plan skeleton
-
-```
-GOAL   one sentence that can be judged done or not done
-STEPS  numbered, each naming its artifact: a file, command output, screenshot or URL
-ORDER  prerequisites and blockers, or "none"
-ASK    the decision the owner must make, with options and costs — or "nothing to decide"
-```
-
-A step without an artifact is not a step. `ASK` is never left blank; when there is nothing to rule on, say so explicitly.
+Plan skeleton: `GOAL` (one judgeable sentence), `STEPS` (numbered, each naming its artifact), `ORDER` (prerequisites or "none"), `ASK` (the decision the owner must make, with options and costs — or an explicit "nothing to decide"). A step without an artifact is not a step.
 
 ### What counts as evidence
 
-Evidence is a value someone else can re-obtain. Feelings, tool-call counts and a model's own assessment are not evidence. Which command proves which layer:
+Evidence is a value someone else can re-obtain. Feelings, tool-call counts and a model's own assessment are not evidence.
 
 | Layer | Proof | Does not prove |
 |---|---|---|
 | Statistics, data, contracts, API | `node tests/verify.js` exit code and check count | that any screen renders |
 | UI mechanics | `npm --prefix web run build`, `node tests/browser.mjs`, then real browser use | that the owner accepts the look |
 | Responsive and theme | CDP screenshots at the audited widths in both themes, overflow measured | aesthetic acceptance |
-| Deployment | `server/tools/deploy.py` access-contract output plus a probe from the public host | that a local build is live |
+| Deployment | `deploy.py` access-contract output plus a probe from the public host | that a local build is live |
 | Documents | bundled Skill checker, then each changed pointer opened | that the prose is correct |
 
-A local build is never a deployment. A green suite is never human acceptance. Never quote a version, assertion count, tolerance or check ID from memory — read it from the source named in the Skill's fact table, and keep volatile numbers out of this file.
-
-When a suite fails, report the red baseline before touching it. If the failure is load-sensitive rather than a product defect, say so and show the isolated re-run; never widen a timeout or tolerance to make it pass.
+A local build is never a deployment. A green suite is never human acceptance. Never quote a version, assertion count, tolerance or check ID from memory — read it from the source named in the Skill's fact table. If a suite fails, report the red baseline before touching it; a load-sensitive failure means an isolated re-run, never a widened timeout.
 
 ### Next-step ownership
 
-- `GO` — the agent can run it now: build, suites, preview deploy, screenshots, public probes.
-- `ASK` — the owner must rule first: scope, order, credentials, statistical policy. The agent runs it after the ruling.
-- `HUMAN` — only the owner can do it: aesthetic final acceptance, real-environment sign-off. The agent prepares evidence and waits.
+- `GO` — the agent can run it now: build, suites, screenshots, preview or deploy once authorized, public probes.
+- `ASK` — the owner must rule first: scope, order, credentials, statistical policy.
+- `HUMAN` — only the owner can do it: aesthetic acceptance, real-environment sign-off.
 
-### Stopping
-
-A stop without a preview is an incomplete stop. At every stop — batch close, blocker, or waiting on a ruling — commit locally, deploy the preview, and put the preview URL and its access-contract result in `EVIDENCE`. If the deploy itself is the blocker, state that in `BOUNDARY` rather than implying the site is updated.
-
-### Worked example
-
-Braces are placeholders for whatever the run actually produced. Never copy example values into a real receipt.
-
-```
-RESULT   The release landing is public; the journal API now requires an account.
-EVIDENCE verify.js exit {0}; browser.mjs exit {0}; deploy access contract {n}/{n} PASS;
-         GET / {200}, GET /api/plan {401}, owner sign-in {200}; preview http://{host}/
-SCOPE    server/app/main.py gate, web/src/App.vue guard, server/tools/deploy.py post-deploy check
-BOUNDARY Aesthetic acceptance belongs to the owner; HTTP only, no TLS; AI quota path not re-tested.
-NEXT     GO re-probe after any redeploy · HUMAN owner signs in on a phone and accepts the look
-```
-
-The owner can re-obtain every number in `EVIDENCE`, sees exactly what was touched in `SCOPE`, and knows in `BOUNDARY` what is still unproven. That is the whole point of the format.
-
-### Two defective receipts
-
-**Mixing fact and intention.** "I made the landing public, next I'll check the sign-in redirect, should be fine." The first clause is a verified fact, the second is unexecuted, and "should be fine" is a guess dressed as a conclusion. Split into a completion carrying only the proven part, `---`, then a plan whose steps each name an artifact.
-
-**Local build claimed as live.** "Sign-in is fixed, all green." No exit code, no public probe, no preview URL — the owner cannot tell whether the server changed or only the working tree did. Name the suite and its exit code, the deployed access-contract result, and the URL the owner can open.
-
-## Capabilities, not products
-
-Use whatever installed tooling provides these capabilities; if none is installed, install a suitable compliant one or fall back to built-in tools. Never depend on a specific extension name or version.
-
-- UI evidence: automated regression plus a real browser for golden/failure paths; screenshots at the audited widths and themes.
-- Independent review: UI and delivery changes are reviewed by a session or reviewer that did not implement them; findings name exact locations, not vague taste.
-- Handover diagrams: architecture/flow diagrams for docs when useful; keep generated artifacts out of runtime code.
-- Documents: office-format tooling for deliverables when requested; project facts stay in README/TODO/handover docs.
-
-Mobile-device, generic-governance or duplicate-automation tooling adds nothing here; do not let it override the Skill's single governance entry or the Web-only boundary.
+`tests/browser.mjs` has been a red baseline since 0.21 (theme toggle removed, register page changed) and is rewritten in 0.35; until then it is never green-light evidence.
