@@ -10,7 +10,7 @@
 
 | 项 | 值 |
 |---|---|
-| 版本 | `web/package.json` = **0.0.38**；0.29–0.38 本地提交，未 push、未部署（0.39 日历、0.40 上线按用户指令紧随） |
+| 版本 | `web/package.json` = **0.0.40**；已部署 `http://82.157.146.30/`（0.0.40）、已 push `origin/master`（`9597dc7` 之后含 0.40） |
 | 工作树 | 以本节所在提交为准 |
 | 最近提交 | 见 `git log --oneline -3` |
 | 门禁 | `node tests/verify.js` exit 0（334 Python 用例 / 6637 检查）；`npm --prefix web run build` exit 0；`node tests/browser.mjs` exit 0（15 项断言、8 张截图），`--sabotage` exit 1；`check_skill.py --root .` PASS |
@@ -34,9 +34,9 @@
 
 ---
 
-## 1 · 下一动作：0.38 审查收口 → 0.39 日历 → 0.40 上线（用户指令，连续执行）
+## 1 · 下一动作：0.40 已上线并 push；下一版待用户派单（0.41 候选：D-10 剩余展示位核对、线上 0.20 计划是否换成 RPL-Raw 正式周期）
 
-**接手指令**：0.38 = 一个**未写过本轮代码**的会话审查 0.29–0.37，逐条实测 §4 `P1` 清单与 `docs/项目交接.md` §12 推断项，清单逐条关闭后交用户。0.39 发布（push + 部署）**只在用户另行下令后**执行。
+**接手指令**：0.38 已由独立会话审查并收口（`ed2380c`）；0.39 日历 `9597dc7`；0.40 已部署与 push。历史口径：0.38 = 一个**未写过本轮代码**的会话审查 0.29–0.37，逐条实测 §4 `P1` 清单与 `docs/项目交接.md` §12 推断项，清单逐条关闭后交用户。0.39 发布（push + 部署）**只在用户另行下令后**执行。
 
 **0.38 审查基线**：审查报告 `RR\review-0.38.md`（0 FAIL / 5 部分 / 10 PASS，缺陷 D-01～D-09、U-01/U-02）。本轮按报告关闭：D-01 兑换后重取 plan/analysis/geometry 且缺 geometry 时降级占位；D-02 动作 register 改用 R5 已到期口径（`asOf` + `min(actual, planned)`）；D-03 落地页 nav/footer/邀请链接全部 44px 命中区；D-04 `aria-expanded` + `aria-controls`；D-05 `BarbellStrip` 赛扣默认 0；D-06 分享卡 watch 赛扣；D-07 `SHOTS_DIR` 跟随 `package.json` 版本；D-09 UI 与画布片组对拍断言；D-08 文档漂移（§12 指向、31 链接/20 表、`user_version=7`、12 项能力）已改。U-01 按用户裁定：测试周注记拆到 `testTitleEn`，仅测试周显示。版本 0.0.38。
 
@@ -66,8 +66,9 @@
 | ~~0.35~~ ✅ | R5 + P1 | 完成率单函数、重写 `tests/browser.mjs`、P1 复核与清理、`docs/shots` 迁出 | 已交付；`verify.js` 334 用例 / 6633 检查 exit 0，`browser.mjs` 11 项 exit 0、`--sabotage` exit 1 |
 | ~~0.36~~ ✅ | R6 + R7 | 首页会员对比矩阵；老站首页效果补齐（`--topH`、分享、滚动 tour） | 已交付；`verify.js` 334 用例 / 6636 检查 exit 0，`browser.mjs` 13 项 exit 0、`--sabotage` exit 1；1280 四列两币种、390 四卡、320 无溢出 |
 | ~~0.37~~ ✅ | R8 | 账户内会员面板（档位、Pro 到期、设备 5、兑换码） | 已交付；面板实机 421 段实测：`Ultra` + `PERMANENT`、设备 `1 / 5`、控件 44px、`RR-BROWSER-PLUS` 回执；browser 15 项 exit 0 |
-| **0.38** | 独立审查 | 未写代码的会话审 0.29–0.37，含 `docs/项目交接.md` §12 推断项逐条实测 | 审查清单逐条关闭；0.29 遗留的 P0-01 缺陷在此复核 |
-| **0.39** | 发布 | 部署 + push（**只在用户另行下令后**） | `deploy.py` 访问契约全 PASS + 公网探测 + `/api/ai/status` `configured: true` |
+| ~~0.38~~ ✅ | 审查收口 | `RR/review-0.38.md` 的 D-01～D-09、U-01/U-02 逐条关闭；版本 0.0.38 | 已交付 `ed2380c`；339 用例 / 6661 检查 exit 0、`--sabotage` exit 1、browser 16 项 exit 0 |
+| ~~0.39~~ ✅ | R9 健身日历 | 独立 `/calendar`、周/月/议程、只读、全部历史 + 未来空档、区间内 REST / 区间外留白、`/cycle` 内链入口 | 已交付 `9597dc7`；日历 6 用例、browser 16 项 exit 0（证据 `RR\shots\0.39`） |
+| ~~0.40~~ ✅ | 发布 | 备份 → Store v6→v7 → `deploy.py` 部署 → push `origin/master` | 备份 `roast-raw-20261115-223521.tar.gz` 13M；线上 `user_version=7` / 20 表；ACCESS-CONTRACT-OK；AI `configured: true`；公网 200；push `6c0c595..9597dc7` |
 
 ---
 
