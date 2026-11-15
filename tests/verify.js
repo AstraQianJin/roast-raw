@@ -1,6 +1,8 @@
 const assert = require('node:assert/strict');
 const { spawnSync } = require('node:child_process');
 const { readFileSync, existsSync } = require('node:fs');
+const { rmSync } = require('node:fs');
+const { tmpdir } = require('node:os');
 const { resolve, join } = require('node:path');
 
 const root = resolve(__dirname, '..');
@@ -122,6 +124,34 @@ async function shareCheck() {
   same([empty.volume, empty.topSet, empty.loggedCount], [null, null, 0], 'unlogged date is an explicit empty state');
   console.log('PASS share math: collar-inclusive plate solve, final-main top set, null-load volume safety, empty state');
 }
+function landingFactsCheck() {
+  const facts = json('web/src/landing-facts.json');
+  const plan = json('data/plan.json');
+  const tmp = join(tmpdir(), `landing-facts-${process.pid}.json`);
+  const generated = spawnSync(python, ['server/tools/landing_facts.py', '--out', tmp], { cwd: root, encoding: 'utf8', env: { ...process.env, PYTHONIOENCODING: 'utf-8' } });
+  assert.equal(generated.status, 0, generated.stderr || 'landing facts generator failed');
+  same(readFileSync(tmp, 'utf8'), readFileSync(join(root, 'web/src/landing-facts.json'), 'utf8'), 'landing facts regenerate byte-for-byte');
+  rmSync(tmp, { force: true });
+  const rows = plan.workouts.filter(row => row.week === facts.week && row.day === facts.day);
+  assert.ok(rows.length > 0, 'landing facts name a real sample day');
+  checks++;
+  same(rows[0].date, facts.date, 'landing facts date comes from the sample day');
+  same(rows.reduce((sum, row) => sum + (row.tonnageKg || 0), 0), facts.day_total_kg, 'day_total_kg recomputed from plan rows (no warm-ups)');
+  same(rows.reduce((sum, row) => sum + row.sets, 0), facts.set_count, 'set_count recomputed from plan rows');
+  same(facts.cycle_total_kg, plan.meta.cycleTonnageKg, 'cycle_total_kg equals meta.cycleTonnageKg');
+  assert.notEqual(facts.day_total_kg, facts.cycle_total_kg, 'day tonnage and cycle tonnage are distinct fields');
+  checks++;
+  const anchors = Object.values(plan.meta.anchors || {}).filter(entry => entry.unit === 'kg').map(entry => entry.movement);
+  facts.lifts.forEach(lift => {
+    const candidates = rows.filter(row => row.bucket === 'main' && row.lift === lift.lift && row.loadKg !== null);
+    assert.ok(candidates.some(row => row.loadKg === lift.top_kg && row.movement === lift.movement), `landing lift ${lift.lift} top load exists on the day`);
+    checks++;
+    same(Object.hasOwn(lift, 'pct'), anchors.includes(lift.movement), `landing lift ${lift.lift} pct only with a same-source anchor`);
+  });
+  assert.ok(facts.lifts.length > 0, 'landing facts carry main lifts');
+  checks++;
+  console.log(`PASS landing facts: byte-identical regeneration, day ${facts.day_total_kg} kg / ${facts.set_count} sets recomputed, cycle ${facts.cycle_total_kg} kg from meta`);
+}
 (async () => {
 try {
   fixtureCheck();
@@ -129,6 +159,7 @@ try {
     libraryCheck();
     syntheticCheck();
     await shareCheck();
+    landingFactsCheck();
     const drift = spawnSync(python, ['server/tools/export_membership.py', '--check'], { cwd: root, encoding: 'utf8', env: { ...process.env, PYTHONIOENCODING: 'utf-8' } });
     assert.equal(drift.status, 0, `web/src/membership.json drifted from server/app/membership.py: ${drift.stdout}${drift.stderr}`);
     console.log('PASS membership table: web/src/membership.json matches the server capability matrix');

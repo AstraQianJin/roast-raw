@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { animate } from '@motionone/dom';
 import packageInfo from '../package.json';
+import landingFacts from './landing-facts.json';
 const [major, , patch] = packageInfo.version.split('.');
 const releaseVersion = `${major}.${patch.padStart(2, '0')}`;
 import MuscleMap from './components/MuscleMap.vue';
@@ -98,8 +99,10 @@ const days = computed(() => {
 });
 const todaySession = computed(() => calendar.value?.day ? { date: calendar.value.date, week: calendar.value.week, day: calendar.value.day } : calendar.value?.nextSession);
 const todayLink = computed(() => todaySession.value ? `/cycle/week/${todaySession.value.week}/day/${todaySession.value.day}` : '/cycle');
-const todayCtaDate = computed(() => calendar.value?.day ? dateLabel(calendar.value.date) : calendar.value?.nextSession ? dateLabel(calendar.value.nextSession.date) : 'NO SESSION');
-const todayCtaLabel = computed(() => calendar.value?.day ? 'TODAY' : 'NEXT');
+// Before the calendar arrives the pill names the plan's first date from the same
+// generated facts the landing page uses; it never prints a placeholder sentence.
+const todayCtaDate = computed(() => !calendar.value ? dateLabel(landingFacts.startDate) : calendar.value.day ? dateLabel(calendar.value.date) : calendar.value.nextSession ? dateLabel(calendar.value.nextSession.date) : dateLabel(landingFacts.startDate));
+const todayCtaLabel = computed(() => !calendar.value ? 'NEXT' : calendar.value.day ? 'TODAY' : 'NEXT');
 const todayRows = computed(() => todaySession.value ? plan.value.workouts.filter(row => row.week === todaySession.value.week && row.day === todaySession.value.day) : []);
 const topLifts = rows => ['S', 'B', 'D'].flatMap(code => {
   const candidates = rows.filter(row => row.bucket === 'main' && row.lift === code && row.loadKg !== null && !(row.sets === 1 && row.reps === 3 && row.mode === 'T1.3x3'));

@@ -2,8 +2,22 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import packageInfo from '../../package.json';
 import BeanMark from './BeanMark.vue';
+import landingFacts from '../landing-facts.json';
 const [major, , patch] = packageInfo.version.split('.');
 const releaseVersion = `${major}.${patch.padStart(2, '0')}`;
+
+// Every landing number comes from web/src/landing-facts.json, which is written by
+// server/tools/landing_facts.py from data/plan.json. Never type a number here.
+const sample = landingFacts;
+const SAMPLE_LABELS = { S: 'SQUAT', B: 'BENCH', D: 'DEADLIFT' };
+const liftLabel = lift => SAMPLE_LABELS[lift.lift] || lift.lift;
+const fmtKg = value => Number(value).toLocaleString('en-US', { maximumFractionDigits: 1 });
+const sampleDate = (() => {
+  const date = new Date(`${sample.date}T00:00:00+08:00`);
+  const parts = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Shanghai' }).formatToParts(date);
+  const pick = type => parts.find(part => part.type === type)?.value || '';
+  return `${pick('day')} ${pick('month').toUpperCase()} ${pick('year')}`;
+})();
 
 const root = ref(null);
 const index = ref(0);
@@ -131,12 +145,11 @@ onBeforeUnmount(() => cleanup());
         </div>
         <div class="wl-visual">
           <div class="hv" aria-label="Illustrative product preview">
-            <div class="hv-bar"><span>ROAST RAW · <b>W05 · DAY B</b></span><span>PREVIEW</span></div>
+            <div class="hv-bar"><span>ROAST RAW · <b>{{ sample.label }}</b></span><span>PREVIEW</span></div>
             <div class="hv-stack">
-              <div class="hv-card"><span class="hv-k">SQUAT · TOP</span><div class="hv-h"><b>140<small>kg</small></b><span>85%</span></div><div class="hv-sets"><i class="ok">5</i><i class="ok">5</i><i class="ok">5</i><i>3</i></div></div>
-              <div class="hv-card"><span class="hv-k">BENCH · TOP</span><div class="hv-h"><b>102.5<small>kg</small></b><span>82%</span></div><div class="hv-sets"><i class="ok">4</i><i class="ok">4</i><i>4</i><i>4</i></div></div>
-              <div class="hv-card wide"><span class="hv-k">CYCLE · {{ demoWeeks.length }} WEEKS</span><div class="hv-weeks"><i v-for="(phase, i) in demoWeeks" :key="i" :class="['ct', phase, { on: i === 4 }]"></i></div><div class="hv-meta"><span>HYPER → STRENGTH → PEAK</span><b>W05</b></div></div>
-              <div class="hv-card wide"><span class="hv-k">TOTAL LOAD · MAIN + VARIATIONS</span><div class="hv-h"><b>4,041<small>kg</small></b><span>17 SETS</span></div></div>
+              <div v-for="lift in sample.lifts" :key="`hero-${lift.lift}`" class="hv-card"><span class="hv-k">{{ liftLabel(lift) }} · TOP</span><div class="hv-h"><b>{{ fmtKg(lift.top_kg) }}<small>kg</small></b><span v-if="lift.pct !== undefined">{{ lift.pct }}%</span></div><div class="hv-sets"><i class="ok">{{ lift.sets }}×{{ lift.reps }}</i></div></div>
+              <div class="hv-card wide"><span class="hv-k">CYCLE · {{ demoWeeks.length }} WEEKS</span><div class="hv-weeks"><i v-for="(phase, i) in demoWeeks" :key="i" :class="['ct', phase, { on: i === sample.week - 1 }]"></i></div><div class="hv-meta"><span>HYPER → STRENGTH → PEAK</span><b>W{{ String(sample.week).padStart(2, '0') }}</b></div></div>
+              <div class="hv-card wide"><span class="hv-k">TOTAL LOAD · MAIN + VARIATIONS</span><div class="hv-h"><b>{{ fmtKg(sample.day_total_kg) }}<small>kg</small></b><span>{{ sample.set_count }} SETS</span></div></div>
             </div>
           </div>
         </div>
@@ -178,10 +191,9 @@ onBeforeUnmount(() => cleanup());
       <div class="wl-sec-head rv"><span class="wl-num">02 /</span><h2>A session, on paper.</h2><p class="wl-deck">The day page reads like a page: main lifts and their top intensity, the total load, then the sets. Nothing is a card you have to open twice.</p></div>
       <div class="wl-two rv">
         <div class="wl-session">
-          <div class="wl-session-head"><span>MAIN LIFTS · TOP INTENSITY</span><span>DAY B · W05</span></div>
-          <div class="wl-lift"><div><b>SQUAT</b><em>Main · 5×5</em></div><strong>110.5<small>kg</small></strong><i>72.5%</i></div>
-          <div class="wl-lift"><div><b>BENCH</b><em>Main · 4×4</em></div><strong>70.5<small>kg</small></strong><i>72.5%</i></div>
-          <div class="wl-total"><span>TOTAL LOAD<br><small>main work + variations</small></span><b>4,041<small>kg</small></b></div>
+          <div class="wl-session-head"><span>MAIN LIFTS · TOP INTENSITY</span><span>{{ sample.label }}</span></div>
+          <div v-for="lift in sample.lifts" :key="`row-${lift.lift}`" class="wl-lift"><div><b>{{ liftLabel(lift) }}</b><em>Main · {{ lift.sets }}×{{ lift.reps }}</em></div><strong>{{ fmtKg(lift.top_kg) }}<small>kg</small></strong><i v-if="lift.pct !== undefined">{{ lift.pct }}%</i><i v-else>—</i></div>
+          <div class="wl-total"><span>TOTAL LOAD<br><small>main work + variations</small></span><b>{{ fmtKg(sample.day_total_kg) }}<small>kg</small></b></div>
         </div>
         <div class="wl-note">
           <span class="wl-note-k">WHY IT MATTERS</span>
@@ -195,11 +207,10 @@ onBeforeUnmount(() => cleanup());
       <div class="wl-sec-head rv"><span class="wl-num">03 /</span><h2>A session is already a card.</h2><p class="wl-deck">One tap on a day page renders the session as a 1080 × 1440 card: one print finish, no watermark.</p></div>
       <div class="wl-two rv">
         <div class="wl-share-wrap"><div class="wl-share-card">
-          <p class="wl-share-k">ROAST RAW · W05 · DAY B</p>
-          <div class="wl-share-lift"><span>SQUAT</span><b>110.5</b><i>72.5%</i></div>
-          <div class="wl-share-lift"><span>BENCH</span><b>70.5</b><i>72.5%</i></div>
-          <div class="wl-share-total"><span>TOTAL LOAD</span><b>4,041 kg</b></div>
-          <p class="wl-share-f">24 SETS · 16 NOV 2026 · NO WATERMARK</p>
+          <p class="wl-share-k">ROAST RAW · {{ sample.label }}</p>
+          <div v-for="lift in sample.lifts" :key="`card-${lift.lift}`" class="wl-share-lift"><span>{{ liftLabel(lift) }}</span><b>{{ fmtKg(lift.top_kg) }}</b><i v-if="lift.pct !== undefined">{{ lift.pct }}%</i></div>
+          <div class="wl-share-total"><span>TOTAL LOAD</span><b>{{ fmtKg(sample.day_total_kg) }} kg</b></div>
+          <p class="wl-share-f">{{ sample.set_count }} SETS · {{ sampleDate }} · NO WATERMARK</p>
         </div></div>
         <div class="wl-note">
           <span class="wl-note-k">EXPORT, NOT A FEED</span>
@@ -267,7 +278,7 @@ onBeforeUnmount(() => cleanup());
     <section class="wl-sec wl-enter rv" id="download">
       <span class="wl-num">09 /</span>
       <h2>Get it now.</h2>
-      <p class="wl-deck">The web ledger is live. The phone apps are being signed and will appear here when they pass the store checks — no side-load links until then.</p>
+      <p class="wl-deck">The web ledger is live. There are no phone apps to download: the buttons below stay closed until an app actually ships.</p>
       <div class="wl-enter-grid">
         <a class="wl-cta" href="/login?next=/cycle">Open the journal →</a>
         <span class="wl-cta ghost disabled">Android APK<br><small>COMING SOON</small></span>
