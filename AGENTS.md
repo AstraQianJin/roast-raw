@@ -82,6 +82,13 @@ Plan skeleton: `GOAL` (one judgeable sentence), `STEPS` (numbered, each naming i
 - Never hardcode a device width in product CSS, tests or prose. Screenshot scripts take the width from `RR_DEVICE_WIDTH` (default 421) and record the value the page actually reported through `window.innerWidth`; a new phone changes the variable and this paragraph, nothing else.
 - Report the measured numbers, not the intent: overflow (`scrollWidth - clientWidth`), control height, and the width each screenshot was taken at.
 
+### Test-day battery (schema v7, 0.34)
+
+- `data/plan.json` `testPlan` carries every group's date and nine `items`: four tier-1 variations, four tier-2 variations and one 5 km run, all on the evidenced SBD test day. `server/tools/gen_data.py` (`TEST_ITEMS`, `_test_plan`) derives them; `validation.py` checks groups and kinds but never invents a second test date.
+- `test_results(account_id, cycle_id, item_id, group_name, load, reps, duration_s, hr, note, updated_at)` is the only home for non-SBD results; SBD attempts stay in `attempts`. `Store.upgrade_test_results()` snapshots, creates the table and sets `user_version=7`; every earlier upgrade step treats 6 or 7 as already migrated.
+- `PUT /api/test-results` sits behind the `test_week` capability, rejects unknown items, needs `load` on a 0.5 kg step for lifting items and `duration_s` for the run. `GET /api/test-results` and `GET /api/export/tests.csv` are read-open on every tier, including a downgraded account.
+- Any new cycle-scoped table must carry `account_id`, hang off `(account_id, cycle_id)` and be added to `server/tools/audit_orphans.py` `LINKS` in the same commit.
+
 ### What counts as evidence
 
 Evidence is a value someone else can re-obtain. Feelings, tool-call counts and a model's own assessment are not evidence.

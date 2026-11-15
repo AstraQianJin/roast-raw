@@ -6,17 +6,17 @@
 
 ---
 
-## 0 · 状态快照（2026-11-15 · 0.33 收工）
+## 0 · 状态快照（2026-11-15 · 0.34 收工）
 
 | 项 | 值 |
 |---|---|
-| 版本 | `web/package.json` = **0.0.33**；0.29–0.33 均已本地提交，未 push、未部署 |
+| 版本 | `web/package.json` = **0.0.34**；0.29–0.34 均已本地提交，未 push、未部署 |
 | 工作树 | 以本节所在提交为准 |
 | 最近提交 | 见 `git log --oneline -3` |
-| 门禁 | `node tests/verify.js` **317** 用例 / **6603** 检查、exit 0（sabotage 子进程仍按预期红）；`npm --prefix web run build` exit 0；`check_skill.py --root .` PASS |
+| 门禁 | `node tests/verify.js` **325** 用例 / **6615** 检查、exit 0（sabotage 子进程仍按预期红）；`npm --prefix web run build` exit 0（dist `index-CbJFUypE.js` 394.86 kB）；`check_skill.py --root .` PASS |
 | 红基线 | `tests/browser.mjs` 自 0.21 起失效（删主题切换、注册页改四输入，旧断言过时）；**0.35 重写后才可作绿灯证据** |
 | 部署 | 线上仍是 0.20 版 `http://82.157.146.30/`（公开落地页 + 账户门控 journal）。本轮**不 push、不部署**（用户 2026-11-15 裁定） |
-| 证据落点 | `RR\shots\0.29\`、`RR\shots\0.30\`（`prestart-evidence.json` + 五宽截图）、`RR\shots\0.31\`（`about-evidence.json`、`free-readonly-evidence.json` + 三宽 about / 免费档只读截图）、`RR\shots\0.33\`（`r4-evidence.json` + 12 张实机宽截图，脚本 `RR\scratch\shot-033.mjs`）；0.32 是纯后端迁移，证据在 `RR\scratch\migrate-live-032.py` 的输出（行数不变、`foreign_key_check` 空、29 条链接孤儿 0）与 `test_ledger.py` 的旧库升级用例 |
+| 证据落点 | `RR\shots\0.29\`、`RR\shots\0.30\`（`prestart-evidence.json` + 五宽截图）、`RR\shots\0.31\`（`about-evidence.json`、`free-readonly-evidence.json` + 三宽 about / 免费档只读截图）、`RR\shots\0.33\`（`r4-evidence.json` + 12 张实机宽截图，脚本 `RR\scratch\shot-033.mjs`）、`RR\shots\0.34\`（`testweek-evidence.json` + 7 张截图，脚本 `RR\scratch\shot-034.mjs`）；0.32/0.34 的迁移证据在 `RR\scratch\migrate-live-032.py` / `migrate-live-034.py` 的输出与 `tests/test_ledger.py`、`tests/test_test_results.py` 的旧库升级用例 |
 | 老项目 | 两个老项目已迁 `RR\ref-projects\`（`roast-powerlifting`、`rplref`）；`rplref` 2026-11-15 瘦身 2243.6 MB，依据与恢复路径见 `RR\ref-projects\rplref\_repo\MIRROR_SLIMMED.md` |
 
 **长期边界**：只做 Web（Vue 3 + Vite + Motion One + FastAPI + SQLite）；界面英文、对话中文；`Ref/` 与两个老项目只读；不手改 `data/plan.json` 与 `web/dist/`；不弱化断言、不中和 sabotage。
@@ -30,11 +30,13 @@
 - **schema v6（0.32）**：`cycles` 复合主键 `(account_id, id)`，13 张子表带 `account_id` + 复合外键；迁移只能走 `Store.upgrade_cycle_keys()`（快照→重建→`PRAGMA user_version=6`），遇到孤儿会点名中止，`activate_plan` 只接受 v6。任何新子表都必须带 `account_id` 并挂到 `(account_id, cycle_id)`，否则 `tests/test_isolation.py` 直接红。
 - **进程环境**：用户级 `PYTHONPYCACHEPREFIX` 曾指向 `C:\Users\Astra\Desktop\RPLRef\Cache\pycache`，会在桌面凭空生成一个「RPLRef」字节码镜像（2026-11-15 已改指向 `%LOCALAPPDATA%\Temp\rr-pycache` 并删除该目录）。屏幕外跑 Python 时字节码落点看这个变量，不是看仓库。
 
+- **schema v7（0.34）**：新表 `test_results(account_id, cycle_id, item_id, …)` 存一级四变式、二级四变式与 5km 结果，主键 `(account_id, cycle_id, item_id)`，外键挂 `cycles(account_id, id)`；迁移只能走 `Store.upgrade_test_results()`（快照→建表→`PRAGMA user_version=7`）。旧升级步骤（`upgrade`/`upgrade_prescriptions`/…/`upgrade_cycle_keys`）都把 7 当「已完成」，`activate_plan` 只接受 6 或 7。写入需 `test_week` 档，读与导出全档开放。本机 live 库已迁移：`user_version` 6→7、既有表行数零差、`foreign_key_check` 空。
+
 ---
 
-## 1 · 下一动作：0.34 测试周真存
+## 1 · 下一动作：0.35 完成率口径 + 浏览器回归重写
 
-**接手指令**：`docs\agent-prompt-0.29-0.39.md` 的 0.34 行（`R4b`：新表 `test_results`，八项变式 + 5km 入库；ASSAY 可对比、导出/分享卡带出；`meta.testPlan` 补齐）。规格见 §4 `R4b`。
+**接手指令**：`docs\agent-prompt-0.29-0.39.md` 的 0.35 行（`R5`：完成率收进单一函数；`tests/browser.mjs` 重写为绿灯基线；`P1` 清理清单）。规格见 §4 `R5` 与 §4 `P1`。
 
 按序执行，一步一提交。提交前跑门禁，回执按 `AGENTS.md` 五字段。
 
@@ -50,7 +52,7 @@
 | ~~0.31~~ ✅ | 门控与出口 | T6 读开写关、T5 降档刷新、T3 孤表审计、P0-03b 导出、P0-04 `/about` | 已交付 `1397e65`；317 用例 / 6587 检查 |
 | ~~0.32~~ ✅ | T4 迁移 | 复合主键 + 14 张表重建 + `user_version=6` | 已交付 `0809155`；旧库行数零差、孤儿 0 |
 | ~~0.33~~ ✅ | R4 视觉欠账 | GEAR 小片与单侧配片、Sheiko 热身（只给主项）、比赛三盏裁判灯、测试周四组 UI、赛扣开关 | 已交付 `556e88f`；实机 421/320/1280 无横向溢出，四交互各实点一次 |
-| **0.34** | R4b 测试周真存 | 新表 `test_results`：八项变式 + 5km 入库；ASSAY 可对比、导出/分享卡带出 | 八项 + 5km 写入读回一致；降档后仍可读可导出；迁移零差 |
+| ~~0.34~~ ✅ | R4b 测试周真存 | 新表 `test_results`：八项变式 + 5km 入库；ASSAY 可对比、导出/分享卡带出 | 已交付 `745dba0`；八项 + 5km 写入读回一致（132.5 kg ×1 / 24:30），三档无横向溢出 |
 | **0.35** | R5 + P1 | 完成率单函数；重写 `tests/browser.mjs`；P1 清单清理 | `verify.js` 与 `browser.mjs` 都 exit 0；每个改写断言做一次故意破坏 |
 | **0.36** | R6 + R7 | 首页会员对比矩阵；老站首页效果补齐 | 320/360/390/412/1280 无横向溢出；折叠/币种/动效各一张 |
 | **0.37** | R8 | 账户内会员面板（档位、Pro 到期、设备 5、兑换码） | 兑换升档、续期、过期回落都在界面走通 |
@@ -68,6 +70,7 @@
 | 0.31 | `1397e65` | 读开写关（含免费档 DailyRecord 常驻 + 禁用表单）、403/`timed_until`/`visibilitychange` 三处一次性刷新、孤表审计 + 表级隔离、`/api/export/logs.csv`、`/about`、`cdp.mjs` 补 `Network.enable` | `RR\shots\0.31\` |
 | 0.32 | `0809155` | `cycles` 复合主键、14 张表复合外键重建、写入/读取全线按账户过滤、导入 409 改「同账号占用」、审计扩到 29 条链接 | `RR\scratch\migrate-live-032.py` 输出 + `tests/test_ledger.py` |
 | 0.33 | `556e88f` | 杠铃片算术抽成 `web/src/plate-load.js`（小片带数值标签、单侧配片、缺量上报）；`GearPlates` 小片柜进 GEAR；热身只列主项且无主项日不留空位；比赛三盏裁判灯（2 白 GOOD / 2 红 MISS）；测试周 SBD 三组 + 计划真实行第四组，各带独立输入；赛扣开关（设置内，默认关，设备本地）贯穿配片、分享卡与起跑页 | `RR\shots\0.33\` |
+| 0.34 | `745dba0` | `testPlan` 补齐九项（一级四变式 / 二级四变式 / 5km）且全部落在证据测试日；`test_results` v7 表 + `upgrade_test_results()`；`GET/PUT /api/test-results`（写需 `test_week`、举重项 0.5kg 步进、跑步项要用时）与 `/api/export/tests.csv`；AttemptBoard 九行真存（44px 控件）、ASSAY 按 SBD 锚点算百分比、分享卡带「已记录/总数」一行；`test_results.py` 8 个新用例 | `RR\shots\0.34\` |
 
 **仍生效的生成物契约**（改生成器时守住，别再抄第二份）：
 
@@ -111,9 +114,11 @@ GEAR 小片与单侧配片；Sheiko 热身（只给主项）；比赛三盏裁�
 - 宽度不写死：截图脚本读 `RR_DEVICE_WIDTH`（默认 421），并把页面 `window.innerWidth` 实测值写进 evidence；换机只改变量与 `AGENTS.md` 的那段话。
 - 每版响应式证据固定三档：实机宽、**320**（窄底线）、**1280**（桌面），报告横向溢出、控件可视高度与截图宽度。
 
-### R4b · 测试周真存（0.34，用户裁定「新表真存」）
+### R4b · 测试周真存（已完成 0.34，`745dba0`）
 
-新表 `test_results`：一级四变式、二级四变式、5km（用时/配速/心率/备注）入库；ASSAY 可对比，导出与分享卡带出。`meta.testPlan` 现为 `null`（八项变式与 5km 在数据里不存在），本版补齐。
+- `meta.testPlan` 由 `gen_data.py` 生成：`tests` 声明 `sbd/tier1/tier2/fivekm`，`dates` 全部等于证据测试日，`items` 九项（`low_bar_squat`/`wide_grip_bench`/`sumo_deadlift`/`power_clean` 属 tier1；`ohp`/`pull_up`/`dip`/`barbell_row` 属 tier2；`five_km` 为 run）。`validation.py` 只校验组与 kind，不再要求 `testPlan.dates` 与证据日期逐键相等。
+- `test_results` 存在每账户每周期的独立表里，SBD 试举仍在 `attempts`；读与导出全档开放，写要 `test_week`，降档后旧结果照样可读可导出。
+- 界面：AttemptBoard 九行各带独立 Save（举重项 Load/Reps，5km 项 Time/Avg HR/Note，控件高 44px）；ASSAY Overview 新增 TEST DAY 区块，用对应 SBD 锚点算百分比；分享卡多一行 `TEST BATTERY n / 9 RECORDED`。
 
 ### R5 · 完成率口径（0.35，用户已同意审查推荐）
 
