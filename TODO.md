@@ -10,13 +10,13 @@
 
 | 项 | 值 |
 |---|---|
-| 版本 | `web/package.json` = **0.0.44**；未部署、未 push（本批 0.45 才发布） |
+| 版本 | `web/package.json` = **0.0.45**；已部署 `http://82.157.146.30/`（0.45）、已 push `origin/master`（`0673ae1`） |
 | 工作树 | 以本节所在提交为准 |
-| 最近提交 | 见 `git log --oneline -3`（0.41 `772d4a9`、0.42 `b560652`、0.43 `d71d3ac`） |
-| 门禁 | `verify.js` exit 0（6807 检查，356 用例）；`build` exit 0；`browser.mjs` 22 项 exit 0，`--sabotage` exit 1 |
+| 最近提交 | `772d4a9` 0.41 · `b560652` 0.42 · `d71d3ac` 0.43 · `f05a600` 0.44 · `0673ae1` 0.45 |
+| 门禁 | 0.45：`verify.js` exit 0（6813 检查、356 用例）；`build` exit 0；`browser.mjs` 22 项 exit 0；`--sabotage` exit 1；`check_skill.py` PASS |
 | 红基线 | 无 |
-| 部署 | 线上仍是 0.0.40 `http://82.157.146.30/`。0.44 **不 push、不部署**（本批裁定） |
-| 证据落点 | `RR\shots\0.41\`–`0.44\` 各一份 `*-evidence.json` |
+| 部署 | 0.45 已发布：health `version 0.45`、`ACCESS-CONTRACT-OK`、`/api/ai/status` `configured: true`（今日配额 20/20） |
+| 证据落点 | `RR\shots\0.41\`–`0.45\` 各一份 `*-evidence.json`，0.45 另记部署与 push 结果 |
 | 老项目 | 两个老项目已迁 `RR\ref-projects\`；`rplref` 瘦身记录见 `RR\ref-projects\rplref\_repo\MIRROR_SLIMMED.md` |
 
 **长期边界**：只做 Web（Vue 3 + Vite + Motion One + FastAPI + SQLite）；界面英文、对话中文；`Ref/` 与两个老项目只读；不手改 `data/plan.json` 与 `web/dist/`；不弱化断言、不中和 sabotage。
@@ -34,7 +34,7 @@
 
 ---
 
-## 1 · 下一动作：执行审查修复批次 0.41 → 0.45（规格见 §2A，本批只在 0.45 部署 + push 并交用户真人验收）
+## 1 · 下一动作：本批五版（0.41–0.45）已全部实现、发布并 push；等用户真人验收与重评分（规格见 §2A）
 
 入口是 `C:\Users\Astra\Desktop\roast-raw-review-report-implementation-plan.pdf`（0.40 本地预览的只读审查，总评 6.3/10：美学 7、逻辑 5、UX 6、文案 7）。用户 2026-11-15 已定：切五版、统计按明细逐行展开、HTTPS 暂不做、末版含 P2 全部并部署 + push + 真人验收。按 §2A 从 0.41 起逐版执行，每版一步到底。
 
@@ -94,7 +94,7 @@
 | ~~0.42~~ ✅ | 确定性 Cycle 页 + 块测试日 | P0-3 | 10 次重载结构相同；B1 不出现别的块的测试日 |
 | ~~0.43~~ ✅ | P1 逻辑 | P1-4/5/6/7 | 日历逐行对拍、试举取整单测、全站无死链、强制失败有错误态 |
 | ~~0.44~~ ✅ | P1 审美 | P1-8/9 | 421/320/1280 三宽无截断缺字、次要标签 WCAG AA |
-| 0.45 | P2 文案与账户 + 发布 | P2-10/11/12 | 文案清单零残留、试举行可区分、能退出登录；部署成功 + 重评分达标 |
+| ~~0.45~~ ✅ | P2 文案与账户 + 发布 | P2-10/11/12 | 文案清单零残留、试举行可区分、能退出登录；部署成功 + 重评分达标 |
 
 ### 0.41 · P0-1 训练数字单源
 
@@ -175,6 +175,10 @@
 6. 交用户真人验收：按报告 §Verification 的八项清单 + 重评分（目标 Logic 8 / Aesthetics 8 / UX 8 / Text 9），HTTPS 项标注「未做，用户裁定暂不需要」。
 
 **完成判据**：报告 12 项里 11 项有可复测证据（P0-2 明确未做），线上版本号 = `web/package.json`，重评分表落 `RR\shots\0.45\`。
+
+**0.45 已交付并发布（2026-11-15）**：`1 WEEKS` 改为按数量取单复数；同动作重复行在行首加 `TOP` / `BACK-OFF` 标（取自首个 segment，不手写）；`WeekCapacity` 加 0 / 中值 / 满量程刻度轴，并用白话写清 MEV 是最低有效量、MRV 是可恢复上限；新增 `Glossary.vue`（SBD / MEV / MRV / RPE / GPP / t / ses / TOP-BACK-OFF 八条）挂在 Analysis 页；顶栏加 `Sign out`（≤480 px 隐藏，账户面板的 `Sign out on this device` 全宽度保留——320 px 下顶栏会被挤到 333 px，这是本版取舍）。**发布实测**：`health` 报 `version 0.45`；`ACCESS-CONTRACT-OK`（落地页公开、门禁开、匿名 401、owner 登录 200、cookie HttpOnly + SameSite=Lax、登出掉 cookie）；`/api/ai/status` `configured: true`、今日配额 `0/20`；`deploy.py` 先写 `/opt/roast-raw-backups/roast-raw-<stamp>.tar.gz` 再解包；`git push` `7115181..0673ae1`。证据 `RR\shots\0.45\release-evidence.json`。
+
+**本版未做（如实记）**：Vault 设备 `Revoke` 控件、Oracle 问卷时间预估与更多 Generate 门控、状态标签白话化只做了部分。这三项不影响 P0/P1 的判定，仍挂在 P2-12 名下。
 
 ---
 
