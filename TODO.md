@@ -32,7 +32,151 @@
 | 0.38 | 独立审查 + 修复 | 由没写代码的会话审 0.29–0.37（含详单 §12 的推断项逐条实测） | 审查清单逐条关闭；verify + build 全部退出码 0（browser 自 0.35 起重写后再作绿灯） |
 | 0.39 | 发布（只在用户另行下令后） | 见原 0.34 发布口径 | `deploy.py` 访问契约全 PASS + 公网探测 + `/api/ai/status` `configured: true` |
 
-### R1 · 会员档位与邀请码（服务端，0.27）
+### 0.29 施工详单 · 安全与首屏
+
+> 状态（2026-11-15）：T2、T1、P0-03a 已完成并提交（`32e923e`、`7ed231c`）；本节剩下 **P0-01** 与 **P0-02** 未做。四条 ASK 是暂定默认值，用户改一处即可。
+
+**① P0-01 刷新不闪 404（未做）**
+
+- 现状：`web/src/App.vue` 模板次序为 `loading` → 请求错误 → 空账本 → `!plan`（`Reading the plan.`）→ `!validRoute`（`NOT IN THIS PLAN`）；0.28 加过 `!plan` 一层，**从未实测**，因此不能宣称已修。
+- 改法：实测若仍闪，把骨架块提前到 `!plan` 之前（`<div class="day-skeleton" role="status" aria-live="polite">`，三行灰条，占位高度与课日卡一致）；`todayCtaLabel` 在 `plan` 为空时不再渲染 `NO SESSION`，改渲染 `·` 占位，避免首屏出现"错误感"文案。
+- 验收（CDP，本机夹具服务）：设 3M 带宽，连续刷新 10 次，每次在立即 / 200ms / 800ms 三个时点取 `document.body.innerText`；断言**不出现** `NOT IN THIS PLAN`、`404`、空正文，允许骨架与 `Reading the plan.`；不设骨架停留时长阈值。空白正文同样判失败（ASK-1 默认：算失败）。
+- 证据：`C:\Users\Astra\Desktop\RR\shots-0.29\p0-01-refresh.json`（10 次 × 3 时点的原文与命中标记）。
+
+**② P0-02 首页数字同源（未做）**
+
+- 新工具：`server/tools/landing_facts.py`，读 `data/plan.json`，写 `web/src/landing-facts.json`（小文件，只含一个样例课日）。
+- 字段：`{planId, startDate, week, day, date, label, lifts[{lift, movement, top_kg, pct, sets, reps}], set_count, total_kg, tonnage_basis}`。
+- 口径：`top_kg` = 该日该主项处方最大重量，**不含热身**；`set_count` = 该日全部处方组数（主项 + 变式 + 辅项）；`total_kg` = Σ(重量 × 次数 × 组数)，取整与 `meta.cycleTonnageKg` 同 basis（主项 0.5 kg / 变式 2.5 kg）；`label` 由 `W{week:02d} · DAY {day}` 生成。样例课日默认 **W01 · DAY A**（ASK-2；理由是首页现有那串数字本就属于该日，改标签最省且不需再造数据）。
+- 前端改点：`web/src/components/WelcomeView.vue` 第 134（`W05 · DAY B` 徽标）、139（`4,041 kg / 17 SETS`）、181–184（`DAY B · W05` 与 `110.5 / 70.5 / 4,041`）、198–201（分享卡同三项）全部绑定 facts；删除全部字面值。hero 与分享卡**强制同一课日**。
+- verify 断言：新增 `landingFactsCheck()` —— 重跑生成器、与产物逐字节相等；再从 `data/plan.json` 独立复算 `total_kg` 与 `set_count`，两个数必须与产物一致（不调用被测函数，避免自证）。
+- 验收：首页每个数字可在 plan 中找到对应行；`node tests/verify.js` 退出 0；`npm --prefix web run build` 后 gzip 增量 < 2 KB（不把整份 plan 塞进 bundle）。
+
+**③ P0-03a 假宣传（已完成 6 处）**
+
+已改：`Check-offs and the day summary`（删"休息计时器"）、`JSON export …`（删 CSV/XLSX）、`SELF-COACHED` 三标签（删 "Zero account"）、分享区（删"英文/中文界面""no account"）、分享卡清单（`No watermark` 替换 `No account required`）、08 段（`Six routes served by one FastAPI process` 替换 `Every link works on your server`）。收尾时再全仓 grep `No account|Zero account|CSV|XLSX|Chinese UI|rest timer|Phone app` 清零，命中即改。
+
+### 0.30 施工详单 · 计划未开始（含 11-23 重算）
+
+**① 日期重算（唯一真相 `plan.meta.startDate`）**
+
+- 目标值：`startDate 2026-11-23`、`endDate 2027-02-21`、测试日 `2027-02-20`；`planId rpl-raw-2026-11-23`、`name` 同步；`profile.start_date` 同步；`meta.motto` 里写死的 `TEST 2027-02-13` 与 `12.7W (89 days to test)` 改为由生成器按日期模板填充，禁止手写。
+- 生成路径：只走 `server/tools/gen_data.py` → `synth_plan.py`，`data/plan.json` 不手改（项目既有禁令）。`Adjust start date` 已走 `/questionnaire` 重建计划，**不新增"整周推迟"操作**，避免两套日期来源。
+- 断言：`validate_plan` 通过；49 节；`cycleTonnageKg` 与偏移前一致（日期不影响负荷，可作零差基线）；所有读日期做期望的用例改为从 plan 取，个别"必须落在测试周"的语义断言改为按周次相对判断（换写法，不降强度）。
+
+**② 未开始态页面（`web/src/components/CyclePrestart.vue` 扩容，ASK-3 默认：/today 顶部）**
+
+- 区块一：倒计时环（现有 `days → pct/num/lbl` 逻辑不动）。
+- 区块二：首次课预习 —— 取 plan 第一节（W01 Day A）：动作名、组×次、顶重、配片（复用既有负荷计算，不另造算法）。
+- 区块三：热身与活动度 —— 取当天 `warmups` entry 的阶梯（空杆×5 / 35%×3 / 50%×2 / 65%×1），按动作分行。
+- 区块四：恢复基线 —— 只展示"本周该采样哪几项 + 怎么测"，缺数据显示 `未取样`，不显示 0（ASK-4 默认：不写库、不给数值门槛）。
+- 硬约束：纯客户端派生，未开始态**不发任何 `/api/ai/*` 请求**（CDP 网络日志为证）；免费档可见，付费派生视图（performance/geometry/vault）仍锁。
+- 验收：320/390/1280 三宽截图；四宽无横向溢出；空数据态与有数据态各一张；日期显示与 plan 完全一致。
+
+### 已确认决策（2026-11-15 用户裁定，取代上方默认值）
+
+- **P0-01 判定（改）**：不判「立即」时点的空白（SPA 首屏 JS 未到之前空正文正常）；判 **200ms、800ms、最终加载完成**三个时点；禁词追加 `NO SESSION`、`Return to the cycle`（与 404 属同一页）；新增**最终态断言**：3M 带宽下 **30 秒内必须出现计划内容**，不得停在骨架；不设单次骨架停留阈值；空白正文仍判失败。
+- **T1（确认保持）**：64 / 30min TTL / `time.monotonic` / 重启清零 全部保持；新增要求：把**线上 worker 数写入部署配置备注**（`AGENTS.md` 环境节 + `server/tools/deploy.py` 注释），worker 数将来变化不必回头改 64。
+- **P0-02（补丁）**：`total_kg` 必须拆成 `day_total_kg`（该日总和，不含热身）与 `cycle_total_kg`（整周期，**必须等于** `meta.cycleTonnageKg`）；`pct` 定义为「顶重占该动作训练最大值的百分比」，与 plan 同源，**找不到同源最大值就删该字段**；消费方扩到三处：hero、分享卡、**NEXT 药丸**（`App.vue` 的 `todayCtaLabel` / `todayCtaDate`）；任一入口要换课日就单独生成一份 facts，绝不手写。
+- **0.30 重算（确认，仅在推迟分支做）**：+7 天后相对时长不变，到测试 89 天、到结束 90 天，`motto` 的 `12.7W (89 days)` 数值不变，只有绝对日期 +7；三条硬要求见下节；`planId` 若改，旧库已播种的旧 planId **必须归档旧周期 + 播种新周期**，不原地改日期。
+- **未开始态（确认）**：只给采样提示、不给数值门槛（未开始态无基线，给门槛就是假精确，门槛留训练期）；四块内容全部从 plan 读；倒计时目标日取 **`plan.meta.startDate`**，不写死 11-16；缺数据显示 `Not sampled`（中文口径「未取样」），**不写 0**。
+
+### 落地方案：关键代码 · 关键数据 · 审美
+
+#### 1. 关键数据（0.30 重算前后对照）
+
+| 项 | 现值（11-16 版） | 改后（11-23 版） | 备注 |
+|---|---|---|---|
+| `meta.startDate` | 2026-11-16 | **2026-11-23** | 唯一真相；其余日期由它派生 |
+| `meta.endDate` | 2027-02-14 | **2027-02-21** | 13 周整 |
+| 测试日 | 2027-02-13 | **2027-02-20** | 结束前一天 |
+| 到测试 / 到结束 | 89 / 90 天 | **89 / 90 天** | 相对时长不变，motto 数值不动 |
+| 周数 / 节数 | 13 / 49 | 13 / 49 | 不变 |
+| `meta.cycleTonnageKg` | 139568.0 | **139568.0** | 日期不影响负荷，作零差基线 |
+| `meta.planId` | `rpl-raw-2026-11-16` | `rpl-raw-2026-11-23`（若改） | 改则必须走归档+重播种 |
+
+#### 2. 0.29 · P0-01 代码要点
+
+现状模板次序（`web/src/App.vue`）：`loading` → 请求错误 → 空账本 → `!plan`（`Reading the plan.`）→ `!validRoute`（`NOT IN THIS PLAN`）。0.28 已把 `!plan` 放在 `!validRoute` 之前，**但从未实测**。若实测仍闪，按下面收敛：
+
+```vue
+<!-- 骨架：固定高度占位，不用 shimmer 动画（尊重减少动效偏好） -->
+<main :aria-busy="loading">
+  <div v-if="loading || !plan" class="day-skeleton" role="status" aria-live="polite">
+    <span class="sk-line w-40"></span><span class="sk-line w-70"></span><span class="sk-line w-55"></span>
+    <span class="sr-only">Reading the plan.</span>
+  </div>
+  <div v-else-if="!validRoute" class="empty-state">NOT IN THIS PLAN …</div>
+```
+
+```css
+.day-skeleton { display: grid; gap: 10px; padding: 18px 16px; border: 1px solid var(--hair); border-radius: 14px; background: var(--panel); min-height: 168px; }
+.sk-line { height: 14px; border-radius: 3px; background: var(--soft); }
+```
+
+- `todayCtaLabel` 在 `plan` 为空时输出 `·`，不渲染 `NO SESSION`（该文案是禁词之一）。
+- 探针草图（一次性，不入仓）：`page.emulateNetworkConditions({downloadThroughput: 375000, uploadThroughput: 375000, latency: 40})` → 10 次 `page.reload()`；每次取 200ms、800ms 的 `document.body.innerText`，再 `waitForFunction` 等计划内容出现（上限 30s）；断言三个时点都不含 `NOT IN THIS PLAN|404|NO SESSION|Return to the cycle`，且最终态命中计划内容，正文非空。
+
+#### 3. 0.29 · P0-02 数据契约与生成器
+
+```json
+{
+  "planId": "rpl-raw-2026-11-23",
+  "startDate": "2026-11-23",
+  "week": 1, "day": "A", "date": "2026-11-23", "label": "W01 · DAY A",
+  "lifts": [{ "lift": "S", "movement": "High-bar Squat", "top_kg": 110.5, "pct": 72.5, "sets": 5, "reps": 5 }],
+  "set_count": 17,
+  "day_total_kg": 4041,
+  "cycle_total_kg": 139568.0,
+  "tonnage_basis": "prescribed loads rounded to 0.5 kg (main) / 2.5 kg (variation)"
+}
+```
+
+- `server/tools/landing_facts.py`：读 `data/plan.json`，按 `week` + `day` 取该课日；字段名以 `sessions[0]` 实际结构为准（**先打印一条真实 session 再写映射，禁止凭记忆猜键名**）；输出紧凑 JSON（`separators=(',', ':')`），产物 `web/src/landing-facts.json`。
+- `cycle_total_kg` 直接取 `meta.cycleTonnageKg`，并在 verify 里断言两者相等（防止将来有人只改一个）。
+- `pct`：`top_kg / 该动作训练最大值 × 100`，训练最大值取 `meta.anchors` 同源值；同源值缺失则**不输出该字段**，前端隐藏百分比标签。
+- 三处绑定：hero 徽标与三张卡（`W0x · DAY y`、`top_kg`、`set_count`、`day_total_kg`）、分享卡同三项、`App.vue` NEXT 药丸（`todayCtaLabel` / `todayCtaDate`）。三处共享同一份 facts；要换日就再生成一份，不手写。
+- verify 新断言：①重跑生成器与产物逐字节相等；②从 `data/plan.json` 独立复算 `day_total_kg`、`set_count`、`cycle_total_kg` 与产物一致（不调用被测函数）。
+
+#### 4. 0.30 · 重算三条硬要求
+
+1. **只走脚本**：`server/tools/gen_data.py`（adapt）→ `synth_plan.py`（build），`data/plan.json` 禁止手改；
+2. **planId 变更必须迁移**：旧库已播种 `rpl-raw-2026-11-16` → 归档旧周期（保留其计划与日志，可回读）、以新 planId 播种新周期；**不允许**把旧周期原地改日期。实现须复用既有 archive 机制；若无，则新增 `archive_cycle` + 迁移前后快照 + 往返读回单测；
+3. **断言强度不降**：锚点日期必须有一条断言直接读 `plan.meta.startDate`；「必须落在测试周」这类断言改为按周次相对判断；`tests/browser.mjs:1245` 填问卷的日期也改成从 plan 读，不写死。
+
+#### 5. 0.30 · 未开始态四区块
+
+| 区块 | 数据来源 | 空态 |
+|---|---|---|
+| 倒计时环 | `plan.meta.startDate`（推迟后 11-23） | 无 |
+| 首次课预习 | plan 第一节：动作、组×次、顶重、配片（复用既有负荷计算） | `Not sampled` |
+| 热身与活动度 | 当日 `warmups` entry 阶梯（空杆×5 / 35%×3 / 50%×2 / 65%×1） | `Not sampled` |
+| 恢复基线 | 仅提示「本周测哪几项、怎么测」 | `Not sampled` |
+
+- 全部客户端派生，未开始态**不发任何 `/api/ai/*` 请求**；免费档可见；`/api/performance`、`/api/geometry`、`/api/vault` 仍锁。
+
+#### 6. 审美基线（沿用 2026-11-14 裁定）
+
+- 只复用旧 App / 旧站视觉语言与 `tokens.css` 变量，不新增装饰性巧思；骨架用 `--soft` 灰条、不做 shimmer。
+- 数字排版沿用 hero 现有 `clamp()` 字号与 `small` 单位写法；小标题沿用 `section-label` 大写 + 字距。
+- 未开始态四块沿用 `.prestart` / `.facts` 卡片的边框、圆角与底纹，不新造卡片样式。
+- 交互控件可视高度 ≥44px；三宽（320/390/1280）无横向溢出；减少动效模式下不跑动画。
+
+#### 7. 验收矩阵
+
+| 版 | 命令 | 证据 |
+|---|---|---|
+| 0.29 | `node tests/verify.js`、`npm --prefix web run build` | `shots-0.29/`：P0-01 十次刷新 JSON + 三时点快照、首页 hero/分享卡/NEXT 三处截图、hero 数字回溯表 |
+| 0.30 | 同上 + `node tests/browser.mjs`（0.35 前仍红，不作绿灯） | `shots-0.30/`：320/390/1280 未开始态、有数据/空数据各一张、日期与 plan 对照表 |
+
+#### 8. 风险与回滚
+
+- P0-01 若 30s 内未出现计划内容：记为缺陷，**不阻塞开周**（起点仍 11-23），进 0.38 审查清单。
+- `landing-facts.json` 与 plan 漂移：由 verify 两条断言拦截，不允许"先改 JSON 再说"。
+- 重算若波及线上已播种周期：先快照再迁移，归档旧周期；本地无日志、线上 owner 记录极少，风险可控。
+
+
+
 
 - **五档**：`free < lite < plus < pro < ultra`，高档包含低档全部能力。价格只做展示，**本轮不接支付**（首页写 “Pricing is published. Checkout opens soon.”）。
 
