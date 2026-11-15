@@ -127,6 +127,13 @@ Plan skeleton: `GOAL` (one judgeable sentence), `STEPS` (numbered, each naming i
 - `/register?code=` prefills the invite field; keep that link shareable rather than asking for a retyped code.
 - The success path of an upgrade is API-covered in `tests/test_membership.py`; the browser suite proves the panel, the device count and the redemption reply. A low-tier end-to-end upgrade is still unwitnessed.
 
+### Calendar projection (R9, 0.39)
+
+- `server/app/calendar.py::calendar_days()` is a read over canonical sessions across active and archived cycles; it never copies plan rows into a second store. `GET /api/calendar` must take `from`/`to` through `Query(alias=...)`, otherwise FastAPI drops unknown names and answers 422.
+- The range is half-open for every view: the client asks for the same span it draws.
+- Empty-day semantics are a contract: a gap inside a cycle span reads REST, a date no cycle spans stays blank. The server ships `cycles` spans so the client can tell them apart; do not guess from the plan inside the view.
+- The page is read-only by construction: no `method:` in `CalendarView.vue`. Details link out to `/cycle`; the entry link lives inside `/cycle` so the four-item primary nav stays intact.
+
 ### Evidence location (0.35)
 
 - Screenshots no longer live in the repository. `tests/browser.mjs` writes them to `SHOTS_DIR` (default `..\RR\shots\<release>`), and `docs/shots/` is ignored. Six `old-ref-*.png` reference stills stay in `docs/ref-shots/` because the aesthetic notes cite them.

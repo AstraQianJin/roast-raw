@@ -53,7 +53,7 @@
 
 ---
 
-## 2 · 版本队列（0.29 → 0.39，顺序已定，不并行）
+## 2 · 版本队列（0.29 → 0.40，顺序已定，不并行）
 
 | 版本 | 主题 | 关键范围 | 验收判据 |
 |---|---|---|---|
@@ -167,6 +167,12 @@ VAULT 账户区（`#account`）：当前档位（豆子 + 档名）、永久档�
 | 吨数 139.5/139.6 | `engine.py` 的 `perWeek.tonnageKg` 曾先 `r1` 再被页面相加 | 已修：周值给原值，页面相加仍得 `139.6`（`verify.js` 与 `browser.mjs` 两侧都有断言） |
 | `FEB13/FEB14` | 已无（0.30 改日历后消失） | 已随版本消失 |
 | CTA 闪烁 | 落地页 CTA 为静态 `<a>`，无动画/无透明度过渡；实测 `opacity: 1`、`transform: none` | 复现不到，不动 |
+
+### R9 · 健身日历（0.39）
+
+独立 `/calendar`：`server/app/calendar.py::calendar_days()` 按半开区间 `from <= date < to` 跨 active + 归档周期投影会话，`GET /api/calendar?from=&to=`（FastAPI 必须 `Query(alias='from'/'to')`，普通参数名会 422）。每会话返回 `cycleId/week/day/title/block/kind/prescribedSets/loggedSets/rowCount/lifts/topLoadKg/status/rows`；状态四态：有正记录 `completed`、全显式 0 `skipped`、过期无记录 `missed`、未到 `planned`。视图周/月/议程；只读，详情给出处，不写任何记录。空档语义（用户 2026-11-15 裁定）：周期跨度**以内**无课日标 REST，跨度**以外**留白；服务端回 `cycles` 跨度，前端 `inSpan()` 判定。入口只放 `/cycle` 页内链（主栏仍四项，不动 320px 四链接断言）。版本 0.0.39。
+
+---
 
 ### 档位与邀请码（0.27/0.28 已实现，留作口径）
 
