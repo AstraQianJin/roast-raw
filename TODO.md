@@ -16,7 +16,7 @@
 | 门禁 | `node tests/verify.js` **317** 用例 / **6587** 检查、exit 0（sabotage 子进程仍按预期红）；`npm --prefix web run build` exit 0；`check_skill.py --root .` PASS |
 | 红基线 | `tests/browser.mjs` 自 0.21 起失效（删主题切换、注册页改四输入，旧断言过时）；**0.35 重写后才可作绿灯证据** |
 | 部署 | 线上仍是 0.20 版 `http://82.157.146.30/`（公开落地页 + 账户门控 journal）。本轮**不 push、不部署**（用户 2026-11-15 裁定） |
-| 证据落点 | `RR\shots\0.29\`、`RR\shots\0.30\`（`prestart-evidence.json` + 五宽截图）、`RR\shots\0.31\`（`about-evidence.json`、`free-readonly-evidence.json` + 三宽 about / 免费档只读截图） |
+| 证据落点 | `RR\shots\0.29\`、`RR\shots\0.30\`（`prestart-evidence.json` + 五宽截图）、`RR\shots\0.31\`（`about-evidence.json`、`free-readonly-evidence.json` + 三宽 about / 免费档只读截图）；0.32 是纯后端迁移，证据在 `RR\scratch\migrate-live-032.py` 的输出（行数不变、`foreign_key_check` 空、29 条链接孤儿 0）与 `test_ledger.py` 的旧库升级用例 |
 | 老项目 | 两个老项目已迁 `RR\ref-projects\`（`roast-powerlifting`、`rplref`）；`rplref` 2026-11-15 瘦身 2243.6 MB，依据与恢复路径见 `RR\ref-projects\rplref\_repo\MIRROR_SLIMMED.md` |
 
 **长期边界**：只做 Web（Vue 3 + Vite + Motion One + FastAPI + SQLite）；界面英文、对话中文；`Ref/` 与两个老项目只读；不手改 `data/plan.json` 与 `web/dist/`；不弱化断言、不中和 sabotage。
@@ -27,6 +27,8 @@
 - 移动日历只能 `server/tools/gen_data.py --start-date <ISO>`：它会按同一 delta 平移源里所有日期字面量，并让 `meta.motto` 的 `TEST <iso>` / `<x.x>W (<n> days to test)` 由日历填充。
 - `planId` 变更必须 `server/tools/roll_cycle.py`：先快照，再归档旧周期（保留计划/日志/问卷可回读）、播种新周期；**禁止原地改日期**。本机 `data/roastraw.sqlite3` 已按此完成 `rpl-raw-2026-11-16`（archived）→ `rpl-raw-2026-11-23`（active）。
 - `data/plan.json` 与 `web/src/landing-facts.json` 都是生成物；`day D` 标题里的 `(W13 TEST)` 来自源表，属于源文本，不是手写。
+- **schema v6（0.32）**：`cycles` 复合主键 `(account_id, id)`，13 张子表带 `account_id` + 复合外键；迁移只能走 `Store.upgrade_cycle_keys()`（快照→重建→`PRAGMA user_version=6`），遇到孤儿会点名中止，`activate_plan` 只接受 v6。任何新子表都必须带 `account_id` 并挂到 `(account_id, cycle_id)`，否则 `tests/test_isolation.py` 直接红。
+- **进程环境**：用户级 `PYTHONPYCACHEPREFIX` 曾指向 `C:\Users\Astra\Desktop\RPLRef\Cache\pycache`，会在桌面凭空生成一个「RPLRef」字节码镜像（2026-11-15 已改指向 `%LOCALAPPDATA%\Temp\rr-pycache` 并删除该目录）。屏幕外跑 Python 时字节码落点看这个变量，不是看仓库。
 
 ---
 
@@ -43,10 +45,10 @@
 
 | 版本 | 主题 | 关键范围 | 验收判据 |
 |---|---|---|---|
-| **0.29** | 安全与首屏 | T2 空口令 fail-closed、T1 `_scoped` 有界 LRU、P0-01 刷新不闪、P0-02 首页同源、P0-03a 假宣传 | §1 四条；`verify.js` exit 0 |
-| **0.30** | 计划未开始态 | 周期推迟到 2026-11-23（全站日期单源重算）、`CyclePrestart` 四区块 | 重算零差（`cycleTonnageKg` 不变）、三宽截图、无 `/api/ai/*` 请求 |
-| **0.31** | 门控与出口 | T6 读开写关、T5 降档主动刷新、T3 孤表审计 + 表级隔离单测、P0-03b 导出、P0-04 `/about` | 门控端点逐行成对；一小时 `/api/session` ≤5 次；12 张表孤儿 0 |
-| **0.32** | T4 迁移 | `cycles` 主键改 `(account_id, id)`；12 张表外键重建；`user_version` 升位 | 旧库升级零差；同 `planId` 两账户并存互不可见；同账户重复仍 409 |
+| ~~0.29~~ ✅ | 安全与首屏 | T2 空口令 fail-closed、T1 `_scoped` 有界 LRU、P0-01 刷新不闪、P0-02 首页同源、P0-03a 假宣传 | 已交付 `b0cbc64`；详单见 git |
+| ~~0.30~~ ✅ | 计划未开始态 | 周期推迟到 2026-11-23、`CyclePrestart` 四区块 | 已交付 `6c56b7d` + `aa1cd8b`；重算零差 |
+| ~~0.31~~ ✅ | 门控与出口 | T6 读开写关、T5 降档刷新、T3 孤表审计、P0-03b 导出、P0-04 `/about` | 已交付 `1397e65`；317 用例 / 6587 检查 |
+| ~~0.32~~ ✅ | T4 迁移 | 复合主键 + 14 张表重建 + `user_version=6` | 已交付 `0809155`；旧库行数零差、孤儿 0 |
 | **0.33** | R4 视觉欠账 | GEAR 小片与单侧配片、Sheiko 热身（只给主项）、比赛三盏裁判灯、测试周四组 UI | 四宽截图 + 每个交互一次实点 |
 | **0.34** | R4b 测试周真存 | 新表 `test_results`：八项变式 + 5km 入库；ASSAY 可对比、导出/分享卡带出 | 八项 + 5km 写入读回一致；降档后仍可读可导出；迁移零差 |
 | **0.35** | R5 + P1 | 完成率单函数；重写 `tests/browser.mjs`；P1 清单清理 | `verify.js` 与 `browser.mjs` 都 exit 0；每个改写断言做一次故意破坏 |
@@ -57,71 +59,20 @@
 
 ---
 
-## 3 · 施工详单
+## 3 · 已完成版本索引（详单不再复述，实现与判据查 git）
 
-### 3.1 · 0.29 ① P0-01 刷新不闪 404（已完成，证据 `RR\shots\0.29\p0-01-refresh.json`）
+| 版本 | 提交 | 落地内容 | 证据 |
+|---|---|---|---|
+| 0.29 | `b0cbc64` | 空口令 fail-closed、`_scoped` 有界 LRU(64/30min)、刷新骨架与 `!plan` 次序实测、首页数字改由 `landing_facts.py` 单源、6 处假宣传清理 | `RR\shots\0.29\` |
+| 0.30 | `6c56b7d` `aa1cd8b` | `gen_data.py --start-date 2026-11-23` 全站单源重算、`roll_cycle.py` 归档 `rpl-raw-2026-11-16` 并播种 `-11-23`、`CyclePrestart` 四区块、桌面 hero 按钮堆叠 | `RR\shots\0.30\` |
+| 0.31 | `1397e65` | 读开写关（含免费档 DailyRecord 常驻 + 禁用表单）、403/`timed_until`/`visibilitychange` 三处一次性刷新、孤表审计 + 表级隔离、`/api/export/logs.csv`、`/about`、`cdp.mjs` 补 `Network.enable` | `RR\shots\0.31\` |
+| 0.32 | `0809155` | `cycles` 复合主键、14 张表复合外键重建、写入/读取全线按账户过滤、导入 409 改「同账号占用」、审计扩到 29 条链接 | `RR\scratch\migrate-live-032.py` 输出 + `tests/test_ledger.py` |
 
-- **现状**（`web/src/App.vue` 模板次序）：`loading` → 请求错误 → 空账本 → `!plan`（`Reading the plan.`）→ `!validRoute`（`NOT IN THIS PLAN`）。0.28 已把 `!plan` 提到 `!validRoute` 之前，**但从未实测**，因此不得宣称已修。
-- **改法**（仅当实测仍闪）：骨架块推进到 `!plan` 之前，固定高度占位，禁用 shimmer；`todayCtaLabel` 在 `plan` 为空时渲染 `·`，不再输出 `NO SESSION`。
-- **判据（用户 2026-11-15 定稿，不许软化）**：
-  - 3M 带宽（≈375 000 B/s、latency 40ms），连续刷新 10 次；
-  - 取样时点：**不判「立即」**（SPA 首屏 JS 未到之前空正文属正常），判 **200ms、800ms** 与**最终加载完成**；
-  - 禁词：`NOT IN THIS PLAN`、`404`、`NO SESSION`、`Return to the cycle`；
-  - **最终态断言**：30 秒内必须出现计划内容，不得停在骨架；
-  - 不设单次骨架停留阈值；**空白正文仍判失败**。
-- **证据**：`RR\shots\0.29\p0-01-refresh.json`（10 次 × 3 时点的原文与命中标记）。
+**仍生效的生成物契约**（改生成器时守住，别再抄第二份）：
 
-### 3.2 · 0.29 ② P0-02 首页数字同源（已完成，`server/tools/landing_facts.py` + verify 复算）
-
-- **生成器** `server/tools/landing_facts.py`：读 `data/plan.json`，取一个样例课日，写紧凑 JSON 到 `web/src/landing-facts.json`（不许把整份 plan 塞进 bundle）。
-- **字段契约**：
-  ```json
-  {
-    "planId": "rpl-raw-2026-11-23",
-    "startDate": "2026-11-23",
-    "week": 1, "day": "A", "date": "2026-11-23", "label": "W01 · DAY A",
-    "lifts": [{ "lift": "S", "movement": "High-bar Squat", "top_kg": 110.5, "pct": 72.5, "sets": 5, "reps": 5 }],
-    "set_count": 17,
-    "day_total_kg": 4041,
-    "cycle_total_kg": 139568.0,
-    "tonnage_basis": "prescribed loads rounded to 0.5 kg (main) / 2.5 kg (variation)"
-  }
-  ```
-- **口径（用户补丁）**：
-  - `day_total_kg` = 该日总和，**不含热身**；
-  - `cycle_total_kg` = 整周期，**必须等于 `meta.cycleTonnageKg`**（一个字段不能既当日又当周期）；
-  - `pct` = 顶重 / 该动作训练最大值 × 100，训练最大值取 `meta.anchors` 同源值；**找不到同源值就删该字段**，前端隐藏百分比；
-  - 样例课日默认 `W01 · DAY A`（首页现有那串数字本就属于该日）。
-- **消费方三处，共用同一份 facts**：`WelcomeView.vue` hero（徽标 + 三张卡 + `4,041 kg / 17 SETS`）、分享卡同三项、`App.vue` NEXT 药丸（`todayCtaLabel` / `todayCtaDate`）。任一入口要换课日就重新生成一份，**绝不手写**。
-- **verify 新增断言**：① 重跑生成器与产物逐字节相等；② 从 `data/plan.json` 独立复算 `day_total_kg`、`set_count`、`cycle_total_kg`（不调用被测函数，避免自证）。
-- **验收**：首页每个数字都能在 plan 找到对应行；`verify.js` exit 0；build 后 gzip 增量 < 2 KB。
-
-### 3.3 · 0.29 ③ P0-03a 假宣传（已完成，收尾待做）
-
-已删 6 处：休息计时器、CSV/XLSX 导出、`SELF-COACHED` 的 "Zero account"、分享区「英文/中文界面」「no account」、分享卡 `No account required`→`No watermark`、`Every link works on your server`→`Six routes served by one FastAPI process`。收尾见 §1 第 3 条。
-
-### 3.4 · 0.30 ① 日期重算（已完成：`--start-date 2026-11-23` + `roll_cycle.py`）
-
-- **目标值**：`startDate 2026-11-23`、`endDate 2027-02-21`、测试日 `2027-02-20`；`planId` 若要改则 `rpl-raw-2026-11-23`；`profile.start_date` 同步；`meta.motto` 里写死的 `TEST 2027-02-13`、`12.7W (89 days to test)` 改由生成器模板填充，禁止手写。
-- **三条硬要求（用户定）**：
-  1. **只走脚本**：`server/tools/gen_data.py`（adapt）→ `synth_plan.py`（build），`data/plan.json` 禁止手改；
-  2. **planId 变更必须迁移**：旧库已播种的 `rpl-raw-2026-11-16` → 归档旧周期（保留计划与日志、可回读）+ 以新 planId 播种新周期；**不允许**原地改日期；
-  3. **断言强度不降**：锚点日期必须有一条断言直接读 `plan.meta.startDate`；「必须落在测试周」改为按周次相对判断；`tests/browser.mjs` 填问卷的日期也改成从 plan 读，不写死。
-- **只在这一分支做**：+7 天后相对时长不变（到测试 89 天、到结束 90 天），`12.7W (89 days)` 数值不变，只是绝对日期 +7。
-
-### 3.5 · 0.30 ② 未开始态页面（已完成：`CyclePrestart.vue` 四区块，证据 `RR\shots\0.30\`）
-
-| 区块 | 数据来源 | 空态 |
-|---|---|---|
-| 倒计时环 | `plan.meta.startDate`（推迟后 11-23，**不写死**） | 无 |
-| 首次课预习 | plan 第一节：动作、组×次、顶重、配片（复用既有负荷计算，不另造算法） | `Not sampled` |
-| 热身与活动度 | 当日 `warmups` 阶梯（空杆×5 / 35%×3 / 50%×2 / 65%×1），按动作分行 | `Not sampled` |
-| 恢复基线 | **只提示「本周测哪几项、怎么测」**，不给数值门槛（未开始态无基线，门槛留训练期） | `Not sampled`（**不写 0**） |
-
-- **硬约束**：纯客户端派生，未开始态**不发任何 `/api/ai/*` 请求**（CDP 网络日志为证）；免费档可见；`/api/performance`、`/api/geometry`、`/api/vault` 仍锁。
-- **验收**：320/390/1280 三宽截图，有数据/空数据各一张，日期与 plan 完全一致，四宽无横向溢出。
-
----
+- `server/tools/landing_facts.py` 读 `data/plan.json` → 写 `web/src/landing-facts.json`；字段 `planId / startDate / week / day / date / label / lifts[] / set_count / day_total_kg / cycle_total_kg / tonnage_basis`。
+- `day_total_kg` 是样例日（`W01 · DAY A`）且不含热身；`cycle_total_kg` 必须等于 `meta.cycleTonnageKg`；`pct` 与该动作 `meta.anchors` 同源，取不到就删字段并由前端隐藏。
+- 消费方三处共用同一份 facts：`WelcomeView.vue` hero、分享卡、`App.vue` NEXT 药丸。换课日只重新生成，**不手写**。
 
 ## 4 · 后续版本规格（0.31 起，实现细节可自决，口径变动须先问）
 
@@ -268,11 +219,11 @@ VAULT 账户区（`#account`）：当前档位（豆子 + 档名）、永久档�
 
 ```
 C:\Users\Astra\Desktop\RR\
-├─ ref-projects\        roast-powerlifting\（530 MB） rplref\（2826 MB，已瘦身）
+├─ ref-projects\        roast-powerlifting\  rplref\（已瘦身至 2243.6 MB，见 _repo\MIRROR_SLIMMED.md）
 ├─ skills\              INDEX.md  roast-raw-agent\
 ├─ builds\              Agent.skill
-├─ shots\               0.21…0.28  archive\
-├─ scratch\             18 个截图脚本 + 4 个老项目探针 + _s27.json + rr-login-repro.mjs
+├─ shots\               0.21…0.32  archive\
+├─ scratch\             截图脚本（shot-029/030/031/031-free）、schema-dump.py、migrate-live-032.py、老项目探针
 ├─ notes\               3 份 RoastRaw-*.md
 ├─ Archive\             reviews\（2 zip） oneoff\（3 个已执行补丁脚本）
 └─ .workbuddy\ .qoder-credits\   历史记录，不动
@@ -321,6 +272,54 @@ C:\Users\Astra\Desktop\RR\
 
 ## 9 · 未决问题（需要用户一句话）
 
-1. 0.30 的 `planId` 是否随日期改为 `rpl-raw-2026-11-23`（改则须归档旧周期 + 重播种）。
-2. `pct` 若在 `meta.anchors` 找不到同源训练最大值 → 删字段（实现时按真实数据定，不需要提前回话）。
-3. §7.5 三点默认值是否照此执行。
+**已闭环**：`planId` 已于 0.30 定为 `rpl-raw-2026-11-23`（旧周期已归档）；`pct` 缺失即删字段已按 `meta.anchors` 落地（0.29 verify 覆盖）；§7.5 三点默认值已执行并入 §7。
+
+仍悬着、且影响后续版本的：
+
+1. **线上怎么迁**：`http://82.157.146.30/` 还是 0.20 旧 schema（v1 期），本地库已到 v6。要上线必须整库替换或对线上库跑同一条迁移链，两种都要先停服务 + 备份。需用户推翻 2026-11-15 的「不 push、不部署」裁定才动手。
+2. **`days[3].titleEn` 里的 `(W13 TEST)`**：属源模板文本，0.30 保留了它。若判定为文案回退，需把清理固化进 `gen_data.py` 而不是手改 `plan.json`。
+3. **0.33 四宽到底取哪四个**：`SKILL` 写 320/360/390/412/1280 五宽，`TODO` 旧文只写「四宽」。建议按 320/390/412/1280，回话即锁定。
+
+---
+
+## 10 · 交接卡（换 Agent / 换会话时先读这一节，再读 §1）
+
+**路径**
+
+- 源码仓库：`C:\Users\Astra\Desktop\Roast Raw`（分支 `master`）。
+- 主项目目录：`C:\Users\Astra\Desktop\RR` —— 只放 Skill、scratch 探针、截图证据，**不放源码**。
+- 老项目只读：`RR\ref-projects\roast-powerlifting`、`RR\ref-projects\rplref`；仓库内 `Ref\` 只读。
+
+**命令（本机 PATH 无 git/node，必须写绝对路径）**
+
+```powershell
+$git = "C:\Users\Astra\AppData\Local\Programs\WorkBuddy\resources\vendor\PortableGit\cmd\git.exe"
+& $git -c user.name=Astra -c user.email=astra@local commit -m "..."
+```
+
+```powershell
+# 门禁（约 4–5 分钟；前台 15s 预算会被转后台，用 TaskOutput 取回）
+$env:RR_ACCESS_PASSWORD=''; $env:RR_ALLOW_OPEN_FIXTURE='1'; $env:DEEPSEEK_API_KEY=''
+node tests/verify.js            # 期望 exit 0；末尾应出现 "PASS verify.js" 与 "PASS governance"
+npm --prefix web run build      # 期望 exit 0
+server\.venv\Scripts\python.exe "C:\Users\Astra\Desktop\RR\skills\roast-raw-agent\scripts\check_skill.py" --root .
+```
+
+**只跑 Python 子集**
+
+```powershell
+server\.venv\Scripts\python.exe -m unittest discover -s tests -p "test_*.py"   # 全量 317
+server\.venv\Scripts\python.exe -m unittest discover -s tests -p "test_*.py" -k gates  # 单主题
+```
+
+**已知会骗人的地方**
+
+- `tests/verify.js` 绿不代表界面能渲染；`tests/browser.mjs` 自 0.21 起是红基线，0.35 重写前**不能当证据**。
+- `verify.js` 日志里出现 `FAIL: fixture weekly chest W1` 是 sabotage 子进程的**预期红**，不是失败。
+- `tests/cdp.mjs` 曾经没 `Network.enable`，`requestLog` 恒空（0.31 已修）；引用「没有某请求」的网络证据前先确认该事件真的在采样。
+- 探针必须过滤预期的 `403 (Forbidden)` console 行，否则 exit 1。
+- `store.logs()` 只返回 `load/sets/reps/rpe/note/updated_at`，key 是 `"week|day|seq"` 字符串，没有 `date`。
+- PowerShell 里 `python -c` 引号/反斜杠易炸：改写文件一律写临时 `.py` 再 `python 那个文件`。
+- `rg` 全仓搜索会超时，必须限定 `tests/ server/ web/src/`。
+- `with sqlite3.connect(...)` 在 Windows 上不关连接会导致临时目录 `PermissionError`，用 `contextlib.closing`。
+- 截图一律 CDP 模拟宽高，不靠窗口尺寸；证据落 `RR\shots\<版本>\`，含一份 `*-evidence.json` 记录测到的数值。
