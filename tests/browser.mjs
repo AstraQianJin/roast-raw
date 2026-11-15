@@ -337,6 +337,10 @@ try {
   })`);
   assert.ok(day.rows >= 4, 'a session day lists its prescribed rows');
   assert.ok(day.main >= 1, 'the main lift is present');
+  // 0.45: a repeated movement must be told apart at row level.
+  const rowTags = await browser.evaluate(`[...document.querySelectorAll('.ex-row-tag')].map(n => n.innerText.trim())`);
+  assert.ok(rowTags.length >= 1, 'a repeated movement carries a TOP / BACK-OFF row tag');
+  assert.ok(rowTags.every(tag => /TOP|BACK-OFF|WORK/.test(tag)), `row tags use the prescribed wording (${rowTags.join(', ')})`);
   assert.ok(day.gear, 'the plate cabinet is on the session day');
   assert.equal(day.overflow, 0, 'the session day does not scroll sideways');
   await shot('session-day');
@@ -634,8 +638,10 @@ try {
   await browser.navigate(`${base}/cycle/week/1/day/A`);
   await browser.waitFor('Boolean(document.querySelector("[data-testid=daily-record]"))', 20000);
   await delay(300);
-  const narrow = await browser.evaluate(`({ width: window.innerWidth, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth })`);
-  assert.equal(narrow.width, 320, 'the narrow viewport is really 320 px');
+  const narrow = await browser.evaluate(`({ width: window.innerWidth, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    wide: [...document.querySelectorAll('body *')].filter(n => n.getBoundingClientRect().right > window.innerWidth + 1)
+      .slice(0, 6).map(n => ({ cls: n.className, tag: n.tagName, right: Math.round(n.getBoundingClientRect().right), text: (n.textContent || '').trim().slice(0, 20) })) })`);
+  assert.equal(narrow.width, 320, `the narrow viewport is really 320 px (${JSON.stringify(narrow.wide)})`);
   assert.equal(narrow.overflow, 0, 'nothing overflows at 320 px');
   await shot('narrow-320');
   ok('320 px stays inside the page', narrow);

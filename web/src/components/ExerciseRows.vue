@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import LogEditor from './LogEditor.vue';
 
 const props = defineProps({
@@ -21,6 +21,17 @@ const toggleEditor = row => {
 };
 watch(() => props.readonly, value => { if (value) openEditor.value = null; });
 const roleNames = { main: 'MAIN LIFTS', sbdVar: 'SBD VARIATIONS', nonSbdVar: 'OTHER VARIATIONS', accessory: 'ACCESSORIES' };
+// Two rows with the same movement must be told apart by their first segment, not
+// by the movement name alone (0.45, P2-11).
+const repeatedNames = computed(() => {
+  const counts = {};
+  for (const row of props.rows) counts[row.nameEn] = (counts[row.nameEn] || 0) + 1;
+  return counts;
+});
+const rowTag = row => {
+  const first = (row.segments?.[0]?.label || 'WORK').toUpperCase();
+  return first === 'BACK-OFF' ? 'BACK-OFF' : first === 'TOP' ? 'TOP' : first;
+};
 const display = value => value === null || value === undefined ? '—' : Number(value).toLocaleString('en-US', { maximumFractionDigits: 1 });
 const setTag = segment => {
   const label = (segment.label || 'WORK').toUpperCase();
@@ -43,7 +54,7 @@ const logSummary = row => {
         <article v-for="row in rows.filter(row => row.bucket === role)" :key="`${row.week}-${row.day}-${row.seq}`" :class="['exercise', row.bucket]">
           <header class="ex-head">
             <span class="ex-index">{{ String(row.seq).padStart(2, '0') }}</span>
-            <div class="ex-title"><h3 class="ex-name">{{ row.nameEn }}</h3><span class="ex-rpe">RPE {{ display(row.targetRpe) }}</span></div>
+            <div class="ex-title"><h3 class="ex-name">{{ row.nameEn }}</h3><span v-if="repeatedNames[row.nameEn] > 1" class="ex-row-tag">{{ rowTag(row) }}</span><span class="ex-rpe">RPE {{ display(row.targetRpe) }}</span></div>
             <button
               v-if="!readonly"
               type="button"
@@ -90,10 +101,11 @@ const logSummary = row => {
 .exercise:nth-of-type(even) { background: var(--panel2); }
 .exercise:first-of-type { border-top: 1px solid var(--line2); }
 .ex-head { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: baseline; gap: 8px; }
-.ex-title { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.ex-title { display: flex; align-items: baseline; gap: 8px; min-width: 0; flex-wrap: wrap; }
 .ex-index { font: 700 8px var(--mono); color: var(--muted); }
 .ex-name { margin: 0; font: 600 13px/1.35 var(--sans); letter-spacing: -.01em; }
 .ex-rpe { font: 600 8px var(--mono); letter-spacing: .06em; color: var(--muted); white-space: nowrap; }
+.ex-row-tag { font: 700 8px var(--mono); letter-spacing: .08em; color: var(--ink); border: 1px solid var(--line2); border-radius: 3px; padding: 1px 4px; white-space: nowrap; }
 .log-inline { display: inline-flex; align-items: baseline; justify-content: flex-end; gap: 6px; min-width: 58px; min-height: 30px; padding: 2px 0 2px 10px; border: 0; border-left: 1px solid var(--line-soft); border-radius: 0; background: none; color: var(--muted); cursor: pointer; white-space: nowrap; }
 .log-inline small { flex: 0 0 auto; font: 700 8px var(--mono); letter-spacing: .1em; white-space: nowrap; }
 .log-inline b { font: 600 9px var(--mono); font-variant-numeric: tabular-nums; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }

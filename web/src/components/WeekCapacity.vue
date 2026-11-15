@@ -37,6 +37,8 @@ const pct = value => `${value / scale.value * 100}%`;
       <span><i class="lg-tick"></i>MRV TICK</span>
     </div>
     <p class="micro-copy">Solid · main &nbsp; Hatched · equivalent variation. Approved transfer factors apply only to SBD capacity, not working sets, muscle weighting or completion. Legacy prescriptions retain their original 1:1 basis. MEV/MRV are reference ranges, not targets.</p>
+    <div class="cap-axis" aria-hidden="true"><span>0</span><span>{{ display(scale / 2) }}</span><span>{{ display(scale) }} sets</span></div>
+    <p class="micro-copy">The bar runs from 0 to {{ display(scale) }} sets: MEV is the least effective volume for progress, MRV the most you recover from. Pass MRV and the next week is likely to feel worse, not better.</p>
   </section>
 </template>
 
@@ -48,6 +50,8 @@ const pct = value => `${value / scale.value * 100}%`;
 .cap-tick { position: absolute; top: -1px; bottom: -1px; width: 1px; background: var(--muted); pointer-events: none; }
 .cap-tick.mrv { width: 2px; background: var(--ink); }
 .cap-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; font: 9px var(--mono); letter-spacing: .06em; color: var(--muted); }
+.cap-axis { display: flex; justify-content: space-between; margin-top: 4px; font: 9px var(--mono); color: var(--muted); }
+.cap-axis span:nth-child(2) { position: relative; }
 .cap-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .cap-legend i { display: inline-block; width: 14px; height: 8px; }
 .lg-solid { background: var(--ink); }

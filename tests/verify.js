@@ -440,6 +440,25 @@ function calendarViewCheck() {
   checks++;
   console.log('PASS calendar projection: /calendar with week/month/agenda, half-open range, read-only');
 }
+function copyAndLabelsCheck() {
+  // 0.45: copy, repeated-row labels, capacity ruler and the glossary.
+  const app = readFileSync(join(root, 'web', 'src', 'App.vue'), 'utf8');
+  assert.ok(app.includes("weeks.length === 1 ? 'WEEK' : 'WEEKS'"), 'one week never prints "1 WEEKS"');
+  assert.ok(app.includes('class="masthead-signout"'), 'the masthead carries a sign-out control');
+  const rows = readFileSync(join(root, 'web', 'src', 'components', 'ExerciseRows.vue'), 'utf8');
+  assert.ok(rows.includes('ex-row-tag'), 'a repeated movement row carries its own TOP / BACK-OFF tag');
+  assert.ok(rows.includes('repeatedNames[row.nameEn] > 1'), 'the tag appears only when the movement repeats');
+  const capacity = readFileSync(join(root, 'web', 'src', 'components', 'WeekCapacity.vue'), 'utf8');
+  assert.ok(capacity.includes('cap-axis'), 'the capacity bar carries a numbered axis');
+  assert.ok(capacity.includes('MEV is the least effective volume'), 'MEV is explained in words, not only as a tick');
+  const glossary = readFileSync(join(root, 'web', 'src', 'components', 'Glossary.vue'), 'utf8');
+  ['SBD', 'MEV', 'MRV', 'RPE', 'GPP', 't', 'ses', 'TOP / BACK-OFF'].forEach(term => {
+    assert.ok(glossary.includes(`'${term}'`), `the glossary defines ${term}`);
+  });
+  checks += 6;
+  console.log('PASS copy and labels: plurals, sign out, row tags, capacity axis, glossary');
+}
+
 function logicAffordanceCheck() {
   // 0.43: the attempt ladder may not tie, a history row may not be a dead button,
   // and the calendar detail may not label a session by her lift letters alone.
@@ -599,6 +618,7 @@ try {
     totalsReconcileCheck();
     blockTestDateCheck();
     logicAffordanceCheck();
+    copyAndLabelsCheck();
     planCalendarCheck();
     testPlanCheck();
     completionCheck();

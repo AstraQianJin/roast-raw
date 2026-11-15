@@ -366,7 +366,7 @@ watch([() => route.fullPath, loading], async () => {
 
 <template>
   <div class="shell">
-    <header class="masthead"><RouterLink :to="isPublic ? '/' : '/cycle'" class="brand" aria-label="Roast Raw home"><BeanMark class="brand-mark" />Roast Raw</RouterLink><span class="edition">TRAINING JOURNAL / {{ releaseVersion }}</span><RouterLink v-if="!isPublic" :to="todayLink" class="today-cta"><span class="today-dot"></span><span class="today-word">{{ todayCtaLabel }}</span><small>{{ todayCtaDate }}</small></RouterLink><RouterLink v-else-if="page === 'welcome'" :to="session?.authenticated ? '/cycle' : { path: '/login', query: { next: '/cycle' } }" class="masthead-cta">MY CYCLE</RouterLink></header>
+    <header class="masthead"><RouterLink :to="isPublic ? '/' : '/cycle'" class="brand" aria-label="Roast Raw home"><BeanMark class="brand-mark" />Roast Raw</RouterLink><span class="edition">TRAINING JOURNAL / {{ releaseVersion }}</span><button v-if="!isPublic" type="button" class="masthead-signout" @click="logout">Sign out</button><RouterLink v-if="!isPublic" :to="todayLink" class="today-cta"><span class="today-dot"></span><span class="today-word">{{ todayCtaLabel }}</span><small>{{ todayCtaDate }}</small></RouterLink><RouterLink v-else-if="page === 'welcome'" :to="session?.authenticated ? '/cycle' : { path: '/login', query: { next: '/cycle' } }" class="masthead-cta">MY CYCLE</RouterLink></header>
     <nav v-if="!isPublic" class="primary-nav" aria-label="Primary"><RouterLink to="/cycle" :class="{ 'router-link-active': page === 'cycle' }">CYCLE</RouterLink><RouterLink to="/analysis">ASSAY</RouterLink><RouterLink to="/questionnaire">ORACLE</RouterLink><RouterLink to="/archive">VAULT</RouterLink></nav>
     <main :aria-busy="loading">
       <WelcomeView v-if="page === 'welcome'" />
@@ -420,7 +420,7 @@ watch([() => route.fullPath, loading], async () => {
               <RouterLink v-for="block in plan.blocks" :key="block.id" :to="`/cycle/block/${block.id}`" class="block-card" :style="{ '--seg': blockColor(block.id) }">
                 <header class="block-card-head"><span class="block-tag">{{ block.id }}</span><span class="block-type">{{ block.cycleType }}</span></header>
                 <h2>{{ block.nameEn }}</h2>
-                <p class="block-range">W{{ String(blockInfo(block.id).first || 0).padStart(2, '0') }} — W{{ String(blockInfo(block.id).last || 0).padStart(2, '0') }} · {{ blockInfo(block.id).weeks.length }} WEEKS · {{ blockInfo(block.id).sessions }} SESSIONS</p>
+                <p class="block-range">W{{ String(blockInfo(block.id).first || 0).padStart(2, '0') }} — W{{ String(blockInfo(block.id).last || 0).padStart(2, '0') }} · {{ blockInfo(block.id).weeks.length }} {{ blockInfo(block.id).weeks.length === 1 ? 'WEEK' : 'WEEKS' }} · {{ blockInfo(block.id).sessions }} {{ blockInfo(block.id).sessions === 1 ? 'SESSION' : 'SESSIONS' }}</p>
                 <div class="block-bar"><i v-for="item in blockInfo(block.id).weeks" :key="item.n" :class="item.kind" :title="`Week ${item.n} · ${item.kind}`"></i></div>
                 <dl class="block-stats"><div><dt>TONNAGE</dt><dd>{{ displayT2(blockInfo(block.id).tonnage / 1000) }}<small> t</small></dd></div><div><dt>TOP %1RM</dt><dd>{{ display(blockInfo(block.id).topPct) }}<small>%</small></dd></div></dl>
                 <span class="block-open">Open block <b>→</b></span>

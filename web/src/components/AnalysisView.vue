@@ -5,6 +5,7 @@ import WeekCapacity from './WeekCapacity.vue';
 import CapacityBoard from './CapacityBoard.vue';
 import TrendView from './TrendView.vue';
 import LockedFeature from './LockedFeature.vue';
+import Glossary from './Glossary.vue';
 
 const props = defineProps({
   plan: { type: Object, required: true },
@@ -303,6 +304,7 @@ const blocks = computed(() => props.plan.blocks.map(block => {
     <template v-else>
       <TrendView :analysis="analysis" :performance="performance" />
     </template>
+    <Glossary />
   </section>
 </template>
 
