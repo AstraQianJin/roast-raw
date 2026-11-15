@@ -71,6 +71,9 @@ async function submit() {
 }
 
 onMounted(() => {
+  // /register?code=… prefills the invite field so a shared link does not need a retyped code.
+  const shared = new URLSearchParams(location.search).get('code');
+  if (shared && !code.value) code.value = shared.trim().toUpperCase();
   if (card.value && !reduce()) {
     animate(card.value, { opacity: [0, 1], transform: ['translateY(14px)', 'translateY(0)'] }, { duration: .5, easing: [.22, 1, .36, 1] });
   }

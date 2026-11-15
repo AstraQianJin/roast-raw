@@ -17,7 +17,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const python = process.env.RR_PYTHON || join(root, 'server/.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
 // Screenshots left the repository in 0.35: they land in the agent folder, and SHOTS_DIR
 // decides where. Default is the sibling RR/shots/<release>.
-const SHOTS_DIR = process.env.SHOTS_DIR || join(root, '..', 'RR', 'shots', '0.35');
+const SHOTS_DIR = process.env.SHOTS_DIR || join(root, '..', 'RR', 'shots', '0.37');
 
 const SABOTAGE = process.argv.includes('--sabotage');
 const PASSWORD = 'browser-gate-035';
@@ -37,7 +37,7 @@ async function freePort() {
 }
 
 const port = await freePort();
-const server = spawn(python, ['tests/serve_fixture.py', '--port', String(port), '--gate', PASSWORD, '--date', '2027-02-21'],
+const server = spawn(python, ['tests/serve_fixture.py', '--port', String(port), '--gate', PASSWORD, '--date', '2027-02-21', '--invite', 'plus=RR-BROWSER-PLUS'],
   { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
 let serverLog = '';
 server.stdout.on('data', chunk => { serverLog += chunk; });
@@ -174,7 +174,44 @@ try {
   const authProbeErrors = browser.errors.map(entry => String(entry.text || entry.exceptionDetails?.text || 'error'));
   ok('the owner password opens the journal');
 
-  // ---- 3. a real session day ---------------------------------------------
+  // ---- 3. the account membership panel -----------------------------------
+  await browser.navigate(`${base}/archive`);
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=membership-panel]"))', 20000);
+  await browser.evaluate(`document.querySelector('#membership-panel').scrollIntoView({ block: 'center' }); true`);
+  await delay(400);
+  const panel = await browser.evaluate(`(() => {
+    const host = document.querySelector('[data-testid=membership-panel]');
+    return {
+      tier: host.querySelector('[data-testid=mp-tier]').innerText.trim(),
+      devices: host.querySelector('[data-testid=mp-devices]').innerText.trim(),
+      rows: host.querySelectorAll('[data-testid=mp-device-list] li').length,
+      current: host.querySelector('[data-testid=mp-device-list] li.mine') ? 1 : 0,
+      minControl: Math.min(...[...host.querySelectorAll('input, button')].map(n => n.getBoundingClientRect().height)),
+      href: location.pathname,
+    };
+  })()`);
+  assert.match(panel.tier, /Free|Lite|Plus|Pro|Ultra/, 'the panel names the current tier');
+  assert.match(panel.devices, /^\d+ \/ \d+$/, 'signed-in devices are counted against the limit');
+  assert.equal(panel.rows, Number(panel.devices.split('/')[0].trim()), 'the list shows every counted device');
+  assert.equal(panel.current, 1, 'this device is marked');
+  assert.ok(panel.minControl >= 44, `panel controls are at least 44 px (${panel.minControl})`);
+  await browser.evaluate(`(() => {
+    const field = document.querySelector('[data-testid=redeem-code]');
+    field.value = 'RR-BROWSER-PLUS';
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    document.querySelector('[data-testid=redeem-form]').requestSubmit();
+    return true;
+  })()`);
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=redeem-message]"))', 10000);
+  const codeAnswer = await browser.evaluate(`document.querySelector('[data-testid=redeem-message]').innerText.trim()`);
+  assert.match(codeAnswer, /tier|redeemed/i, 'a known code reaches the server and answers in the panel');
+  await browser.screenshot(join(SHOTS_DIR, 'account-panel-421.png'), await browser.evaluate(`(() => {
+    const box = document.querySelector('[data-testid=membership-panel]').getBoundingClientRect();
+    return { x: box.left + window.scrollX, y: box.top + window.scrollY, width: box.width, height: Math.min(box.height, 900), scale: 1 };
+  })()`));
+  ok('account membership panel: tier, devices and code refusal', { ...panel, codeAnswer });
+
+  // ---- 4. a real session day ---------------------------------------------
   await browser.navigate(`${base}/cycle/week/1/day/A`);
   await browser.waitFor('Boolean(document.querySelector("[data-testid=daily-record]"))', 20000);
   await delay(400);

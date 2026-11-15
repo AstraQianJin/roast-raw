@@ -104,6 +104,13 @@ Plan skeleton: `GOAL` (one judgeable sentence), `STEPS` (numbered, each naming i
 - The screenshot tour is scroll driven (`wl-tour`, `62vh × shots`). Do not reintroduce a drag deck beside it.
 - Share is `navigator.share` → clipboard → textarea `execCommand`, with `Link copied` feedback; a clipboard rejection must not end the action.
 
+### Account membership (R8, 0.37)
+
+- `MembershipPanel.vue` on the vault page reads `/api/session` for the tier and `/api/membership/sessions` for devices; it must not invent a tier ladder, a device limit or an expiry date.
+- SQLite timestamps arrive as `YYYY-MM-DD HH:MM:SS` with no zone. Parse by normalising the space to `T`, appending `Z` when no zone is present, and render blank for an invalid value. A thrown date inside a computed value unmounts the whole panel silently.
+- `/register?code=` prefills the invite field; keep that link shareable rather than asking for a retyped code.
+- The success path of an upgrade is API-covered in `tests/test_membership.py`; the browser suite proves the panel, the device count and the redemption reply. A low-tier end-to-end upgrade is still unwitnessed.
+
 ### Evidence location (0.35)
 
 - Screenshots no longer live in the repository. `tests/browser.mjs` writes them to `SHOTS_DIR` (default `..\RR\shots\<release>`), and `docs/shots/` is ignored. Six `old-ref-*.png` reference stills stay in `docs/ref-shots/` because the aesthetic notes cite them.

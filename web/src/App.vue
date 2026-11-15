@@ -33,6 +33,7 @@ import LoadProfile from './components/LoadProfile.vue';
 import AnalysisView from './components/AnalysisView.vue';
 import BlockWeekNav from './components/BlockWeekNav.vue';
 import LockedFeature from './components/LockedFeature.vue';
+import MembershipPanel from './components/MembershipPanel.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -459,6 +460,7 @@ watch([() => route.fullPath, loading], async () => {
           <section v-if="!route.params.cycleId" id="account" class="account-panel" aria-label="Account and data">
             <div class="eyebrow">RR / 04 · VAULT — TOOLS</div>
             <h2>Cycle tools.</h2>
+            <MembershipPanel :session="session" @changed="refreshSessionOnce" />
             <details class="account-tools"><summary>Import a cycle</summary><PlanImport /></details>
             <details class="account-tools"><summary>Gear setup</summary><div class="gear-setup" data-testid="gear-settings"><label class="gear-toggle"><input type="checkbox" :checked="useCollars" data-testid="collar-toggle" @change="setUseCollars($event.target.checked)"><span><strong>Competition collars</strong><small>Off by default. On: every plate breakdown counts the 5 kg collar pair. Off: the bar is the only fixed weight on the bar. This is a device-level venue fact, kept on this device and never exported with a plan.</small></span></label></div></details>
             <details class="account-tools"><summary>Prescription settings</summary><PrescriptionSettings :cycle-id="plan.meta.planId" @changed="refresh" /></details>

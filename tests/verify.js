@@ -290,6 +290,25 @@ function membershipMatrixCheck() {
   checks++;
   console.log(`PASS membership matrix: ${members.capabilities.length} capabilities from membership.json, four columns plus the Ultra strip`);
 }
+function membershipPanelCheck() {
+  // The account panel reads the session and the membership endpoints; it must not
+  // keep its own tier ladder or device limit.
+  const panel = readFileSync(join(root, 'web', 'src', 'components', 'MembershipPanel.vue'), 'utf8');
+  const register = readFileSync(join(root, 'web', 'src', 'components', 'RegisterView.vue'), 'utf8');
+  const app = readFileSync(join(root, 'web', 'src', 'App.vue'), 'utf8');
+  const members = json('web/src/membership.json');
+  assert.ok(panel.includes('/api/membership/sessions') && panel.includes('/api/membership/redeem'), 'devices and redemption go through the API');
+  assert.ok(panel.includes("props.session?.device_limit ?? membership.device_limit"), 'the device limit comes from the session or the export');
+  assert.ok(panel.includes('timeZone: \'Asia/Shanghai\''), 'expiry and device stamps are Beijing time');
+  assert.ok(panel.includes('data-testid="redeem-code"') && panel.includes('redeem-message'), 'the code field and its feedback exist');
+  assert.ok(panel.includes('min-height: 44px'), 'panel controls stay at 44 px');
+  assert.ok(app.includes('<MembershipPanel') && app.includes('@changed="refreshSessionOnce"'), 'the vault page mounts the panel and refreshes the session after a redemption');
+  assert.ok(register.includes('URLSearchParams(location.search).get(\'code\')'), '/register?code= prefills the invite field');
+  assert.ok(panel.includes('PERMANENT'), 'a permanent tier is labelled instead of an expiry date');
+  assert.ok(!panel.includes('"free": 1') && members.tiers.includes('ultra'), 'tiers stay in the export');
+  checks++;
+  console.log('PASS membership panel: session-driven tier, devices from /api/membership/sessions, redemption through the API');
+}
 function planCalendarCheck() {
   const plan = json('data/plan.json');
   const meta = plan.meta;
@@ -367,6 +386,7 @@ try {
     testPlanCheck();
     completionCheck();
     membershipMatrixCheck();
+    membershipPanelCheck();
     governanceCheck();
     const drift = spawnSync(python, ['server/tools/export_membership.py', '--check'], { cwd: root, encoding: 'utf8', env: { ...process.env, PYTHONIOENCODING: 'utf-8' } });
     assert.equal(drift.status, 0, `web/src/membership.json drifted from server/app/membership.py: ${drift.stdout}${drift.stderr}`);

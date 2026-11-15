@@ -6,17 +6,17 @@
 
 ---
 
-## 0 · 状态快照（2026-11-15 · 0.36 收工）
+## 0 · 状态快照（2026-11-15 · 0.37 收工）
 
 | 项 | 值 |
 |---|---|
-| 版本 | `web/package.json` = **0.0.36**；0.29–0.36 均已本地提交，未 push、未部署 |
+| 版本 | `web/package.json` = **0.0.37**；0.29–0.37 均已本地提交，未 push、未部署 |
 | 工作树 | 以本节所在提交为准 |
 | 最近提交 | 见 `git log --oneline -3` |
-| 门禁 | `node tests/verify.js` exit 0（334 Python 用例 / 6636 检查，新增 membership 段；sabotage 子进程仍按预期红）；`npm --prefix web run build` exit 0（dist `index-CtglPJcm.js` 407.54 kB / css 161.02 kB）；`node tests/browser.mjs` exit 0（13 项断言、7 张截图），`--sabotage` exit 1；`check_skill.py --root .` PASS |
-| 红基线 | 无：browser 自 0.35 起为绿灯基线，0.36 追加会员矩阵与滚动 tour 断言 |
+| 门禁 | `node tests/verify.js` exit 0（334 Python 用例 / 6637 检查）；`npm --prefix web run build` exit 0；`node tests/browser.mjs` exit 0（15 项断言、8 张截图），`--sabotage` exit 1；`check_skill.py --root .` PASS |
+| 红基线 | 无 |
 | 部署 | 线上仍是 0.20 版 `http://82.157.146.30/`。本轮**不 push、不部署**（用户 2026-11-15 裁定） |
-| 证据落点 | `RR\shots\0.29`–`0.35`；0.36 = `RR\shots\0.36\`（`membership-1280-{cny,usd,expanded,focus,reduced}`、`membership-390-{cards,plus}`、`membership-320`、`tour-1280-{start,mid}`、`tour-390`、`landing-share-390` + `membership-evidence.json`，脚本 `RR\scratch\shot-036.mjs`）；旧截图在 `RR\shots\archive\` |
+| 证据落点 | `RR\shots\0.36\`（会员矩阵 9 张 + tour 3 张 + `membership-evidence.json`）、`RR\shots\0.37\`（`account-panel-421.png` 及套件 8 张） |
 | 老项目 | 两个老项目已迁 `RR\ref-projects\`；`rplref` 瘦身记录见 `RR\ref-projects\rplref\_repo\MIRROR_SLIMMED.md` |
 
 **长期边界**：只做 Web（Vue 3 + Vite + Motion One + FastAPI + SQLite）；界面英文、对话中文；`Ref/` 与两个老项目只读；不手改 `data/plan.json` 与 `web/dist/`；不弱化断言、不中和 sabotage。
@@ -34,11 +34,13 @@
 
 ---
 
-## 1 · 下一动作：0.37 账户内会员面板（R8）
+## 1 · 下一动作：0.38 独立审查（用户另开会话）
 
-**接手指令**：0.37 = `R8`（账户内会员面板），规格见 §4 `R8`。要点：当前档位（豆子 + 档名）、永久档标记、Pro 到期日（北京时间）、已登录设备 x/5（可逐个登出）、`Redeem a code` 输入框成功即时刷新并解除锁定、失败提示与注册页一致、`/register` 支持 `?code=` 预填。首页不加档位徽章；应用顶栏右侧可显示很小档位字样。
+**接手指令**：0.38 = 一个**未写过本轮代码**的会话审查 0.29–0.37，逐条实测 §4 `P1` 与 §12 推断项，清单逐条关闭后交用户。0.39 发布（push + 部署）**只在用户另行下令后**执行。
 
-**0.36 已交付（R6 + R7）**：`web/src/components/MembershipMatrix.vue` 从 `web/src/membership.json` 渲染四列（Ultra 不占列）；桌面真 `<table>` + `<th scope>`、Plus 列 `RECOMMENDED`、CNY/USD 翻牌、前 6 行默认展开其余 `grid-template-rows: 0fr → 1fr`、悬停整列聚焦、`ResizeObserver` 实测 `--topH`；手机 `scroll-snap` 四张档位卡 + 每行四档标联动；Ultra 墨底条带上沿扫光。`WelcomeView.vue` 新增 sticky `.wl-top`（`wl-share` + `wl-toast`，`navigator.share` → 剪贴板 → `execCommand` 兜底），deck 拖拽换成滚动驱动 tour（`wl-tour` sticky stage、`is-on`/`is-prev`、`--tour-p` 进度线、44px 圆点跳转）。R7 对照清单写进 `docs\审美回炉清单.md`（中英切换/暗色/Mini-Max/APK 明确不搬，Friends 互链因目标地址不可核验不加）。
+**0.37 已交付（R8）**：`web/src/components/MembershipPanel.vue` 挂在 VAULT 的 `#account` 段：档位豆数 + 档名、永久档 `PERMANENT` / 限时档 `UNTIL <北京时间日期>`、`SIGNED-IN DEVICES x / 5`（`GET /api/membership/sessions`，本机标 `THIS DEVICE`，其他设备可逐个 `DELETE` 登出）、`Redeem a code` 走 `POST /api/membership/redeem` 并 `refreshSessionOnce` 刷新会话能力表；`RegisterView` 支持 `/register?code=` 预填（读 `URLSearchParams`，转大写）。`verify.js` 新增 `membershipPanelCheck()`，`browser.mjs` 新增账户面板断言（档位/设备数/44px/兑换回执）。
+
+**0.36 已交付（R6 + R7）**：`MembershipMatrix.vue` 从 `web/src/membership.json` 渲染四列（Ultra 不占列）+ 手机 `scroll-snap` 四卡；`WelcomeView.vue` 新增 sticky `.wl-top`、`wl-share`/`wl-toast`、滚动驱动 `wl-tour`（替换原 deck 手势）；`docs\审美回炉清单.md` 补老站对照表。
 
 **0.35 留下的既成事实**（后续版本必须遵守）：
 
@@ -61,7 +63,7 @@
 | ~~0.34~~ ✅ | R4b 测试周真存 | 新表 `test_results`：八项变式 + 5km 入库；ASSAY 可对比、导出/分享卡带出 | 已交付 `745dba0`；八项 + 5km 写入读回一致（132.5 kg ×1 / 24:30），三档无横向溢出 |
 | ~~0.35~~ ✅ | R5 + P1 | 完成率单函数、重写 `tests/browser.mjs`、P1 复核与清理、`docs/shots` 迁出 | 已交付；`verify.js` 334 用例 / 6633 检查 exit 0，`browser.mjs` 11 项 exit 0、`--sabotage` exit 1 |
 | ~~0.36~~ ✅ | R6 + R7 | 首页会员对比矩阵；老站首页效果补齐（`--topH`、分享、滚动 tour） | 已交付；`verify.js` 334 用例 / 6636 检查 exit 0，`browser.mjs` 13 项 exit 0、`--sabotage` exit 1；1280 四列两币种、390 四卡、320 无溢出 |
-| **0.37** | R8 | 账户内会员面板（档位、Pro 到期、设备 5、兑换码） | 兑换升档、续期、过期回落都在界面走通 |
+| ~~0.37~~ ✅ | R8 | 账户内会员面板（档位、Pro 到期、设备 5、兑换码） | 已交付；面板实机 421 段实测：`Ultra` + `PERMANENT`、设备 `1 / 5`、控件 44px、`RR-BROWSER-PLUS` 回执；browser 15 项 exit 0 |
 | **0.38** | 独立审查 | 未写代码的会话审 0.29–0.37，含详单 §12 推断项逐条实测 | 审查清单逐条关闭；0.29 遗留的 P0-01 缺陷在此复核 |
 | **0.39** | 发布 | 部署 + push（**只在用户另行下令后**） | `deploy.py` 访问契约全 PASS + 公网探测 + `/api/ai/status` `configured: true` |
 
@@ -144,7 +146,11 @@ GEAR 小片与单侧配片；Sheiko 热身（只给主项）；比赛三盏裁�
 
 对照表在 `docs/审美回炉清单.md`。已补：`--topH` 实测（`ResizeObserver` 观察 `.wl-top`）、分享（`navigator.share` → 剪贴板 → `execCommand`，成功 `Link copied` 1900ms）、滚动驱动 tour（`wl-tour` `62vh × 4` 容器 + sticky stage、`is-on`/`is-prev` 抬起变暗、`--tour-p` 1px 进度线、44px 圆点 `scrollTo`、rAF 节流），deck 手势代码已删除。不搬：中英切换、暗色、Mini/Max、APK、第三方友链（目标地址不可核验）。
 
-### R8 · 账户内会员面板（0.37）
+### R8 · 账户内会员面板（已完成 0.37）
+
+落地：`web/src/components/MembershipPanel.vue` 挂在 `#account`（VAULT 页）。档位豆数 + 档名；永久档写 `PERMANENT`，限时档写 `UNTIL <北京时间日期>`；设备 `x / 5` 来自 `GET /api/membership/sessions`（本机标 `THIS DEVICE`，其余可 `DELETE /api/membership/sessions/{id}` 登出）；`Redeem a code` 走 `POST /api/membership/redeem`，成功后 `refreshSessionOnce` 重读会话并即时解除锁定态，失败沿用注册页同一句提示。时间戳解析做了防御：SQLite 的 `YYYY-MM-DD HH:MM:SS` 先补 `T`/`Z`，无效值渲染为空而不是抛错（首版 `Invalid time value` 让整块组件静默不挂载，已修）。
+
+**未验证边界**：成功升档的界面路径（fixture 所有者账号本身是 Ultra，兑换只会返回「already has that tier or higher」）；升档/续期/过期回落在 API 层由 `tests/test_membership.py` 覆盖，浏览器只证到了面板与回执这一段。0.38 审查时应补一个低档账号的端到端升档实测。
 
 VAULT 账户区（`#account`）：当前档位（豆子 + 档名）、永久档、Pro 到期日（北京时间）、已登录设备 x/5（可逐个登出）。`Redeem a code` 输入框：成功即时刷新并解除锁定态，失败提示与注册页一致。`/register` 支持 `?code=` 预填（输入框在用户名之上）。首页右上不加档位徽章；应用内顶栏右侧可显示很小档位字样。
 
