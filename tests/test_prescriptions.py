@@ -181,7 +181,7 @@ class PrescriptionTests(unittest.TestCase):
                         'legacy', 7, 'Fatigue is not recovery'))
         return row
 
-    def assert_snapshot(self, snapshot, rows, version=6):
+    def assert_snapshot(self, snapshot, rows, version=7):
         with open_db(snapshot) as db:
             self.assertEqual(db.execute('PRAGMA integrity_check').fetchone()[0], 'ok')
             self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], version)
@@ -208,7 +208,7 @@ class PrescriptionTests(unittest.TestCase):
         self.assertEqual(current['versions'][0]['id'], canonical_id(self.seed))
         self.assertTrue(current['versions'][0]['current'])
         with open_db(self.path) as db:
-            self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], 6)
+            self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], 7)
         payload = {'cycle_id': self.cycle, 'current_id': current['currentId'], 'references': current['references']}
         preview = self.preview(payload)
         self.assertTrue(preview['changes'])
@@ -719,15 +719,16 @@ class PrescriptionMigrationTests(unittest.TestCase):
             for table in StoreClass.V6_TABLES:
                 expected[table] = sorted(((0,) + tuple(row)) for row in after.get(table, []))
             expected['ledger_meta'] = [('open_ledger', '0')]
+            expected['test_results'] = []
             self.assertEqual(database_rows(path), expected)
             migrated_backups = backups(path) - stable_backups
-            self.assertEqual(len(migrated_backups), 6, 'v4 questionnaire, v5 AI, additive accounts, membership, per-account ledger and composite-key migrations must each snapshot once')
+            self.assertEqual(len(migrated_backups), 7, 'v4 questionnaire, v5 AI, additive accounts, membership, per-account ledger, composite-key and v7 test-results migrations must each snapshot once')
             snapshot_versions = set()
             for backup in migrated_backups:
                 with open_db(backup) as db:
                     snapshot_versions.add(db.execute('PRAGMA user_version').fetchone()[0])
                     self.assertEqual(db.execute('PRAGMA integrity_check').fetchone()[0], 'ok')
-            self.assertEqual(snapshot_versions, {3, 4, 5})
+            self.assertEqual(snapshot_versions, {3, 4, 5, 6})
 
 
 if __name__ == '__main__':

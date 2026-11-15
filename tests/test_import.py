@@ -263,7 +263,17 @@ class ImportTests(unittest.TestCase):
             self.rejected(self.legacy, doc)
 
     def test_test_date_is_evidenced_not_fabricated(self):
-        self.assertEqual(self.raw["testPlan"], {"tests": ["sbd"], "dates": {"sbd": "2027-02-13"}})
+        # SBD keeps the evidenced date; the extra battery sits on that same date and is
+        # never invented when the source has no test day at all.
+        plan = self.raw["testPlan"]
+        self.assertEqual(plan["dates"]["sbd"], "2027-02-13")
+        self.assertEqual(plan["tests"], ["fivekm", "sbd", "tier1", "tier2"])
+        self.assertEqual({plan["dates"][group] for group in ("tier1", "tier2", "fivekm")}, {"2027-02-13"})
+        self.assertEqual([item["id"] for item in plan["items"]],
+                         ["low_bar_squat", "wide_grip_bench", "sumo_deadlift", "power_clean",
+                          "ohp", "pull_up", "dip", "barbell_row", "five_km"])
+        self.assertEqual([item["group"] for item in plan["items"]],
+                         ["tier1"] * 4 + ["tier2"] * 4 + ["fivekm"])
         doc = copy.deepcopy(self.envelope)
         for row in doc["plan"]["Workouts"]:
             if row["mode"] == "Top.Test":

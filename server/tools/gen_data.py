@@ -38,6 +38,38 @@ ANCHOR_CATEGORY = {
 MOTTO_TEST_DATE = re.compile(r"TEST \d{4}-\d{2}-\d{2}")
 MOTTO_CYCLE_LENGTH = re.compile(r"\d+\.\d+W \(\d+ days to test\)")
 
+# Test-day items beyond SBD (owner ruling T3/T4/T5/T6). Labels reuse the movement
+# names the plan already prescribes so a recorded result can be read beside the
+# real work; SBD attempts keep their own table and are not repeated here.
+TEST_ITEMS = [
+    {"id": "low_bar_squat", "group": "tier1", "labelEn": "Low-bar Squat", "kind": "load"},
+    {"id": "wide_grip_bench", "group": "tier1", "labelEn": "Wide-grip Bench", "kind": "load"},
+    {"id": "sumo_deadlift", "group": "tier1", "labelEn": "Sumo Deadlift", "kind": "load"},
+    {"id": "power_clean", "group": "tier1", "labelEn": "Power Clean", "kind": "load"},
+    {"id": "ohp", "group": "tier2", "labelEn": "Overhead Press", "kind": "load"},
+    {"id": "pull_up", "group": "tier2", "labelEn": "Pull-up", "kind": "loadBodyweight"},
+    {"id": "dip", "group": "tier2", "labelEn": "Dip", "kind": "loadBodyweight"},
+    {"id": "barbell_row", "group": "tier2", "labelEn": "Barbell Row", "kind": "load"},
+    {"id": "five_km", "group": "fivekm", "labelEn": "5 km run", "kind": "run"},
+]
+
+
+def _test_plan(actual_test_dates):
+    """Test dates for every group, derived from the SBD test day when it exists.
+
+    All groups sit on the same test day because the source schedules the whole
+    battery there. Without an evidenced SBD date the groups stay out, so a plan
+    can never claim a test day it does not prescribe.
+    """
+    payload = {"tests": sorted(actual_test_dates), "dates": dict(actual_test_dates)}
+    sbd = actual_test_dates.get("sbd")
+    if sbd:
+        payload["dates"].update({"tier1": sbd, "tier2": sbd, "fivekm": sbd})
+        payload["tests"] = sorted(set(actual_test_dates) | {"tier1", "tier2", "fivekm"})
+        payload["items"] = copy.deepcopy(TEST_ITEMS)
+    return payload
+
+
 def num(value):
     """Optional legacy number, used only after boundary validation."""
     if value is None or value == "":
@@ -491,7 +523,7 @@ def adapt(envelope, lib, mm, errors=None, source_sha256=None, file="plan.json"):
         "runPlan": [dict(copy.deepcopy(r), date=(start + datetime.timedelta(
             days=(int(r["week"]) - 1) * 7 + int(r.get("weekday_offset", days[r["day"]]["weekdayOffset"])))).isoformat())
                     for r in plan.get("RunPlan", [])],
-        "testPlan": {"tests": sorted(actual_test_dates), "dates": actual_test_dates},
+        "testPlan": _test_plan(actual_test_dates),
         "source": {"format": envelope["format"], "schemaVersion": envelope["schemaVersion"],
                    "exportedAt": envelope.get("exportedAt"), "app": copy.deepcopy(envelope.get("app")),
                    "sha256": source_sha256, "hashBasis": "input-bytes" if source_sha256 is not None else "unavailable",

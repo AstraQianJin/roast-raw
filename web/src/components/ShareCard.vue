@@ -16,8 +16,24 @@ const error = ref('');
 const busy = ref(false);
 
 const dates = computed(() => [...new Set(props.plan.workouts.map(row => row.date))].sort());
-const data = computed(() => dayShareData(props.plan, props.logs, date.value));
+const testLine = ref('');
+const data = computed(() => ({ ...dayShareData(props.plan, props.logs, date.value), testLine: testLine.value }));
 const collarPair = computed(() => collarPairOf(useCollars.value));
+
+// The battery count is read once so the card can say how much of the test day was
+// actually recorded; a missing endpoint simply leaves the line out.
+async function loadTests() {
+  try {
+    const query = new URLSearchParams({ cycle_id: props.plan.meta.planId });
+    const response = await fetch('/api/test-results?' + query.toString(), { cache: 'no-store' });
+    if (!response.ok) return;
+    const payload = await response.json();
+    const items = payload.items || [];
+    const done = items.filter(item => item.result).length;
+    testLine.value = items.length ? 'TEST BATTERY ' + done + ' / ' + items.length + ' RECORDED' : '';
+    draw();
+  } catch { /* the card still renders without the battery line */ }
+}
 
 function draw() {
   if (!canvas.value) return;
@@ -52,6 +68,7 @@ async function download() {
 
 onMounted(() => {
   draw();
+  loadTests();
   if (document.fonts?.ready) document.fonts.ready.then(draw);
 });
 watch([data, () => props.theme], draw, { deep: true });

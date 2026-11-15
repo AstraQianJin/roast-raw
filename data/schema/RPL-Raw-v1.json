@@ -27,8 +27,18 @@
     "testPlan": {
       "type": "object", "additionalProperties": false, "required": ["tests", "dates"],
       "properties": {
-        "tests": {"type": "array", "uniqueItems": true, "items": {"const": "sbd"}},
-        "dates": {"type": "object", "additionalProperties": false, "properties": {"sbd": {"type": "string", "format": "date"}}}
+        "tests": {"type": "array", "uniqueItems": true, "items": {"enum": ["sbd", "tier1", "tier2", "fivekm"]}},
+        "dates": {
+          "type": "object", "additionalProperties": false,
+          "properties": {
+            "sbd": {"type": "string", "format": "date"},
+            "tier1": {"type": "string", "format": "date"},
+            "tier2": {"type": "string", "format": "date"},
+            "fivekm": {"type": "string", "format": "date"}
+          }
+        },
+        "items": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/testItem"},
+                  "description": "Non-SBD test items. The SBD attempts stay in their own table."}
       }
     },
     "source": {
@@ -47,6 +57,16 @@
     }
   },
   "$defs": {
+    "testItem": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "group", "labelEn", "kind"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9_]+$"},
+        "group": {"enum": ["tier1", "tier2", "fivekm"]},
+        "labelEn": {"$ref": "#/$defs/text"},
+        "kind": {"enum": ["load", "loadBodyweight", "run"]}
+      }
+    },
     "gpp": {
       "type": "object", "required": ["week", "item_idx"],
       "properties": {

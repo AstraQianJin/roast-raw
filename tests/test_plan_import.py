@@ -203,7 +203,7 @@ class PlanImportCase(PlanImportFixtures):
             self.assertTrue(error['expected'])
         return errors
 
-    def assert_snapshot(self, snapshot, rows, schema, version=6):
+    def assert_snapshot(self, snapshot, rows, schema, version=7):
         with open_db(snapshot) as db:
             self.assertEqual(db.execute('PRAGMA integrity_check').fetchone()[0], 'ok')
             self.assertEqual(db.execute('PRAGMA foreign_key_check').fetchall(), [])
@@ -215,7 +215,7 @@ class PlanImportCase(PlanImportFixtures):
         with open_db(self.path) as db:
             for table, count in expected.items():
                 self.assertEqual(db.execute(f'SELECT count(*) FROM {table}').fetchone()[0], count, table)
-            self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], 6)
+            self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], 7)
             self.assertEqual(db.execute('PRAGMA foreign_key_check').fetchall(), [])
             self.assertEqual(db.execute('PRAGMA integrity_check').fetchone()[0], 'ok')
 
@@ -519,7 +519,7 @@ class PlanImportAPITests(PlanImportCase):
                         self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], version)
                 finally:
                     with open_db(self.path) as db:
-                        db.execute('PRAGMA user_version=6')
+                        db.execute('PRAGMA user_version=7')
 
     def test_confirm_snapshots_and_preserves_complete_old_review_records_and_history(self):
         self.save_records(prescription=True)

@@ -204,6 +204,11 @@ export function renderShareCard(canvas, data, plan, theme = 'light', collarPair 
   g.font = `700 20px ${mono}`;
   const completion = data.completion === null ? '—' : `${Math.round(data.completion * 100)}%`;
   g.fillText(`COMPLETION ${completion} · DONE ÷ PLANNED`, M, 1274);
+  if (data.testLine) {
+    g.fillStyle = gold;
+    g.font = `700 18px ${mono}`;
+    g.fillText(data.testLine, M, 1304);
+  }
   g.fillStyle = gold;
   g.font = `800 24px ${display}`;
   g.fillText('ROAST RAW', M, 1330);

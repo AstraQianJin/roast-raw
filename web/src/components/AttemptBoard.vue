@@ -19,6 +19,35 @@ const drafts = ref({});
 const editing = ref({});
 const LIFTS = [['squat', 'SQUAT', 'S'], ['bench', 'BENCH', 'B'], ['deadlift', 'DEADLIFT', 'D']];
 
+// Test items beyond SBD come from the plan and are stored in their own table, so a
+// result survives the cycle being archived. SBD attempts keep their own flow above.
+const tests = ref(null);
+const testDrafts = reactive({});
+const testMessage = ref('');
+const TEST_TITLES = { tier1: 'TIER 1 VARIATIONS', tier2: 'TIER 2 VARIATIONS', fivekm: '5 KM RUN' };
+const testGroups = computed(() => {
+  const items = tests.value?.items || [];
+  return ['tier1', 'tier2', 'fivekm'].map(group => ({ group, title: TEST_TITLES[group], items: items.filter(item => item.group === group) })).filter(entry => entry.items.length);
+});
+const recordedTests = computed(() => (tests.value?.items || []).filter(item => item.result).length);
+const timeToSeconds = text => {
+  const value = String(text || '').trim();
+  if (!value) return null;
+  const parts = value.split(':').map(Number);
+  if (parts.some(part => !Number.isFinite(part) || part < 0)) return null;
+  if (parts.length === 1) return Math.round(parts[0] * 60);
+  if (parts.length === 2) return Math.round(parts[0] * 60 + parts[1]);
+  if (parts.length === 3) return Math.round(parts[0] * 3600 + parts[1] * 60 + parts[2]);
+  return null;
+};
+const secondsToTime = value => {
+  if (value === null || value === undefined) return '';
+  const minutes = Math.floor(value / 60);
+  const seconds = value % 60;
+  return `${minutes}:${String(seconds).padStart(2, '0')}`;
+};
+
+
 // Three judge lights per attempt, white by default. Two or more white lights is a
 // good lift, two or more red is a miss; the vote is only recorded on confirmation.
 const votes = reactive({});
@@ -55,7 +84,54 @@ async function load() {
     }
   } catch (failure) { error.value = failure.message || 'The server is unavailable. Retry the connection.'; }
 }
-onMounted(load);
+onMounted(() => { load(); loadTests(); });
+
+async function loadTests() {
+  try {
+    const response = await fetch(`/api/test-results?${new URLSearchParams({ cycle_id: props.cycleId })}`, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`Test results could not be loaded (${response.status}).`);
+    tests.value = await response.json();
+    for (const item of tests.value.items) {
+      const result = item.result;
+      if (item.kind === 'run') {
+        testDrafts[item.id] = { time: secondsToTime(result?.duration_s), hr: result?.hr ?? '', note: result?.note ?? '' };
+      } else {
+        testDrafts[item.id] = { load: result?.load ?? '', reps: result?.reps ?? '' };
+      }
+    }
+  } catch (failure) { testMessage.value = failure.message || 'Test results could not be loaded.'; }
+}
+
+async function saveTest(item) {
+  const draft = testDrafts[item.id] || {};
+  const body = { cycle_id: props.cycleId, item_id: item.id };
+  if (item.kind === 'run') {
+    const seconds = timeToSeconds(draft.time);
+    if (seconds === null || seconds < 60) { testMessage.value = 'Enter the 5 km time as minutes:seconds.'; return; }
+    body.duration_s = seconds;
+    if (draft.hr !== '' && Number.isFinite(Number(draft.hr))) body.hr = Number(draft.hr);
+    body.note = String(draft.note || '').slice(0, 200);
+  } else {
+    const load = Number(draft.load);
+    if (!Number.isFinite(load) || load <= 0) { testMessage.value = 'Enter the tested load in kilograms.'; return; }
+    body.load = load;
+    if (draft.reps !== '' && Number.isFinite(Number(draft.reps))) body.reps = Number(draft.reps);
+  }
+  busy.value = true;
+  testMessage.value = '';
+  try {
+    const response = await fetch('/api/test-results', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      throw new Error(payload?.detail || `The test result was not saved (${response.status}).`);
+    }
+    await loadTests();
+    testMessage.value = `${item.labelEn} saved.`;
+  } catch (failure) { testMessage.value = failure.message || 'The test result was not saved.'; }
+  finally { busy.value = false; }
+}
 
 const attemptAt = (lift, number) => state.value.lifts[lift].attempts[number - 1];
 const confirmed = (lift, number) => { const attempt = attemptAt(lift, number); return !!attempt && attempt.result !== null; };
@@ -193,6 +269,31 @@ const extraDays = computed(() => {
         </ol>
       </article>
 
+      <section class="test-items" data-testid="test-items" aria-label="Test items beyond SBD">
+        <div class="section-kicker"><span>TEST ITEMS</span><span>{{ recordedTests }} / {{ (tests?.items || []).length }} RECORDED</span></div>
+        <p class="reading-note">Eight variations and one 5 km run sit beside the SBD attempts. Each row saves on its own, and a saved result stays readable after the cycle is archived.</p>
+        <p v-if="testMessage" class="reading-note" role="status" data-testid="test-message">{{ testMessage }}</p>
+        <article v-for="group in testGroups" :key="group.group" class="test-group" :data-testid="`test-group-${group.group}`">
+          <h3>{{ group.title }}</h3>
+          <ul class="test-rows">
+            <li v-for="item in group.items" :key="item.id" :data-testid="`test-item-${item.id}`">
+              <span class="test-name">{{ item.labelEn }}<small v-if="item.kind === 'loadBodyweight'">added weight</small></span>
+              <template v-if="item.kind === 'run'">
+                <label class="test-field"><span>Time</span><input v-model="testDrafts[item.id].time" inputmode="numeric" placeholder="24:30" :data-testid="`test-time-${item.id}`"></label>
+                <label class="test-field"><span>Avg HR</span><input type="number" min="30" max="230" v-model="testDrafts[item.id].hr" placeholder="—" :data-testid="`test-hr-${item.id}`"></label>
+                <label class="test-field wide"><span>Note</span><input v-model="testDrafts[item.id].note" maxlength="200" placeholder="Optional" :data-testid="`test-note-${item.id}`"></label>
+              </template>
+              <template v-else>
+                <label class="test-field"><span>Load</span><input type="number" step="0.5" min="0.5" v-model="testDrafts[item.id].load" :data-testid="`test-load-${item.id}`"><em>kg</em></label>
+                <label class="test-field"><span>Reps</span><input type="number" min="1" max="100" v-model="testDrafts[item.id].reps" placeholder="1" :data-testid="`test-reps-${item.id}`"></label>
+              </template>
+              <span v-if="item.result" class="test-saved" :data-testid="`test-saved-${item.id}`">{{ item.kind === 'run' ? secondsToTime(item.result.duration_s) : `${item.result.load} kg` }}{{ item.result && item.result.reps ? ` × ${item.result.reps}` : '' }}</span>
+              <button type="button" class="test-save" :disabled="busy" :data-testid="`test-save-${item.id}`" @click="saveTest(item)">{{ item.result ? 'Update' : 'Save' }}</button>
+            </li>
+          </ul>
+        </article>
+      </section>
+
       <section class="planned" data-testid="planned-rows" aria-label="Planned rows in this test week">
         <div class="section-kicker"><span>PLANNED ROWS</span><span>{{ extraRows.length }} THIS WEEK</span></div>
         <p class="reading-note">The fourth group is the work this plan really schedules in the test week. Rows from other sessions of the week keep their own inputs; nothing outside the plan is added.</p>
@@ -250,6 +351,22 @@ const extraDays = computed(() => {
 .attempt-lock-note { flex-basis: 100%; color: var(--muted); font: 11px/1.6 var(--sans); }
 .attempt-bar { flex-basis: 100%; display: flex; min-width: 0; }
 .planned { margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--line); }
+.test-items { margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--line); }
+.test-group { margin-top: 12px; border: 1px solid var(--line-soft); background: var(--panel); }
+.test-group h3 { padding: 10px 12px; font: 700 11px var(--mono); letter-spacing: .08em; color: var(--muted); border-bottom: 1px solid var(--line-soft); }
+.test-rows { list-style: none; margin: 0; padding: 0; }
+.test-rows li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 10px 12px; border-top: 1px solid var(--line-soft); }
+.test-rows li:first-child { border-top: 0; }
+.test-name { flex: 1 1 120px; min-width: 0; font: 600 13px var(--sans); color: var(--ink); }
+.test-name small { display: block; font: 10px var(--mono); color: var(--muted); }
+.test-field { display: inline-flex; align-items: center; gap: 5px; }
+.test-field span { font: 10px var(--mono); letter-spacing: .05em; color: var(--muted); }
+.test-field input { width: 74px; min-height: 44px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 2px; background: var(--panel2); color: var(--ink); font: 600 13px var(--mono); }
+.test-field.wide input { width: 120px; font-weight: 400; }
+.test-field em { font: 10px var(--mono); font-style: normal; color: var(--muted); }
+.test-saved { font: 700 10px var(--mono); letter-spacing: .04em; color: var(--accent); }
+.test-save { min-height: 44px; min-width: 44px; padding: 8px 12px; border: 1px solid var(--line); background: var(--panel2); color: var(--ink); font: 12px var(--sans); cursor: pointer; }
+.test-save:disabled { cursor: default; opacity: .6; }
 .planned-empty { font-style: italic; }
 .planned-day { margin-top: 12px; }
 .planned-day-head { margin: 0 0 4px; font: 700 10px var(--mono); letter-spacing: .08em; color: var(--muted); }

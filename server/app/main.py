@@ -190,6 +190,7 @@ def create_app(db_path=None, plan_path=None):
         base.seed_owner(access_username, access_password)
         base.upgrade_ledger(access_username)
         base.upgrade_cycle_keys()
+        base.upgrade_test_results()
         app.state.open_ledger = base.open_ledger()
         app.state.store = base.for_account(app.state.open_ledger)
         yield
@@ -459,6 +460,68 @@ def create_app(db_path=None, plan_path=None):
             return store.save_attempt(payload.cycle_id, payload.lift, payload.number, payload.load, payload.result)
         except ReadOnlyError as exc:
             raise HTTPException(409, str(exc)) from exc
+
+    def test_items(selected):
+        return (selected.get('testPlan') or {}).get('items') or []
+
+    @app.get('/api/test-results')
+    def test_results_state(cycle_id: str | None = None):
+        selected = active_plan(cycle_id)
+        selected_id = selected['meta']['planId']
+        saved = {row['item_id']: row for row in store.test_results(selected_id)}
+        entries = [dict(item, result=saved.get(item['id'])) for item in test_items(selected)]
+        return {'cycle_id': selected_id, 'dates': (selected.get('testPlan') or {}).get('dates') or {},
+                'items': entries}
+
+    class TestResultInput(BaseModel):
+        model_config = ConfigDict(extra='forbid')
+        cycle_id: str = Field(min_length=1)
+        item_id: str = Field(min_length=1, max_length=64)
+        load: float | None = Field(default=None, gt=0, le=500)
+        reps: int | None = Field(default=None, ge=0, le=100)
+        duration_s: int | None = Field(default=None, ge=60, le=7200)
+        hr: float | None = Field(default=None, ge=30, le=230)
+        note: str = Field(default='', max_length=200)
+
+    @app.put('/api/test-results')
+    def save_test_result(payload: TestResultInput):
+        need('test_week')
+        selected = active_plan(payload.cycle_id)
+        item = next((entry for entry in test_items(selected) if entry['id'] == payload.item_id), None)
+        if item is None:
+            raise HTTPException(422, 'Unknown test item for this cycle')
+        if item['kind'] == 'run':
+            if payload.duration_s is None:
+                raise HTTPException(422, 'A 5 km result needs its time in seconds')
+        else:
+            if payload.load is None:
+                raise HTTPException(422, 'This test item needs a load')
+            if abs(payload.load / 0.5 - round(payload.load / 0.5)) > 1e-6:
+                raise HTTPException(422, 'Test loads must be a multiple of 0.5 kg')
+        try:
+            return store.save_test_result(selected['meta']['planId'], payload.item_id, item['group'],
+                                          payload.load, payload.reps, payload.duration_s, payload.hr,
+                                          payload.note)
+        except ReadOnlyError as exc:
+            raise HTTPException(409, str(exc)) from exc
+
+    @app.get('/api/export/tests.csv')
+    def export_tests_csv(cycle_id: str | None = None):
+        """The account's own test-day results as CSV, readable after the cycle is archived."""
+        selected = active_plan(cycle_id)
+        labels = {entry['id']: entry for entry in test_items(selected)}
+        rows = store.test_results(selected['meta']['planId'])
+        header = ['cycle_id', 'item_id', 'group', 'label', 'load_kg', 'reps', 'duration_s', 'hr', 'note', 'updated_at']
+        lines = [','.join(header)]
+        for row in rows:
+            label = labels.get(row['item_id'], {}).get('labelEn', '')
+            values = [selected['meta']['planId'], row['item_id'], row['group_name'], label, row['load'],
+                      row['reps'], row['duration_s'], row['hr'], row['note'], row['updated_at']]
+            lines.append(','.join(csv_cell(value) for value in values))
+        body = '\r\n'.join(lines) + '\r\n'
+        return Response(content=body, media_type='text/csv; charset=utf-8', headers={
+            'Content-Disposition': f'attachment; filename="RoastRaw-{selected["meta"]["planId"]}-tests.csv"',
+            'Cache-Control': 'no-store'})
 
     class DeletionPrepareInput(BaseModel):
         model_config = ConfigDict(extra='forbid')

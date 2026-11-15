@@ -580,8 +580,26 @@ def validate_plan(doc, file="plan.json", lib=None):
     equal("meta.cycleTonnageKg", round(sum(r["tonnageKg"] for r in doc["workouts"]), 1), meta["cycleTonnageKg"])
     if "testPlan" in doc:
         dates = test_dates(doc["workouts"])
-        equal("testPlan.dates", dates, doc["testPlan"]["dates"])
-        equal("testPlan.tests", sorted(dates), doc["testPlan"]["tests"])
+        plan = doc["testPlan"]
+        # SBD keeps the evidenced date and must never be invented. The extra groups
+        # (tier-1, tier-2, 5 km) are checked against that same date instead of being
+        # forced to equal it, and their items must stay inside the declared groups.
+        equal("testPlan.dates.sbd", dates.get("sbd"), plan["dates"].get("sbd"))
+        extra = sorted(set(plan["dates"]) - {"sbd"})
+        for group in extra:
+            equal("testPlan.dates." + group, dates.get("sbd"), plan["dates"][group])
+        equal("testPlan.tests", sorted(set(dates) | set(extra)), plan["tests"])
+        items = plan.get("items") or []
+        ids = [item["id"] for item in items]
+        if len(ids) != len(set(ids)):
+            errors.append(issue(file, "testPlan.items", "unique ids", ids, items))
+        for i, item in enumerate(items):
+            if item["group"] == "fivekm" and item["kind"] != "run":
+                errors.append(issue(file, "testPlan.items.%d.kind" % i, "run for the 5 km item", item["kind"], item))
+            if item["group"] in ("tier1", "tier2") and item["kind"] == "run":
+                errors.append(issue(file, "testPlan.items.%d.kind" % i, "a lifting item", item["kind"], item))
+            if item["group"] not in extra:
+                errors.append(issue(file, "testPlan.items.%d.group" % i, extra or ["no extra test group"], item["group"], item))
     for table, identity_field in (("gpp", "item_idx"), ("runPlan", "day")):
         identities = set()
         for i, row in enumerate(doc.get(table, [])):

@@ -192,6 +192,37 @@ function landingFactsCheck() {
   checks++;
   console.log(`PASS landing facts: byte-identical regeneration, day ${facts.day_total_kg} kg / ${facts.set_count} sets recomputed, cycle ${facts.cycle_total_kg} kg from meta`);
 }
+function testPlanCheck() {
+  // The test battery is its own layer: nine items on the SBD test day, groups that
+  // cannot be swapped, and a load/run split the server enforces, checked here by hand.
+  const plan = json('data/plan.json');
+  const testPlan = plan.testPlan;
+  const sbd = testPlan.dates.sbd;
+  same(sbd, plan.meta.profile.motto.match(/TEST (\d{4}-\d{2}-\d{2})/)[1], 'test battery sits on the evidenced SBD date');
+  assert.deepEqual(Object.keys(testPlan.dates).sort(), ['fivekm', 'sbd', 'tier1', 'tier2'], 'every group declares a date');
+  ['tier1', 'tier2', 'fivekm'].forEach(group => {
+    same(testPlan.dates[group], sbd, `${group} sits on the SBD date, not a second test day`);
+  });
+  const items = testPlan.items;
+  same(items.length, 9, 'four tier-1 variations, four tier-2 variations and the 5 km');
+  same(items.filter(item => item.group === 'tier1').length, 4, 'tier-1 count');
+  same(items.filter(item => item.group === 'tier2').length, 4, 'tier-2 count');
+  same(items.filter(item => item.group === 'fivekm').length, 1, '5 km count');
+  const ids = items.map(item => item.id);
+  same(ids.length, new Set(ids).size, 'item ids are unique');
+  const runs = items.filter(item => item.kind === 'run');
+  same(runs.map(item => item.id), ['five_km'], 'only the 5 km is a run');
+  assert.ok(ids.every(id => /^[a-z0-9_]+$/.test(id)), 'item ids are lowercase snake case');
+  assert.deepEqual(testPlan.tests, ['fivekm', 'sbd', 'tier1', 'tier2'], 'declared groups are the ones with dates');
+  // Every lifting item names a load the server will accept on a 0.5 kg step.
+  items.filter(item => item.kind !== 'run').forEach(item => {
+    assert.match(item.kind, /load|loadBodyweight/, `${item.id} declares a load kind`);
+  });
+  const schema = json('data/schema/RPL-Raw-v1.json');
+  same(schema.$defs.testItem.properties.kind.enum, ['load', 'loadBodyweight', 'run'], 'schema load kinds');
+  same(schema.properties.testPlan.properties.tests.items.enum, ['sbd', 'tier1', 'tier2', 'fivekm'], 'schema group names');
+  console.log(`PASS test battery: 9 items on ${sbd}, groups ${testPlan.tests.join('/')}`);
+}
 function planCalendarCheck() {
   const plan = json('data/plan.json');
   const meta = plan.meta;
@@ -266,6 +297,7 @@ try {
     await shareCheck();
     landingFactsCheck();
     planCalendarCheck();
+    testPlanCheck();
     governanceCheck();
     const drift = spawnSync(python, ['server/tools/export_membership.py', '--check'], { cwd: root, encoding: 'utf8', env: { ...process.env, PYTHONIOENCODING: 'utf-8' } });
     assert.equal(drift.status, 0, `web/src/membership.json drifted from server/app/membership.py: ${drift.stdout}${drift.stderr}`);

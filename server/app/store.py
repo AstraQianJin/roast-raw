@@ -55,7 +55,7 @@ class Store:
     def initialize(self, plan):
         with self.connect() as db:
             version = db.execute('PRAGMA user_version').fetchone()[0]
-            if version not in (0, 1, 2, 3, 4, 5, 6):
+            if version not in (0, 1, 2, 3, 4, 5, 6, 7):
                 raise RuntimeError('Unsupported database version; no data was changed')
             db.execute('PRAGMA journal_mode=WAL')
             db.executescript('''
@@ -122,7 +122,7 @@ class Store:
     def upgrade(self):
         with self.connect() as db:
             version = db.execute('PRAGMA user_version').fetchone()[0]
-        if version in (2, 3, 4, 5, 6):
+        if version in (2, 3, 4, 5, 6, 7):
             return
         if version != 1:
             raise RuntimeError('Unsupported database version; no data was changed')
@@ -142,7 +142,7 @@ class Store:
         from .stats.variations import digest
         with self.connect() as db:
             version = db.execute('PRAGMA user_version').fetchone()[0]
-        if version in (3, 4, 5, 6):
+        if version in (3, 4, 5, 6, 7):
             return
         if version != 2:
             raise RuntimeError('Unsupported database version; no data was changed')
@@ -161,7 +161,7 @@ class Store:
     def upgrade_questionnaire(self):
         with self.connect() as db:
             version = db.execute('PRAGMA user_version').fetchone()[0]
-        if version in (4, 5, 6):
+        if version in (4, 5, 6, 7):
             return
         if version != 3:
             raise RuntimeError('Unsupported database version; no data was changed')
@@ -177,7 +177,7 @@ class Store:
     def upgrade_ai(self):
         with self.connect() as db:
             version = db.execute('PRAGMA user_version').fetchone()[0]
-        if version in (5, 6):
+        if version in (5, 6, 7):
             return
         if version != 4:
             raise RuntimeError('Unsupported database version; no data was changed')
@@ -380,6 +380,32 @@ class Store:
                 FOREIGN KEY(account_id, cycle_id) REFERENCES cycles(account_id, id))""",
                             ('token', 'cycle_id', 'created_at'), 'cycle_id'),
     }
+
+    def upgrade_test_results(self):
+        """v7: test-day results for the eight variations and the 5 km.
+
+        SBD attempts stay in their own table; this table holds every other test
+        item so a result can be read back after the cycle is archived.
+        """
+        with self.connect() as db:
+            version = db.execute('PRAGMA user_version').fetchone()[0]
+            exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='test_results'").fetchone()
+        if version >= 7:
+            return
+        if version < 6:
+            return
+        self.snapshot()
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            db.execute('''CREATE TABLE test_results (
+                account_id INTEGER NOT NULL, cycle_id TEXT NOT NULL, item_id TEXT NOT NULL,
+                group_name TEXT NOT NULL CHECK(group_name IN ('tier1','tier2','fivekm')),
+                load REAL, reps INTEGER CHECK(reps IS NULL OR reps >= 0),
+                duration_s INTEGER CHECK(duration_s IS NULL OR duration_s >= 0),
+                hr REAL, note TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL,
+                PRIMARY KEY(account_id, cycle_id, item_id),
+                FOREIGN KEY(account_id, cycle_id) REFERENCES cycles(account_id, id))''')
+            db.execute('PRAGMA user_version=7')
 
     def upgrade_cycle_keys(self):
         with self.connect() as db:
@@ -759,6 +785,36 @@ class Store:
                         json.dumps({'lift': lift, 'number': number, 'load': load, 'result': result}), stamp))
         return {'lift': lift, 'number': number, 'load': load, 'result': result, 'updated_at': stamp}
 
+    def test_results(self, cycle_id):
+        with self.connect() as db:
+            if not self._owns(db, cycle_id):
+                return []
+            clause, args = self._mine()
+            rows = db.execute('SELECT item_id,group_name,load,reps,duration_s,hr,note,updated_at '
+                              f'FROM test_results WHERE cycle_id=?{clause} ORDER BY item_id',
+                              (cycle_id, *args)).fetchall()
+        return [dict(row) for row in rows]
+
+    def save_test_result(self, cycle_id, item_id, group_name, load=None, reps=None,
+                         duration_s=None, hr=None, note=''):
+        stamp = timestamp()
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            self.require_active(db, cycle_id)
+            db.execute('''INSERT INTO test_results(account_id,cycle_id,item_id,group_name,load,reps,
+                    duration_s,hr,note,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(account_id,cycle_id,item_id) DO UPDATE SET group_name=excluded.group_name,
+                load=excluded.load,reps=excluded.reps,duration_s=excluded.duration_s,hr=excluded.hr,
+                note=excluded.note,updated_at=excluded.updated_at''',
+                (self._account(db), cycle_id, item_id, group_name, load, reps, duration_s, hr, note, stamp))
+            db.execute('INSERT INTO records_journal(account_id,cycle_id,kind,key,payload,created_at) '
+                       'VALUES(?,?,?,?,?,?)',
+                       (self._account(db), cycle_id, 'test', item_id,
+                        json.dumps({'item_id': item_id, 'group': group_name, 'load': load, 'reps': reps,
+                                    'duration_s': duration_s, 'hr': hr, 'note': note}), stamp))
+        return {'item_id': item_id, 'group_name': group_name, 'load': load, 'reps': reps,
+                'duration_s': duration_s, 'hr': hr, 'note': note, 'updated_at': stamp}
+
     def _owned_status(self, db, cycle_id):
         clause, args = self._mine()
         cycle = db.execute(f'SELECT status FROM cycles WHERE id=?{clause}', (cycle_id, *args)).fetchone()
@@ -997,13 +1053,13 @@ class Store:
         from .validation import validate_plan
         validate_plan(plan, file='import.json')
         with self.connect() as db:
-            if db.execute('PRAGMA user_version').fetchone()[0] != 6:
+            if db.execute('PRAGMA user_version').fetchone()[0] not in (6, 7):
                 raise RuntimeError('Unsupported database version. No data was changed.')
         self.snapshot()
         clause, args = self._mine()
         with self.connect() as db:
             db.execute('BEGIN IMMEDIATE')
-            if db.execute('PRAGMA user_version').fetchone()[0] != 6:
+            if db.execute('PRAGMA user_version').fetchone()[0] not in (6, 7):
                 raise RuntimeError('Unsupported database version. No data was changed.')
             active = db.execute(f"SELECT id FROM cycles WHERE status='active'{clause}", args).fetchone()
             source = self._review_source(db, active['id']) if active else None

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import MuscleMap from './MuscleMap.vue';
 import WeekCapacity from './WeekCapacity.vue';
 import CapacityBoard from './CapacityBoard.vue';
@@ -25,6 +25,35 @@ const tabs = [
   { k: 'muscle', l: 'Muscle' },
   { k: 'trend', l: 'Trend' },
 ];
+// Test-day battery. Read-only here: the test week owns the inputs, this panel only
+// puts a recorded result beside the SBD anchor it belongs to.
+const tests = ref(null);
+const TEST_ANCHOR = {
+  low_bar_squat: ['squat', 'sq_1rm'], wide_grip_bench: ['bench', 'bp_1rm'],
+  sumo_deadlift: ['deadlift', 'dl_1rm'], power_clean: ['deadlift', 'dl_1rm'],
+  ohp: ['bench', 'bp_1rm'], barbell_row: ['deadlift', 'dl_1rm'],
+};
+const clock = seconds => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+onMounted(async () => {
+  try {
+    const response = await fetch(`/api/test-results?${new URLSearchParams({ cycle_id: props.plan.meta.planId })}`, { cache: 'no-store' });
+    if (response.ok) tests.value = await response.json();
+  } catch { /* the panel stays out of the way when the server is unreachable */ }
+});
+const testRows = computed(() => (tests.value?.items || []).map(item => {
+  const result = item.result;
+  const mapping = TEST_ANCHOR[item.id];
+  const anchorKey = mapping ? mapping[1] : null;
+  const anchorKg = anchorKey ? (props.plan.meta.profile[anchorKey] ?? null) : null;
+  let value = null;
+  if (result) {
+    value = item.kind === 'run'
+      ? (result.duration_s ? `${clock(result.duration_s)}${result.hr ? ` · ${result.hr} bpm` : ''}` : null)
+      : `${result.load} kg${result.reps ? ` × ${result.reps}` : ''}`;
+  }
+  const vs = result && item.kind !== 'run' && anchorKg ? result.load / anchorKg * 100 : null;
+  return { id: item.id, label: item.labelEn, value, vs, anchor: mapping ? `${mapping[0]} anchor` : null };
+}));
 const liftLabels = { S: 'Squat', B: 'Bench', D: 'Deadlift' };
 const liftKeys = { S: 'sq', B: 'bp', D: 'dl' };
 const display = value => value === null || value === undefined ? '—' : Number(value).toLocaleString('en-US', { maximumFractionDigits: 1 });
@@ -178,6 +207,20 @@ const blocks = computed(() => props.plan.blocks.map(block => {
           </div>
         </div>
         <div class="goal-scale"><span>{{ display(lifts[0].start) }} kg anchor</span><span>target</span></div>
+      </section>
+
+      <section v-if="testRows.length" class="test-panel" aria-label="Test results" data-testid="analysis-tests">
+        <div class="panel-head">
+          <div><div class="eyebrow">TEST DAY</div><h2>What the battery actually moved.</h2></div>
+          <p class="panel-note">{{ testRows.filter(row => row.value !== null).length }} of {{ testRows.length }} items recorded. Each result is the load tested that day; the percentage is against the matching SBD anchor, not a forecast.</p>
+        </div>
+        <ul class="test-compare">
+          <li v-for="row in testRows" :key="row.id" :data-testid="`analysis-test-${row.id}`">
+            <span class="tc-name">{{ row.label }}</span>
+            <span class="tc-value">{{ row.value === null ? 'Not recorded' : row.value }}</span>
+            <span class="tc-vs">{{ row.vs === null ? '—' : `${display(row.vs)}% of ${row.anchor}` }}</span>
+          </li>
+        </ul>
       </section>
 
       <section class="block-strip" aria-label="Block contribution">
@@ -349,5 +392,16 @@ const blocks = computed(() => props.plan.blocks.map(block => {
   .ex-row { grid-template-columns: 20px minmax(0, 1fr) 34px 46px 40px; gap: 5px; }
   .ex-cell b { font-size: 11px; }
   .ex-cell small { font-size: 6.5px; }
+}
+.test-panel { margin-top: 22px; padding: 18px; border: 1px solid var(--line-soft); background: var(--panel); }
+.test-compare { list-style: none; margin: 12px 0 0; padding: 0; }
+.test-compare li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: baseline; padding: 9px 0; border-top: 1px solid var(--line-soft); }
+.test-compare li:first-child { border-top: 0; }
+.tc-name { font: 600 13px var(--sans); color: var(--ink); overflow-wrap: anywhere; }
+.tc-value { font: 600 13px var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tc-vs { font: 11px var(--mono); color: var(--muted); white-space: nowrap; }
+@media (max-width: 430px) {
+  .test-compare li { grid-template-columns: minmax(0, 1fr) auto; }
+  .tc-vs { grid-column: 1 / -1; }
 }
 </style>

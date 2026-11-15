@@ -33,6 +33,7 @@ LINKS = (
     ('questionnaires', 'cycle_id', 'cycles', 'id', None),
     ('ai_calls', 'cycle_id', 'cycles', 'id', None),
     ('attempts', 'cycle_id', 'cycles', 'id', None),
+    ('test_results', 'cycle_id', 'cycles', 'id', None),
     ('deletion_tokens', 'cycle_id', 'cycles', 'id', None),
     ('cycles', 'account_id', 'accounts', 'id', 0),
     ('ai_calls', 'account_id', 'accounts', 'id', None),
@@ -50,6 +51,7 @@ LINKS = (
     ('prescription_versions', 'account_id', 'accounts', 'id', None),
     ('questionnaires', 'account_id', 'accounts', 'id', None),
     ('attempts', 'account_id', 'accounts', 'id', None),
+    ('test_results', 'account_id', 'accounts', 'id', None),
     ('deletion_tokens', 'account_id', 'accounts', 'id', None),
 )
 
