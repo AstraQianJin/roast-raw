@@ -27,6 +27,15 @@ OPTIONAL = {
     'journals', 'integrity',
 }
 BUCKETS = ('main', 'sbdVar', 'nonSbdVar', 'accessory')
+# The eight approved variation families, restated from the owner's 2026-11-16 ruling.
+APPROVED_VARIATIONS = {'Low-bar Squat', 'Wide-grip Bench', 'Sumo Deadlift', 'Power Clean',
+                       'OHP', 'Pull-Up', 'Weighted Pull-Up', 'Dip', 'Weighted Dip',
+                       'Bent-Over Barbell Row', 'Barbell Row'}
+
+
+def policy_bucket(row):
+    return 'main' if row['bucket'] == 'main' else (
+        'sbdVar' if row['movement'] in APPROVED_VARIATIONS else row['bucket'])
 
 
 def row_key(row):
@@ -367,8 +376,14 @@ class ReviewTests(unittest.TestCase):
 
     def test_weekly_actuals_are_only_recorded_rows_and_zero_is_not_missing(self):
         source = self.source()
+        # An accessory here means a movement the eight-variation taxonomy leaves
+        # outside S/B/D accounting, so its weight cannot leak into SBD tonnage.
+        approved = {'OHP', 'Pull-Up', 'Weighted Pull-Up', 'Dip', 'Weighted Dip',
+                    'Bent-Over Barbell Row', 'Barbell Row', 'Low-bar Squat', 'Wide-grip Bench',
+                    'Sumo Deadlift', 'Power Clean'}
         rows = [next(row for row in source['plan']['workouts']
-                     if row['week'] == 1 and row['bucket'] == bucket)
+                     if row['week'] == 1 and row['bucket'] == bucket
+                     and (bucket != 'accessory' or row['movement'] not in approved))
                 for bucket in ('main', 'sbdVar', 'accessory')]
         source['logs'] = {
             row_key(rows[0]): actual(sets=2, reps=3, load=100),
@@ -403,9 +418,10 @@ class ReviewTests(unittest.TestCase):
         factors = {'main': 2, 'sbdVar': 3, 'nonSbdVar': 3, 'accessory': 1}
         planned = dict.fromkeys(BUCKETS, 0)
         for row in source['plan']['workouts']:
-            planned[row['bucket']] += row['sets']
+            bucket = policy_bucket(row)
+            planned[bucket] += row['sets']
             source['logs'][row_key(row)] = actual(
-                sets=row['sets'] * factors[row['bucket']], reps=1, load=101.25,
+                sets=row['sets'] * factors[bucket], reps=1, load=101.25,
                 note='Actual single, not an actual SBD test')
         source['plan']['meta']['profile'].update(init_bw_kg=100, target_bw_kg=90)
         source['body_metrics'] = [metric(source['cycle']['start_date'], 95)]

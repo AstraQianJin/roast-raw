@@ -587,8 +587,12 @@ def create_app(db_path=None, plan_path=None):
             raise HTTPException(409, str(exc)) from exc
 
     @app.get('/api/plan')
-    def plan(cycle_id: str | None = None):
-        return active_plan(cycle_id)
+    def plan(cycle_id: str | None = None, labels: str | None = None):
+        selected = active_plan(cycle_id)
+        if labels != 'policy':
+            return selected
+        from .stats.variations import label_plan
+        return label_plan(selected)
 
     @app.get('/api/performance')
     def recorded_performance(cycle_id: str | None = None):

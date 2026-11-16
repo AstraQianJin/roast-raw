@@ -349,7 +349,7 @@ try {
 
   // ---- 4. a real session day ---------------------------------------------
   await browser.navigate(`${base}/cycle/week/1/day/A`);
-  await browser.waitFor('Boolean(document.querySelector("[data-testid=daily-record]"))', 20000);
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=session-head]"))', 20000);
   await delay(400);
   const day = await browser.evaluate(`({
     rows: document.querySelectorAll('.exercise').length,
@@ -366,10 +366,20 @@ try {
   const rowTags = await browser.evaluate(`[...document.querySelectorAll('.ex-row-tag')].map(n => n.innerText.trim())`);
   assert.ok(rowTags.length >= 1, 'a repeated movement carries a TOP / BACK-OFF row tag');
   assert.ok(rowTags.every(tag => /TOP|BACK-OFF|WORK/.test(tag)), `row tags use the prescribed wording (${rowTags.join(', ')})`);
-  assert.ok(!day.gear, 'the plate cabinet is gone from the session day');
-  assert.ok(!day.warmup, 'no suggested-warm-up list is injected into a session');
-  assert.equal(day.overflow, 0, 'the session day does not scroll sideways');
-  await shot('session-day');
+  assert.ok(day.gear, 'the equipment reminder is part of the session page');
+  const gear = await browser.evaluate(`(() => {
+    const host = document.querySelector('[data-testid=gear-plates]');
+    return {
+      rows: host ? host.querySelectorAll('.gp-row').length : 0,
+      load: host?.querySelector('.gp-load')?.innerText.replace(/\\s+/g, ' ').trim() || '',
+      side: host?.querySelector('.gp-side')?.innerText.replace(/\\s+/g, ' ').trim() || '',
+      cabinet: host ? host.querySelectorAll('.gp-plate').length : 0,
+    };
+  })()`);
+  assert.ok(gear.rows >= 1, 'a prescribed bar load gets its own plate line');
+  assert.match(gear.side, /Per side|Side A/, `the reminder states what goes on each side (${gear.side})`);
+  assert.ok(gear.cabinet >= 4, 'the micro-plate cabinet is shown with the load');
+  await shot('session-gear');
   // 0.44: the anatomy figure must be big enough to read. The week page carries the
   // compact map; a fixture without geometry renders the locked panel instead.
   await browser.navigate(`${base}/cycle/week/1`);
@@ -397,7 +407,7 @@ try {
   assert.match(weekScope.kicker, /WEEKLY CAPACITY/, 'the week page labels its capacity as weekly');
   assert.match(weekScope.map, /^W\d{2}$/, 'the week page names a week above the muscle map');
   await browser.navigate(`${base}/cycle/week/1/day/A`);
-  await browser.waitFor('Boolean(document.querySelector("[data-testid=daily-record]"))', 20000);
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=session-head]"))', 20000);
   await delay(400);
   const scope = await browser.evaluate(`(() => ({
     cap: document.querySelector('.week-capacity')?.dataset.scope || '',
@@ -412,13 +422,13 @@ try {
   assert.ok(scope.total && scope.total !== '732', `the day total is the session's own set count (${scope.total})`);
   ok('a day carries its own capacity and muscle map', scope);
   await browser.navigate(`${base}/cycle/week/1/day/A`);
-  await browser.waitFor('Boolean(document.querySelector("[data-testid=daily-record]"))', 20000);
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=session-head]"))', 20000);
   ok('session day renders', day);
 
   // ---- 4b. the calendar detail is that same session (0.43) ----------------
   const detailCard = weekView.detailCards[0];
   await browser.navigate(`${base}${detailCard.href}`);
-  await browser.waitFor('Boolean(document.querySelector("[data-testid=daily-record]"))', 20000);
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=session-head]"))', 20000);
   await delay(300);
   const detailDay = await browser.evaluate(`({ rows: document.querySelectorAll('.exercise').length,
     movements: [...document.querySelectorAll('.exercise')].map(n => n.innerText.replace(/\\s+/g, ' ')) })`);
@@ -434,7 +444,7 @@ try {
   ok('the calendar detail and the session page are one session', { href: detailCard.href, label: detailCard.label, detailRows: detailCard.rows.length, pageRows: detailDay.rows });
   // Restore the state the next checks assume: one known session day.
   await browser.navigate(`${base}/cycle/week/1/day/A`);
-  await browser.waitFor('Boolean(document.querySelector("[data-testid=daily-record]"))', 20000);
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=session-head]"))', 20000);
 
 
   // ---- 4b. one number, every page (0.41) ---------------------------------
@@ -609,7 +619,7 @@ try {
   assert.equal(cycleSweep.clipped.length, 0, `no clipped text on the cycle page (${JSON.stringify(cycleSweep.clipped)})`);
   assert.equal(cycleSweep.lowContrast.length, 0, `small labels reach AA contrast (${JSON.stringify(cycleSweep.lowContrast)})`);
   await browser.navigate(`${base}/cycle/week/1/day/A`);
-  await browser.waitFor('Boolean(document.querySelector("[data-testid=daily-record]"))', 20000);
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=session-head]"))', 20000);
   const daySweep = await browser.evaluate(sweep);
   assert.equal(daySweep.clipped.length, 0, `no clipped text on the session page (${JSON.stringify(daySweep.clipped)})`);
   assert.equal(daySweep.lowContrast.length, 0, `small labels reach AA contrast on the session page (${JSON.stringify(daySweep.lowContrast)})`);
@@ -623,7 +633,7 @@ try {
 
   // The logging check below expects the session day again.
   await browser.navigate(`${base}/cycle/week/1/day/A`);
-  await browser.waitFor('Boolean(document.querySelector("[data-testid=daily-record]"))', 20000);
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=session-head]"))', 20000);
   await delay(300);
 
   // ---- 4. logging round-trips through the real server ---------------------
@@ -649,7 +659,7 @@ try {
   assert.match(saved.summary, /102\.5/, 'the logged load is echoed on the row');
   assert.match(saved.done, /done/, 'the row is marked as logged');
   await browser.navigate(`${base}/cycle/week/1/day/A`);
-  await browser.waitFor('Boolean(document.querySelector("[data-testid=daily-record]"))', 20000);
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=session-head]"))', 20000);
   await delay(400);
   const persisted = await browser.evaluate(`document.querySelector('.exercise.main .log-inline b').innerText.trim()`);
   assert.equal(persisted, saved.summary, 'the logged row survives a reload');
@@ -709,7 +719,7 @@ try {
   // ---- 7. the narrow floor -------------------------------------------------
   await browser.viewport(320, 800);
   await browser.navigate(`${base}/cycle/week/1/day/A`);
-  await browser.waitFor('Boolean(document.querySelector("[data-testid=daily-record]"))', 20000);
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=session-head]"))', 20000);
   await delay(300);
   const narrow = await browser.evaluate(`({ width: window.innerWidth, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
     wide: [...document.querySelectorAll('body *')].filter(n => n.getBoundingClientRect().right > window.innerWidth + 1)

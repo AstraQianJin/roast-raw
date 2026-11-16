@@ -6,17 +6,17 @@
 
 ---
 
-## 0 · 状态快照（2026-11-16 · 0.59）
+## 0 · 状态快照（2026-11-16 · 0.61）
 
 | 项 | 值 |
 |---|---|
-| 版本 | `web/package.json` = **0.0.59**；本地提交；批次末版 |
+| 版本 | `web/package.json` = **0.0.60**（页面显示 0.61）；本地提交；重建批次末版 |
 | 工作树 | 以本节所在提交为准 |
-| 最近提交 | `025f36c` 0.56 · `3704aa4` 0.55 · `8f21457` 0.51 · `6be8e4e` 0.50 · `252871e` 0.49 |
-| 门禁 | 0.59：`verify.js` exit 0（6804 检查、356 用例）；`build` exit 0（128.95 kB css / 326.00 kB js）；`browser.mjs` 28 项 exit 0；`browser --sabotage` exit 1 |
+| 最近提交 | `58d3ab2` 0.60 · `025f36c` 0.56 · `3704aa4` 0.55 · `8f21457` 0.51 · `6be8e4e` 0.50 · `252871e` 0.49 |
+| 门禁 | 0.61：`verify.js` exit 0（6820 检查、356 用例）；`build` exit 0（125.16 kB css / 312.68 kB js）；`browser.mjs` 28 项 exit 0；`browser --sabotage` exit 1 |
 | 红基线 | 无 |
-| 发布 | 0.59 已部署（`ACCESS-CONTRACT-OK`，公网 health version 0.59）+ push `21fe910..d4db5c3`；重建批次 0.50–0.60 收口 |
-| 证据落点 | `RR\shots\0.59\`（28 项浏览器检查、7 张视口截图）；0.50/0.51/0.55/0.56 各留有当版截图 |
+| 发布 | 0.61 部署与 push 见 §1C 末行 |
+| 证据落点 | `RR\shots\0.60\`（28 项浏览器检查、7 张视口截图）；0.50/0.51/0.55/0.56/0.59 各留有当版截图 |
 | 老项目 | 两个老项目已迁 `RR\ref-projects\`；`rplref` 瘦身记录见 `RR\ref-projects\rplref\_repo\MIRROR_SLIMMED.md` |
 
 **长期边界**：只做 Web（Vue 3 + Vite + Motion One + FastAPI + SQLite）；界面英文、对话中文；`Ref/` 与两个老项目只读；不手改 `data/plan.json` 与 `web/dist/`；不弱化断言、不中和 sabotage。
@@ -106,6 +106,7 @@
 | **0.58** ✓ | 文档与交接 | `README.md` 去 share card；`AGENTS.md` 证据基线改写为纯度断言；`docs/项目交接.md` §0 顶部加 2026-11-16 裁定（下线清单 + 13.9/13.10/§17 转历史） | `check_skill.py --root .` exit 0（PASS Skill metadata, body, folder and project pointers） |
 | **0.59** | 版本收口 | `package.json` 0.0.59 + lockfile；全量门禁；`RR\shots\0.59\` | `verify.js`/`build`/`browser.mjs` 全绿 + `--sabotage` exit 1 |
 | **0.60** ✅ | 发布 | 备份 → `deploy.py` 部署 → push；部署后 `ACCESS-CONTRACT-OK`、公网探针 | `ACCESS-CONTRACT-OK`，公网 `/` 200、`health` version 0.59、匿名 API 401；push `21fe910..d4db5c3` |
+| **0.61** ✅ | 装备提醒回归 · 状态监控下线 · 八变式归类 | 从 `252871e` 取回 `GearPlates.vue`（按处方主项重量给出每侧配片、微片柜与「不计算赛扣」说明），Today 与 Day 各挂一处 `EQUIPMENT / PLATES PER SIDE`；删除 `DailyRecord.vue` 及 Today/Day 的晨脉记录入口（状态监控下线），server readiness 端点保留但 UI 零引用；八变式归类：`meta.variationPolicy = eight-variations-v1`，`policy_of()` 统一 plan/analysis/completion/review，`label_plan()` 在 `GET /api/plan?labels=policy` 与 engine 分析内按策略重标 role/bucket/lift，OHP、俯身杠铃划船、引体、双杠计入 `sbdVar`，系数按用户裁定（S .90 / B .90 / D .85 / PC .15 / OHP .35 / PU .10 / Dip .60 / Row .25）；存储计划仍保留 legacy 字段证据，加载与吨位不变 | `verify.js` exit 0（6820 检查 / 356 用例，含新增 `variationPolicyCheck`：289 主项 / 289 变式 / 154 辅助组）；`build` exit 0（125.16 kB css / 312.68 kB js）；`browser.mjs` 28 项 exit 0（`RR\shots\0.60\`，`gear=true`、`warmup=false`）；`--sabotage` exit 1 |
 
 **两条待裁定（0.50 用默认值执行，落地后标 ASK）**：
 - 「设置」默认只下线 Gear setup（赛扣开关），保留 `PrescriptionSettings`——它是修正参考 1RM 与处方版本回滚的唯一界面，删掉等于让处方冻结在导入那一刻。

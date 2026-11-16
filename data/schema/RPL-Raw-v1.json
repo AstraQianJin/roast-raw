@@ -114,7 +114,9 @@
         "startDate": {"$ref": "#/$defs/date"}, "endDate": {"$ref": "#/$defs/date"},
         "weeks": {"$ref": "#/$defs/positive"}, "sessions": {"$ref": "#/$defs/count"},
         "auxSets": {"$ref": "#/$defs/count"}, "cycleTonnageKg": {"$ref": "#/$defs/tonnage"},
-        "tonnageBasis": {"type": "string"}, "profile": {"type": "object"},
+        "tonnageBasis": {"type": "string"},
+        "variationPolicy": {"type": "string", "enum": ["eight-variations-v1"]},
+        "profile": {"type": "object"},
         "anchors": {"type": "object"}, "goals": {"type": "array", "items": {"type": "object"}},
         "guardrails": {"type": "object"}
       }

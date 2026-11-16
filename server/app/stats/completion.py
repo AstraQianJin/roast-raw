@@ -15,7 +15,7 @@ Policy, deliberately simple and never capped at a different place:
 
 from datetime import datetime
 
-from .variations import classification
+from .variations import classification, policy_of
 
 CLASS_KEYS = ('main', 'var', 'acc')
 BUCKETS = ('main', 'sbdVar', 'nonSbdVar', 'accessory')
@@ -38,7 +38,7 @@ def completion(plan, logs=None, today=None, mode='log'):
         raise ValueError('mode must be plan or log')
     logs = logs or {} if mode == 'log' else {}
     as_of = _today(today)
-    policy = plan.get('prescription', {}).get('version')
+    policy = policy_of(plan)
     planned = dict.fromkeys(BUCKETS, 0)
     actual = dict.fromkeys(BUCKETS, 0)
     credited = dict.fromkeys(CLASS_KEYS, 0)

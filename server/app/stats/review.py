@@ -8,7 +8,7 @@ from decimal import Decimal, localcontext
 from . import engine
 from .performance import performance
 from .readiness import score_readiness
-from .variations import classification
+from .variations import classification, policy_of
 
 
 __all__ = ['build_review', 'bodyweight_progress']
@@ -77,7 +77,7 @@ def _weekly_totals(week):
 
 
 def _planned_actual(plan, logs):
-    policy = plan.get('prescription', {}).get('version')
+    policy = policy_of(plan)
     rows = []
     actual_logs = {}
     for row in plan['workouts']:
@@ -144,7 +144,7 @@ def _readiness(records, score_date):
 
 
 def _main_performance(plan, logs):
-    policy = plan.get('prescription', {}).get('version')
+    policy = policy_of(plan)
     rows = {}
     lifts = {}
     for row in plan['workouts']:

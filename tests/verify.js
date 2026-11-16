@@ -16,6 +16,14 @@ const root = resolve(__dirname, '..');
 const localPython = join(root, 'server', '.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
 const python = process.env.RR_PYTHON || (existsSync(localPython) ? localPython : 'python');
 const sabotage = process.argv.includes('--sabotage-child');
+// Approved eight-variation families, restated here from the owner's 2026-11-16 ruling
+// so the gate sums its expectations without asking the engine under test.
+const POLICY_FAMILIES = {
+  'Low-bar Squat': ['S', .9], 'Wide-grip Bench': ['B', .9], 'Sumo Deadlift': ['D', .85],
+  'Power Clean': ['D', .15], OHP: ['B', .35], 'Pull-Up': ['D', .1], Dip: ['B', .6],
+  'Bent-Over Barbell Row': ['D', .25],
+};
+const policyBucket = row => row.bucket === 'main' ? 'main' : POLICY_FAMILIES[row.movement] ? 'sbdVar' : row.bucket;
 let checks = 0;
 const json = path => JSON.parse(readFileSync(join(root, path), 'utf8').replace(/^\uFEFF/, ''));
 function runPython(code) {
@@ -34,7 +42,7 @@ function near(actual, expected, epsilon, label) {
 function fixtureCheck() {
   const cap = json('Ref/02_Stats/capData.json');
   const mm = json('Ref/02_Stats/mmData.json');
-  const analysis = runPython(`import json\nfrom server.app.stats import engine\np=json.load(open('data/plan.json',encoding='utf-8'))\n${sabotage ? "next(m for m in engine.library()['movements'] if m['name_en']=='Mid-grip Bench')['coef6']['chest'] += 0.1\n" : ''}print(json.dumps(engine.analyze(p)))`);
+  const analysis = runPython(`import json\nfrom server.app.stats import engine\np=json.load(open('data/plan.json',encoding='utf-8'))\np.get('meta',{}).pop('variationPolicy',None)\n${sabotage ? "next(m for m in engine.library()['movements'] if m['name_en']=='Mid-grip Bench')['coef6']['chest'] += 0.1\n" : ''}print(json.dumps(engine.analyze(p)))`);
   same(analysis.weeks, cap.weeks, 'fixture week count');
   same(analysis.deload, cap.deload, 'fixture deload weeks');
   same(analysis.test, [cap.test], 'fixture test week');
@@ -73,6 +81,39 @@ function fixtureCheck() {
   console.log(`PASS fixture: ${checks} checks; 13 weeks / 49 sessions / 732 sets / 139568.0 kg`);
   console.log(`PASS precision: six-group weekly max diff=${groupDiff.toExponential(3)} (<=1e-9); leaf max diff=${leafDiff.toFixed(10)} (<=0.1)`);
 }
+function variationPolicyCheck() {
+  // 0.61: the cycle declares the approved eight variations. The stored plan keeps its
+  // legacy labels, so the fixture above still proves the source arithmetic; this check
+  // proves the taxonomy the app serves, with expectations summed by hand from plan rows.
+  const plan = json('data/plan.json');
+  assert.equal(plan.meta.variationPolicy, 'eight-variations-v1', 'the cycle declares the eight-variation taxonomy');
+  checks++;
+  const families = POLICY_FAMILIES;
+  const roles = { main: 0, sbdVar: 0, accessory: 0 };
+  const expected = { S: { main: 0, var: 0 }, B: { main: 0, var: 0 }, D: { main: 0, var: 0 } };
+  for (const row of plan.workouts) {
+    const family = families[row.movement];
+    const bucket = row.bucket === 'main' ? 'main' : family ? 'sbdVar' : row.bucket;
+    roles[bucket] = (roles[bucket] || 0) + row.sets;
+    if (row.bucket === 'main') expected[row.lift].main += row.sets;
+    if (family) expected[family[0]].var += row.sets * family[1];
+  }
+  const analysis = runPython(`import json\nfrom server.app.stats import engine, variations\np=json.load(open('data/plan.json',encoding='utf-8'))\nserved=variations.label_plan(p)\nprint(json.dumps({'cycle':engine.analyze(p)['cycle'],'served':{r['movement']:r['bucket'] for r in served['workouts']},'policy':variations.policy_of(p)}))`);
+  assert.equal(analysis.policy, 'eight-variations-v1', 'the served plan resolves to the declared policy');
+  checks++;
+  same(analysis.cycle.roles.main, roles.main, 'policy main sets');
+  same(analysis.cycle.roles.sbdVar, roles.sbdVar, 'policy variation sets count every approved family');
+  same(analysis.cycle.roles.accessory, roles.accessory, 'policy accessory sets');
+  for (const code of ['S', 'B', 'D']) {
+    near(analysis.cycle.equivalent[code].main, expected[code].main, 0.05, `policy ${code} main equivalent`);
+    near(analysis.cycle.equivalent[code].total, expected[code].main + expected[code].var, 0.2, `policy ${code} equivalent total uses approved transfers`);
+  }
+  ['OHP', 'Bent-Over Barbell Row', 'Pull-Up', 'Dip'].forEach(movement => {
+    same(analysis.served[movement], 'sbdVar', `${movement} is served as a variation`);
+  });
+  console.log(`PASS variation policy: ${roles.main} main / ${roles.sbdVar} variation / ${roles.accessory} accessory sets; OHP, row, pull-up and dip counted as variations`);
+}
+
 function libraryCheck() {
   const lib = json('data/movements.json');
   same(lib.movements.length, 261, 'movement count');
@@ -208,7 +249,7 @@ function completionCheck() {
   const sessionDates = new Map();
   plan.workouts.forEach(row => {
     if (!sessionDates.has(`${row.week}|${row.day}`)) sessionDates.set(`${row.week}|${row.day}`, row.date);
-    if (row.date <= asOf) planned[classes[row.bucket]] += row.sets;
+    if (row.date <= asOf) planned[classes[policyBucket(row)]] += row.sets;
   });
   const elapsedSessions = [...sessionDates.values()].filter(date => date <= asOf).length;
   const result = runPython(`import json
@@ -390,9 +431,13 @@ function pureViewCheck() {
   // feature is pinned as absent here so a stray import cannot creep back in.
   const app = readFileSync(join(root, 'web', 'src', 'App.vue'), 'utf8');
   const style = readFileSync(join(root, 'web', 'src', 'style.css'), 'utf8');
-  ['CyclePrestart', 'WarmupSuggestions', 'GearPlates', 'ShareButton', 'ShareCard', 'QuestionnaireView', 'AiOutlook', 'MembershipMatrix', 'PrescriptionSettings', 'cycle-prestart-band'].forEach(name => {
+  ['CyclePrestart', 'WarmupSuggestions', 'DailyRecord', 'ShareButton', 'ShareCard', 'QuestionnaireView', 'AiOutlook', 'MembershipMatrix', 'PrescriptionSettings', 'cycle-prestart-band'].forEach(name => {
     assert.ok(!app.includes(name), `${name} is gone from the training surface`);
   });
+  checks++;
+  // 0.61: the equipment reminder is back, driven by the prescribed bar load.
+  assert.ok(app.includes("import GearPlates from './components/GearPlates.vue'"), 'the equipment reminder is mounted again');
+  assert.ok((app.match(/<GearPlates :rows=/g) || []).length === 2, 'today and the session page both show plates per side');
   checks++;
   const nav = app.match(/<nav v-if="!isPublic" class="primary-nav"[^>]*>(.*?)<\/nav>/s);
   assert.ok(nav, 'the primary nav exists');
@@ -409,9 +454,9 @@ function pureViewCheck() {
   assert.ok(style.includes('.week-band { position: absolute; inset: 0 0 auto; height: 4px;'), 'the week row carries a 4 px top intensity line');
   assert.ok(style.includes('.day-row { display: grid;'), 'days stack as rows');
   checks++;
-  // 0.54: a day is its own page, with the record on top and the pulse folded at the bottom.
+  // 0.54/0.61: a day is its own page; the readiness monitor is gone, the plates remain.
   assert.ok(app.includes("planView === 'day'"), 'the day route resolves to its own template');
-  assert.ok(app.includes('data-testid="session-head"') && app.includes('class="day-recovery"'), 'the session page leads with its head and folds the pulse record');
+  assert.ok(app.includes('data-testid="session-head"') && !app.includes('day-recovery'), 'the session page leads with its head and carries no readiness drawer');
   checks++;
   // 0.55: the pillars are part of the training views, not only of Assay.
   assert.ok(app.includes('const blockCapacity = computed'), 'a block rolls its capacity up from its own weeks');
@@ -422,7 +467,7 @@ function pureViewCheck() {
   checks++;
   // 0.56: the gate now holds the deletion at file level too, so a restore cannot be
   // half-done — no module, no route, no countdown copy may survive in the source tree.
-  ['components/WarmupSuggestions.vue', 'components/GearPlates.vue', 'components/ShareButton.vue', 'components/ShareCard.vue',
+  ['components/WarmupSuggestions.vue', 'components/DailyRecord.vue', 'components/ShareButton.vue', 'components/ShareCard.vue',
     'components/CyclePrestart.vue', 'components/QuestionnaireView.vue', 'components/AiOutlook.vue', 'components/MembershipMatrix.vue',
     'components/PrescriptionSettings.vue', 'gear-settings.js', 'share.js'].forEach(relative => {
     assert.ok(!existsSync(join(root, 'web', 'src', relative)), `${relative} stays deleted`);
@@ -559,7 +604,6 @@ function governanceCheck() {
   const app = readFileSync(join(root, 'web', 'src', 'App.vue'), 'utf8');
   const router = readFileSync(join(root, 'web', 'src', 'main.js'), 'utf8');
   const about = readFileSync(join(root, 'web', 'src', 'components', 'AboutView.vue'), 'utf8');
-  const daily = readFileSync(join(root, 'web', 'src', 'components', 'DailyRecord.vue'), 'utf8');
   assert.ok(router.includes("'/about'"), '/about is a registered route, not a dead footer link');
   checks++;
   assert.ok(app.includes("if (route.path === '/about') return 'about';"), 'App.vue resolves the about page');
@@ -574,9 +618,9 @@ function governanceCheck() {
   checks++;
   assert.ok(app.includes('timed_until'), 'a timed tier schedules its own one-shot expiry');
   checks++;
-  assert.ok(app.includes(":readonly=\"!can('recovery_body')\""), 'free tiers read the daily record with the write locked');
+  assert.ok(!app.includes('DailyRecord'), 'the readiness monitor is gone from the training view');
   checks++;
-  assert.ok(daily.includes('readonlyNote'), 'the locked record explains itself');
+  assert.ok(app.includes('day-gear') && app.includes('EQUIPMENT'), 'the equipment reminder names itself on the training surface');
   checks++;
   const orphans = spawnSync(python, ['server/tools/audit_orphans.py', '--json'], { cwd: root, encoding: 'utf8', env: { ...process.env, PYTHONIOENCODING: 'utf-8' } });
   assert.equal(orphans.status, 0, `orphan audit failed: ${orphans.stdout}${orphans.stderr}`);
@@ -592,6 +636,7 @@ function governanceCheck() {
 (async () => {
 try {
   fixtureCheck();
+  variationPolicyCheck();
   if (!sabotage) {
     libraryCheck();
     syntheticCheck();

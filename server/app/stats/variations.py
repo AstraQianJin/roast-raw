@@ -11,7 +11,7 @@ from . import engine
 from . import prescription as P
 
 POLICY = 'eight-variations-v1'
-__all__ = ['POLICY', 'family', 'classification', 'catalogue', 'defaults',
+__all__ = ['POLICY', 'family', 'policy_of', 'promoted', 'classification', 'label_plan', 'catalogue', 'defaults',
            'validate_references', 'recalculate', 'digest', 'changes', 'system_load']
 
 # name family -> lift, transfer, conservative reference kg, total-system load
@@ -27,6 +27,11 @@ _FAMILIES = {
 }
 _ALIASES = {'Weighted Pull-Up': 'Pull-Up', 'Weighted Dip': 'Dip'}
 _PRIMARY = frozenset(('Low-bar Squat', 'Wide-grip Bench', 'Sumo Deadlift'))
+# Families promoted out of the legacy accessory bucket. They count as variations now,
+# but a plan without the eight-variations policy keeps its approved transfer factor
+# instead of inheriting the legacy one-to-one basis.
+_PROMOTED = frozenset(('OHP', 'Pull-Up', 'Weighted Pull-Up', 'Dip', 'Weighted Dip',
+                       'Bent-Over Barbell Row', 'Barbell Row'))
 _RTS = (None, 100, 95.5, 92.2, 89.2, 86.3, 83.7, 81.1, 78.6, 76.2,
         74, 72, 70, 68.3, 66.7, 65.2, 63.8, 62.5, 61.2, 60, 58.8)
 _PRESCRIBED = 'Prescribed percentage'
@@ -47,6 +52,11 @@ def family(row):
     return dict(zip(('lift', 'transfer', 'default', 'system'), values))
 
 
+def promoted(row):
+    """True for families the taxonomy counts as variations even without the policy."""
+    return _name(row) in _PROMOTED
+
+
 def _entry(row):
     name, category = _name(row), C.row_category(row)
     identity = row.get('movementId') or row.get('id')
@@ -54,6 +64,15 @@ def _entry(row):
         identity = f'{category}|{name.casefold()}'
     return next((entry for entry in engine.library()['movements']
                  if entry['id'] == identity), None)
+
+
+def policy_of(plan):
+    """The classification policy a plan carries: applied prescription, else its declared taxonomy."""
+    prescription = plan.get('prescription') if isinstance(plan, dict) else None
+    if isinstance(prescription, dict) and prescription.get('version'):
+        return prescription['version']
+    meta = plan.get('meta') if isinstance(plan, dict) else None
+    return meta.get('variationPolicy') if isinstance(meta, dict) else None
 
 
 def classification(row, policy=None):
@@ -68,6 +87,19 @@ def classification(row, policy=None):
     return (C.movement_role(name, evidence), C.movement_bucket(name, evidence),
             entry.get('lift') if entry is not None else C.movement_lift(name, evidence),
             entry.get('level') if entry is not None else C.movement_level(name))
+
+
+def label_plan(plan):
+    """Serve the plan with role, bucket, lift and level under its declared taxonomy."""
+    if not isinstance(plan, dict):
+        return plan
+    policy = policy_of(plan)
+    if policy != POLICY:
+        return plan
+    labeled = copy.deepcopy(plan)
+    for row in labeled.get('workouts', []):
+        row['role'], row['bucket'], row['lift'], row['level'] = classification(row, policy)
+    return labeled
 
 
 def catalogue():

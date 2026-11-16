@@ -10,7 +10,7 @@ import MuscleMap from './components/MuscleMap.vue';
 import ExerciseRows from './components/ExerciseRows.vue';
 import WeekCapacity from './components/WeekCapacity.vue';
 import CapacityBoard from './components/CapacityBoard.vue';
-import DailyRecord from './components/DailyRecord.vue';
+import GearPlates from './components/GearPlates.vue';
 import TrendView from './components/TrendView.vue';
 import ArchiveView from './components/ArchiveView.vue';
 import PlanImport from './components/PlanImport.vue';
@@ -57,11 +57,6 @@ const session = ref(null);
 const loaded = ref(false);
 const emptyLedger = computed(() => loaded.value && !error.value && cycles.value && !cycles.value.active_cycle_id);
 const can = capability => (session.value?.capabilities || []).includes(capability);
-// Read-open / write-closed: every tier reads its own daily record; only a tier that carries
-// recovery_body writes it. The lock lives on the form, not on the component's existence.
-const recoveryLockNote = computed(() => session.value?.authenticated
-  ? 'Read-only on this tier. Saving recovery and body metrics needs the Plus tier or higher.'
-  : 'Read-only record.');
 const authReady = ref(false);
 const mode = ref('plan');
 const page = computed(() => {
@@ -293,7 +288,7 @@ async function refresh(silent = false) {
     // Every projection the first screen needs is requested in one round trip: the server
     // answers them independently, so awaiting them in sequence only adds latency.
     const [cycleRows, planRow, analysisRow, geometryRow, todayRow, logRow, performanceRow] = await Promise.all([
-      get('/api/cycle'), get('/api/plan'), get(`/api/analysis?mode=${mode.value}`), soft('/api/geometry'),
+      get('/api/cycle'), get('/api/plan?labels=policy'), get(`/api/analysis?mode=${mode.value}`), soft('/api/geometry'),
       get('/api/today'), get('/api/log'), soft('/api/performance'),
     ]);
     cycles.value = cycleRows;
@@ -460,9 +455,11 @@ watch([() => route.fullPath, loading], async () => {
               <section class="day-capacity" aria-label="Session capacity"><header><span class="section-label">SESSION CAPACITY · PLANNED</span><strong>{{ todaySetCount }} SETS</strong></header><div class="capacity-track"><i v-for="(sets, index) in [todayTotals.main, todayTotals.variation, todayTotals.accessory]" :key="index" :style="{ width: `${sets / Math.max(todaySetCount, 1) * 100}%` }"></i></div><div class="capacity-key"><span>MAIN {{ todayTotals.main }}</span><span>VAR {{ todayTotals.variation }}</span><span>ACCESSORY {{ todayTotals.accessory }}</span></div></section>
               <BlockWeekNav :blocks="plan.blocks" :weeks="plan.weeks" :current-week="todaySession.week" />
               <RouterLink :to="`/cycle/week/${todaySession.week}/day/${todaySession.day}`" class="inline-link">Open the scheduled day →</RouterLink>
-              <DailyRecord :cycle-id="plan.meta.planId" :date="todaySession.date" :session-id="`${todaySession.week}|${todaySession.day}`" :readonly="!can('recovery_body')" :readonly-note="recoveryLockNote" @saved="refreshPrescription" />
-
               <ExerciseRows :rows="todayRows" :cycle-id="plan.meta.planId" :logs="logs" :system-loads="prescriptionInfo?.systemLoads || {}" @saved="savedLog" />
+              <section class="day-gear" aria-label="Equipment reminder">
+                <div class="section-kicker"><span>EQUIPMENT</span><span>PLATES PER SIDE</span></div>
+                <GearPlates :rows="todayRows" :bar-kg="plan.meta.profile.bar_kg || 20" :collar-pair="0" />
+              </section>
             </template>
           </div>
           <aside><MuscleMap v-if="geometry" compact :geometry="geometry" :leaves="todayAnalysis ? todayLeaves : leaves" :heat-scale="analysis.heatScale" :week-number="currentWeek" :week-count="plan.weeks.length" :scope="todayAnalysis ? 'session' : 'week'" @week="selectWeek" /><LockedFeature v-else compact label="Muscle-group map" tier="plus" /><WeekCapacity :week="todayAnalysis || week" :ranges="analysis.ranges" :scope="todayAnalysis ? 'session' : 'week'" :kicker="todayAnalysis ? 'SESSION CAPACITY' : 'WEEKLY CAPACITY'" /></aside>
@@ -519,7 +516,10 @@ watch([() => route.fullPath, loading], async () => {
                 </div>
                 <p v-if="weekMeta.kind === 'deload'" class="notice">{{ DELOAD_NOTE }}</p>
                 <ExerciseRows :rows="dayRows" :cycle-id="plan.meta.planId" :logs="logs" :system-loads="prescriptionInfo?.systemLoads || {}" @saved="savedLog" />
-                <details class="day-recovery"><summary>Morning pulse &amp; body record</summary><DailyRecord :cycle-id="plan.meta.planId" :date="dayDate" :session-id="`${currentWeek}|${route.params.day}`" :readonly="!can('recovery_body')" :readonly-note="recoveryLockNote" @saved="refreshPrescription" /></details>
+                <section class="day-gear" aria-label="Equipment reminder">
+                  <div class="section-kicker"><span>EQUIPMENT</span><span>PLATES PER SIDE</span></div>
+                  <GearPlates :rows="dayRows" :bar-kg="plan.meta.profile.bar_kg || 20" :collar-pair="0" />
+                </section>
               </div>
               <aside>
                 <MuscleMap v-if="geometry" compact :geometry="geometry" :leaves="sessionLeaves" :heat-scale="analysis.heatScale" :week-number="currentWeek" :week-count="plan.weeks.length" scope="session" @week="selectWeek" />

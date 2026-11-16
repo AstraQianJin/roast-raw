@@ -280,8 +280,12 @@ class APITests(GeneratedPlanCase):
             self.assertEqual(db.execute('SELECT count(*) FROM logs_journal').fetchone()[0], 2)
 
     def test_accessory_accepts_null_load_and_optional_rpe(self):
-        rows = [row for row in self.seed['workouts'] if row['bucket'] == 'accessory']
-        self.assertTrue(rows, 'The generated plan must contain an accessory')
+        approved = {'OHP', 'Pull-Up', 'Weighted Pull-Up', 'Dip', 'Weighted Dip',
+                    'Bent-Over Barbell Row', 'Barbell Row', 'Low-bar Squat', 'Wide-grip Bench',
+                    'Sumo Deadlift', 'Power Clean'}
+        rows = [row for row in self.seed['workouts']
+                if row['bucket'] == 'accessory' and row['movement'] not in approved]
+        self.assertTrue(rows, 'The generated plan must contain an accessory outside the eight variations')
         payload = actual_payload(self.seed, rows[0], sets=3, reps=10, load=None, rpe=None)
         self.put_log(payload)
         logged = self.get_json('/api/analysis', params={'mode': 'log'})

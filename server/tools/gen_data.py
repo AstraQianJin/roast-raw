@@ -511,6 +511,10 @@ def adapt(envelope, lib, mm, errors=None, source_sha256=None, file="plan.json"):
         days_to_test = (datetime.date.fromisoformat(test_iso) - start).days
         prof["motto"] = MOTTO_TEST_DATE.sub("TEST %s" % test_iso, motto)
         prof["motto"] = MOTTO_CYCLE_LENGTH.sub("%.1fW (%d days to test)" % (days_to_test / 7.0, days_to_test), prof["motto"])
+    # This cycle carries the approved eight-variation taxonomy. The marker is metadata;
+    # row labels are derived from it when served, so the stored plan keeps its legacy
+    # field evidence and no row is silently repriced.
+    from server.app.stats import variations as V
     doc = {
         "schemaVersion": "RPL-Raw-v1",
         "meta": {
@@ -519,6 +523,7 @@ def adapt(envelope, lib, mm, errors=None, source_sha256=None, file="plan.json"):
             "startDate": start.isoformat(),
             "endDate": (start + datetime.timedelta(days=total_weeks * 7 - 1)).isoformat(),
             "weeks": total_weeks,
+            "variationPolicy": V.POLICY,
             "sessions": len({(x["week"], x["day"]) for x in workouts}),
             "auxSets": sum(x["sets"] for x in workouts if x["bucket"] == "accessory"),
             "cycleTonnageKg": round(sum(x["tonnageKg"] for x in workouts), 1),

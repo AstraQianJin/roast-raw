@@ -143,8 +143,10 @@ def analyze(plan, logs=None, mode='plan', today=None):
         raise ValueError('mode must be plan or log')
     from .completion import completion
     logs = logs or {}
-    policy = plan.get('prescription', {}).get('version')
-    from .variations import classification
+    from .variations import classification, label_plan, policy_of
+    policy = policy_of(plan)
+    if policy is not None:
+        plan = label_plan(plan)
     # One calculation for sets and tonnage: stats/totals.py. Muscle, leaf and
     # equivalent volume stay here because they depend on movement mapping, not rows.
     headline = plan_totals(plan, logs, mode)
