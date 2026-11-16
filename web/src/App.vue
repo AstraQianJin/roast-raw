@@ -212,6 +212,27 @@ const blockTestDate = computed(() => {
   return testDate;
 });
 const blockTopPct = computed(() => Math.max(0, ...blockPerWeek.value.map(row => row.topPct || 0), 0));
+// 0.55: the block is a training unit too, so it gets the same capacity read as a
+// week — summed from the weeks it owns, never re-derived from rows here.
+const blockCapacity = computed(() => {
+  const codes = ['S', 'B', 'D'];
+  const rows = blockPerWeek.value;
+  const sumOf = pick => rows.reduce((sum, row) => sum + (pick(row) || 0), 0);
+  return {
+    total: sumOf(row => row.total),
+    equivalent: Object.fromEntries(codes.map(code => [code, {
+      total: sumOf(row => row.equivalent?.[code]?.total),
+      main: sumOf(row => row.equivalent?.[code]?.main),
+      var: sumOf(row => row.equivalent?.[code]?.var),
+      unknown: sumOf(row => row.equivalent?.[code]?.unknown),
+    }])),
+    lifts: Object.fromEntries(codes.map(code => [code, {
+      main: sumOf(row => row.lifts?.[code]?.main),
+      var: sumOf(row => row.lifts?.[code]?.var),
+    }])),
+    roles: { accessory: sumOf(row => row.roles?.accessory), nonSbdVar: sumOf(row => row.roles?.nonSbdVar) },
+  };
+});
 const weekGpp = computed(() => (plan.value?.gpp || []).filter(item => item.week === currentWeek.value));
 function blockInfo(blockId) {
   const weeks = (plan.value?.weeks || []).filter(item => item.blockId === blockId);
@@ -480,6 +501,7 @@ watch([() => route.fullPath, loading], async () => {
                 <span class="week-open"><b>OPEN WEEK →</b></span>
               </RouterLink>
             </section>
+            <WeekCapacity :week="blockCapacity" :ranges="analysis.ranges" scope="block" kicker="BLOCK CAPACITY" />
             <LoadProfile :weeks="blockWeeks" :blocks="plan.blocks" :per-week="blockPerWeek" :test-date="blockTestDate" scope="block" />
           </template>
           <template v-else-if="planView === 'day'">

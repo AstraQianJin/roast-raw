@@ -442,6 +442,19 @@ try {
   await browser.waitFor('Boolean(document.querySelector(".plan-metrics"))', 20000);
   const blockMetric = await browser.evaluate(`[...document.querySelectorAll('.plan-metrics .metric')].map(n => n.innerText.replace(/\\s+/g, ' ').trim()).find(text => /BLOCK TONNAGE/.test(text))`);
   assert.ok(blockMetric.includes(`${handBlockT} t`), 'the block page shows the same sub-total as the block card');
+  // 0.55: a block carries its own capacity and its own load profile, not just a list.
+  const handBlockSets = plan.workouts.filter(row => blockWeeks.includes(row.week)).reduce((sum, row) => sum + row.sets, 0);
+  const blockPillar = await browser.evaluate(`(() => ({
+    scope: document.querySelector('.week-capacity')?.dataset.scope || '',
+    kicker: document.querySelector('.week-capacity .section-kicker')?.innerText.replace(/\\s+/g, ' ').trim() || '',
+    total: document.querySelector('[data-testid=weekly-total]')?.innerText.trim() || '',
+    load: Boolean(document.querySelector('[data-testid=load-profile]')),
+  }))()`);
+  assert.equal(blockPillar.scope, 'block', 'the block page states its capacity over the block');
+  assert.match(blockPillar.kicker, /BLOCK CAPACITY/, 'the block labels its capacity as a block, not a week');
+  assert.equal(blockPillar.total, String(handBlockSets), 'the block capacity is the sum of its own weeks');
+  assert.ok(blockPillar.load, 'the block keeps its load profile');
+  ok('a block carries its own capacity and load profile', blockPillar);
   // 0.47: the week row is one line of small squares, numbered only, whatever the block length.
   const squares = await browser.evaluate(`(() => {
     const items = [...document.querySelectorAll('.bw-weeks a')];

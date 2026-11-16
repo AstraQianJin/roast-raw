@@ -413,6 +413,13 @@ function pureViewCheck() {
   assert.ok(app.includes("planView === 'day'"), 'the day route resolves to its own template');
   assert.ok(app.includes('data-testid="session-head"') && app.includes('class="day-recovery"'), 'the session page leads with its head and folds the pulse record');
   checks++;
+  // 0.55: the pillars are part of the training views, not only of Assay.
+  assert.ok(app.includes('const blockCapacity = computed'), 'a block rolls its capacity up from its own weeks');
+  assert.ok(app.includes('scope="block" kicker="BLOCK CAPACITY"'), 'the block page labels the rolled-up capacity');
+  ['scope="week" kicker="WEEKLY CAPACITY"', 'kicker="SESSION CAPACITY"', '<LoadProfile'].forEach(needle => {
+    assert.ok(app.includes(needle), `the training views keep ${needle}`);
+  });
+  checks++;
   console.log('PASS pure view: three sections, four intensity bands, weeks and days as rows, a session page of its own');
 }
 
