@@ -22,10 +22,14 @@ const sampleDate = (() => {
 
 const root = ref(null);
 const index = ref(0);
-const tour = ref(null);
-const tourP = ref(0);
-let cleanup = () => {};
-let tourFrame = 0;
+const stage = ref(null);
+const dragX = ref(0);
+const dragging = ref(false);
+const width = ref(390);
+let activePointer = null;
+let startX = 0;
+let startY = 0;
+let axis = null;
 
 const shots = [
   { src: '/shots/today-390-light.png', k: 'TODAY', title: 'Prescribed loads, recorded sets and the working body on one page.' },
@@ -33,28 +37,66 @@ const shots = [
   { src: '/shots/analysis-390-light.png', k: 'ANALYSIS', title: 'Weekly working sets, SBD equivalents and reference bands.' },
   { src: '/shots/archive-390-light.png', k: 'ARCHIVE', title: 'Past cycles stay readable, exportable and comparable.' },
 ];
-// The tour is driven by scroll position, not by a drag gesture: the section is taller
-// than the stage, and how far it has been read sets the progress line and the figure.
-function clamp01(value) { return Math.max(0, Math.min(1, value)); }
-function readTour() {
-  tourFrame = 0;
-  const el = tour.value;
-  if (!el) return;
-  const span = el.offsetHeight - window.innerHeight * 0.9;
-  const progress = span > 0 ? clamp01(-el.getBoundingClientRect().top / span) : 0;
-  tourP.value = progress;
-  index.value = Math.min(shots.length - 1, Math.floor(progress * shots.length + 0.0001));
+let cleanup = () => {};
+// The deck is dragged, not scrolled: the front frame follows the finger, the frames
+// behind it sit at a smaller scale and fade out as they lose the front.
+const shotCount = shots.length;
+const clampIndex = value => Math.max(0, Math.min(shotCount - 1, value));
+const dragPct = computed(() => (dragX.value / Math.max(1, width.value)) * 100);
+function frameStyle(i) {
+  const shift = (i - index.value) * 100 + dragPct.value;
+  const away = Math.min(1.25, Math.abs(shift) / 100);
+  return {
+    transform: `translate3d(${shift.toFixed(2)}%, ${(away * 14).toFixed(1)}px, 0) scale(${(1 - away * 0.09).toFixed(3)})`,
+    opacity: String(Math.max(0.05, 1 - away * 0.82)),
+    filter: away > 0.02 ? `grayscale(${Math.min(1, away).toFixed(2)})` : 'none',
+    zIndex: String(shotCount - Math.round(away * 100)),
+    pointerEvents: i === index.value ? 'auto' : 'none',
+  };
 }
-function onScroll() {
-  if (!tourFrame) tourFrame = requestAnimationFrame(readTour);
-}
-function jumpTo(i) {
-  const el = tour.value;
+const railWidth = computed(() => `${((index.value + 1) / shotCount) * 100}%`);
+
+function onPointerDown(event) {
+  if (event.pointerType === 'mouse' && event.button !== 0) return;
+  const el = stage.value;
   if (!el) return;
-  const top = el.getBoundingClientRect().top + window.scrollY;
-  const span = el.offsetHeight - window.innerHeight * 0.9;
-  window.scrollTo({ top: top + (i / shots.length) * span + 2, behavior: 'smooth' });
-  index.value = i; tourP.value = i / shots.length;
+  width.value = el.clientWidth || 390;
+  activePointer = event.pointerId;
+  startX = event.clientX;
+  startY = event.clientY;
+  axis = null;
+  dragging.value = true;
+}
+function onPointerMove(event) {
+  if (!dragging.value || event.pointerId !== activePointer) return;
+  const dx = event.clientX - startX;
+  const dy = event.clientY - startY;
+  if (!axis) {
+    if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+    axis = Math.abs(dx) >= Math.abs(dy) ? 'x' : 'y';
+    if (axis === 'x') stage.value?.setPointerCapture?.(activePointer);
+  }
+  if (axis !== 'x') return;
+  event.preventDefault();
+  const atEdge = (index.value === 0 && dx > 0) || (index.value === shotCount - 1 && dx < 0);
+  dragX.value = atEdge ? dx * 0.3 : dx;
+}
+function onPointerUp(event) {
+  if (!dragging.value) return;
+  if (event && activePointer !== null && event.pointerId !== activePointer) return;
+  const dx = dragX.value;
+  const wasHorizontal = axis === 'x';
+  dragging.value = false;
+  dragX.value = 0;
+  activePointer = null;
+  axis = null;
+  if (wasHorizontal && Math.abs(dx) > Math.max(28, width.value * 0.14)) {
+    index.value = clampIndex(index.value + (dx < 0 ? 1 : -1));
+  }
+}
+function onTourKey(event) {
+  if (event.key === 'ArrowLeft') { index.value = clampIndex(index.value - 1); event.preventDefault(); }
+  if (event.key === 'ArrowRight') { index.value = clampIndex(index.value + 1); event.preventDefault(); }
 }
 
 // The landing chart draws the same per-week series the cycle page draws: it comes
@@ -143,13 +185,11 @@ async function shareSite() {
 onMounted(() => {
   const el = root.value;
   if (!el) return;
-  window.addEventListener('scroll', onScroll, { passive: true });
-  window.addEventListener('resize', onScroll, { passive: true });
-  readTour();
+  window.addEventListener('pointerup', onPointerUp);
+  window.addEventListener('pointercancel', onPointerUp);
   cleanup = () => {
-    window.removeEventListener('scroll', onScroll);
-    window.removeEventListener('resize', onScroll);
-    if (tourFrame) cancelAnimationFrame(tourFrame);
+    window.removeEventListener('pointerup', onPointerUp);
+    window.removeEventListener('pointercancel', onPointerUp);
     document.documentElement.classList.remove('wl-open');
   };
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -282,23 +322,23 @@ onBeforeUnmount(() => { clearTimeout(shareTimer); cleanup(); });
       </div>
     </section>
 
-    <section class="wl-sec wl-tour-sec" id="screens" :style="{ '--tour-p': tourP }">
-      <div class="wl-sec-head rv"><span class="wl-num">06 /</span><h2>The journal, on the record.</h2><p class="wl-deck">Captured at phone width from the current build. Scroll and the figure changes: the frame you have passed lifts, dims and stays behind.</p></div>
-      <div ref="tour" class="wl-tour" data-testid="wl-tour" :style="{ height: `${shots.length * 62}vh` }">
+    <section class="wl-sec wl-tour-sec" id="screens">
+      <div class="wl-sec-head rv"><span class="wl-num">06 /</span><h2>The journal, on the record.</h2><p class="wl-deck">Captured at phone width from the current build. Drag the deck with your finger: the frame you hold follows it, and the ones behind fade as they lose the front.</p></div>
+      <div class="wl-tour" data-testid="wl-tour">
         <div class="wl-tour-stage">
-          <div class="wl-tour-frames">
-            <figure v-for="(shot, i) in shots" :key="shot.src" class="wl-tshot" :class="{ 'is-on': i === index, 'is-prev': i < index }" :aria-hidden="i !== index">
+          <div ref="stage" class="wl-tour-frames" :class="{ 'is-dragging': dragging }" role="group" aria-roledescription="carousel" aria-label="Journal screenshots" tabindex="0" @pointerdown="onPointerDown" @pointermove="onPointerMove" @pointerup="onPointerUp" @pointercancel="onPointerUp" @keydown="onTourKey">
+            <figure v-for="(shot, i) in shots" :key="shot.src" class="wl-tshot" :class="{ 'is-on': i === index }" :style="frameStyle(i)" :aria-hidden="i !== index">
               <img :src="shot.src" :alt="`${shot.k} page screenshot`" loading="lazy" draggable="false">
             </figure>
           </div>
           <div class="wl-tour-caption" aria-live="polite">
             <nav class="wl-tour-dots" aria-label="Screenshot position">
-              <button v-for="(shot, i) in shots" :key="`d-${shot.src}`" type="button" :aria-label="`Jump to ${shot.k}`" :aria-current="index === i ? 'true' : 'false'" @click="jumpTo(i)"><i></i></button>
+              <button v-for="(shot, i) in shots" :key="`d-${shot.src}`" type="button" :aria-label="`Show ${shot.k}`" :aria-current="index === i ? 'true' : 'false'" @click="index = i"><i></i></button>
             </nav>
             <p class="wl-cap-name">Figure {{ index + 1 }} · {{ shots[index].k }}</p>
             <p class="wl-cap-desc">{{ shots[index].title }}</p>
           </div>
-          <div class="wl-tour-rail" aria-hidden="true"><i :style="{ width: `${tourP * 100}%` }"></i></div>
+          <div class="wl-tour-rail" aria-hidden="true"><i :style="{ width: railWidth }"></i></div>
         </div>
       </div>
     </section>
@@ -491,12 +531,12 @@ onBeforeUnmount(() => { clearTimeout(shareTimer); cleanup(); });
 .wl-browser-rows i { height: 10px; border-radius: 3px; background: var(--ct-strength); opacity: .7; }
 .wl-browser-rows b { text-align: right; color: var(--ink); }
 .wl-tour { position: relative; max-width: 860px; margin: 20px auto 0; }
-.wl-tour-stage { position: sticky; top: calc(var(--topH, 0px) + 10px); display: grid; grid-template-rows: minmax(0, 1fr) auto auto; height: clamp(460px, 74vh, 700px); }
-.wl-tour-frames { display: grid; place-items: center; min-height: 0; }
-.wl-tshot { grid-area: 1 / 1; height: 100%; width: auto; aspect-ratio: 390 / 844; margin: 0; overflow: hidden; border: 1px solid var(--hair); border-radius: 18px; background: var(--panel2); box-shadow: 0 24px 60px rgba(17, 17, 17, .18); transition: transform .5s var(--ease), opacity .45s var(--ease), filter .45s var(--ease); }
-.wl-tshot.is-on { opacity: 1; transform: translateY(0) scale(1); box-shadow: 0 34px 80px rgba(17, 17, 17, .24); }
-.wl-tshot.is-prev { opacity: .28; transform: translateY(-26px) scale(.96); filter: grayscale(1); }
-.wl-tshot:not(.is-on):not(.is-prev) { opacity: 0; transform: translateY(26px) scale(.96); pointer-events: none; }
+.wl-tour-stage { position: relative; display: grid; grid-template-rows: minmax(0, 1fr) auto; height: clamp(460px, 74vh, 700px); }
+.wl-tour-frames { position: relative; min-height: 0; touch-action: pan-y; cursor: grab; overflow-x: clip; overflow-y: visible; }
+.wl-tour-frames.is-dragging { cursor: grabbing; }
+.wl-tshot { position: absolute; inset: 0; margin: auto; height: 100%; width: auto; aspect-ratio: 390 / 844; overflow: hidden; border: 1px solid var(--hair); border-radius: 18px; background: var(--panel2); box-shadow: 0 24px 60px rgba(17, 17, 17, .18); transition: transform .42s var(--ease), opacity .42s var(--ease), filter .42s var(--ease); will-change: transform, opacity; }
+.wl-tshot.is-on { box-shadow: 0 34px 80px rgba(17, 17, 17, .24); }
+.wl-tour-frames.is-dragging .wl-tshot { transition: none; }
 .wl-tshot img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top center; -webkit-user-drag: none; }
 .wl-tour-rail { position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--hair); }
 .wl-tour-rail i { display: block; height: 1px; background: var(--ink); transition: width .2s linear; }

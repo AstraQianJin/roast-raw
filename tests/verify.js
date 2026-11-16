@@ -315,9 +315,9 @@ function membershipMatrixCheck() {
   assert.ok(welcome.includes('<MembershipMatrix />'), 'the landing page renders the matrix');
   assert.ok(welcome.includes('data-testid="wl-share"') && welcome.includes('Link copied'), 'the share control and its feedback exist');
   assert.ok(!welcome.includes('no tiers'), 'the old "no tiers" copy is gone');
-  assert.ok(welcome.includes('data-testid="wl-tour"') && welcome.includes('--tour-p'), 'the screenshot tour is scroll driven');
-  assert.ok(welcome.includes('wl-tour-dots') && welcome.includes('is-prev'), 'dots jump and passed figures stay behind');
-  assert.ok(!welcome.includes('wl-shots') && !welcome.includes('onDown'), 'the drag deck is gone, not running beside the tour');
+  assert.ok(welcome.includes('data-testid="wl-tour"') && welcome.includes("onPointerDown"), 'the screenshot deck is dragged by the pointer');
+  assert.ok(welcome.includes('wl-tour-dots') && welcome.includes('frameStyle'), 'dots select a frame and every frame carries a drag offset');
+  assert.ok(!welcome.includes('--tour-p') && !welcome.includes('readTour'), 'the scroll reader is gone, not running beside the deck');
   checks++;
   console.log(`PASS membership matrix: ${members.capabilities.length} capabilities from membership.json, four columns plus the Ultra strip`);
 }
@@ -455,7 +455,11 @@ function copyAndLabelsCheck() {
   ['SBD', 'MEV', 'MRV', 'RPE', 'GPP', 't', 'ses', 'TOP / BACK-OFF'].forEach(term => {
     assert.ok(glossary.includes(`'${term}'`), `the glossary defines ${term}`);
   });
-  checks += 6;
+  // 0.46: a cycle that has not begun says so on the cycle page, not only on Today.
+  assert.ok(app.includes('data-testid="cycle-prestart-band"'), 'the cycle page carries a not-started band');
+  assert.ok(app.includes("calendar.value.status !== 'upcoming'"), 'the band exists only before the start date');
+  assert.ok(app.includes("startCountdown ? 'STARTS IN' : 'START'"), 'the start metric becomes a countdown before day one');
+  checks += 7;
   console.log('PASS copy and labels: plurals, sign out, row tags, capacity axis, glossary');
 }
 

@@ -126,31 +126,48 @@ try {
   ok('membership cards on a phone', phoneMatrix);
   await browser.viewport(WIDTH, 900);
 
-  // ---- 1d. the screenshot tour follows the scroll --------------------------
+  // ---- 1d. the screenshot deck follows the finger, not the page scroll ----
   await browser.navigate(`${base}/`);
   await delay(500);
   const firstFigure = await browser.evaluate(`document.querySelector('.wl-cap-name').innerText`);
-  await browser.evaluate(`(() => {
-    const el = document.querySelector('[data-testid=wl-tour]');
-    const top = el.getBoundingClientRect().top + window.scrollY;
-    const span = el.offsetHeight - window.innerHeight * 0.9;
-    window.scrollTo({ top: top + span * 0.6, behavior: 'auto' });
-    return true;
+  const deck = await browser.evaluate(`(() => {
+    const frames = document.querySelector('.wl-tour-frames');
+    frames.scrollIntoView({ block: 'center', behavior: 'auto' });
+    const box = frames.getBoundingClientRect();
+    return { x: box.left + box.width / 2, y: box.top + box.height / 2, scroll: window.scrollY };
   })()`);
-  await delay(400);
+  await delay(300);
+  await browser.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: deck.x, y: deck.y, button: 'left', clickCount: 1 });
+  for (let step = 1; step <= 4; step++) {
+    await browser.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: deck.x - step * 30, y: deck.y, button: 'left', buttons: 1 });
+    await delay(40);
+  }
+  const midDrag = await browser.evaluate(`(() => {
+    const cards = [...document.querySelectorAll('.wl-tshot')];
+    return { dragging: document.querySelector('.wl-tour-frames').classList.contains('is-dragging'),
+             shifted: cards.filter(c => /translate3d\\(-?[0-9.]+%/.test(c.style.transform)).length };
+  })()`);
+  assert.ok(midDrag.dragging, 'the deck reports a live drag');
+  assert.equal(midDrag.shifted, 4, 'every frame carries a drag offset while the finger is down');
+  await browser.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: deck.x - 120, y: deck.y, button: 'left', clickCount: 1 });
+  await delay(500);
   const tourState = await browser.evaluate(`(() => ({
     figure: document.querySelector('.wl-cap-name').innerText,
     on: document.querySelectorAll('.wl-tshot.is-on').length,
-    prev: document.querySelectorAll('.wl-tshot.is-prev').length,
+    behind: [...document.querySelectorAll('.wl-tshot')].filter(c => parseFloat(c.style.opacity) < 1).length,
     rail: document.querySelector('.wl-tour-rail i').style.width,
     dot: [...document.querySelectorAll('.wl-tour-dots button')].map(b => b.getBoundingClientRect().height).sort((a, b) => a - b)[0],
+    scroll: window.scrollY,
+    overflow: document.documentElement.scrollWidth - window.innerWidth,
   }))()`);
-  assert.notEqual(tourState.figure, firstFigure, 'scrolling moved the figure');
+  assert.notEqual(tourState.figure, firstFigure, 'a left drag moved the deck on');
   assert.equal(tourState.on, 1, 'exactly one figure is in front');
-  assert.equal(tourState.prev, 2, 'passed figures stay behind the current one');
-  assert.ok(parseFloat(tourState.rail) > 50 && parseFloat(tourState.rail) < 70, `progress line follows the scroll (${tourState.rail})`);
+  assert.equal(tourState.behind, 3, 'the other three sit behind it, faded');
+  assert.ok(parseFloat(tourState.rail) >= 49 && parseFloat(tourState.rail) <= 51, `the rail tracks the current frame (${tourState.rail})`);
   assert.ok(tourState.dot >= 44, 'dots are at least 44 px');
-  ok('screenshot tour is scroll driven', tourState);
+  assert.ok(Math.abs(tourState.scroll - deck.scroll) < 2, 'dragging the deck did not move the page');
+  assert.equal(tourState.overflow, 0, 'the deck does not push the page sideways');
+  ok('screenshot deck is dragged by the finger', tourState);
 
 
   // ---- 2. the gate answers, and a wrong password stays on the form --------

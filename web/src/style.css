@@ -44,6 +44,11 @@ main { padding: 30px 0 48px; }
 .hero-subtitle { font-family: var(--display); font-weight: 800; font-size: 18px; text-transform: uppercase; color: var(--muted); margin-top: 8px; }
 .annotation { font-size: 12px; color: var(--muted); margin-top: 12px; }
 .notice { padding: 12px 0; margin: 18px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+/* Pre-start is its own state: a bordered band with a dot, never a normal week with
+   empty cells or a zeroed dashboard. */
+.cycle-prestart-band { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 16px 0 4px; padding: 12px 14px; border: 1px solid var(--line); border-left: 3px solid var(--accent); background: var(--panel); font-size: 12px; line-height: 1.6; color: var(--muted); }
+.cycle-prestart-band .section-label { color: var(--accent); }
+.cycle-prestart-band a { color: var(--ink); }
 .badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0; }
 .badge { padding: 4px 7px; font: 800 9px var(--mono); letter-spacing: .05em; border: 1px solid var(--gold-line); color: var(--gold); background: var(--gold-soft); border-radius: 6px; }
 .badge:first-child { border-color: var(--accent); }

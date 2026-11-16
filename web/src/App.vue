@@ -112,6 +112,20 @@ const days = computed(() => {
 });
 const todaySession = computed(() => calendar.value?.day ? { date: calendar.value.date, week: calendar.value.week, day: calendar.value.day } : calendar.value?.nextSession);
 const todayLink = computed(() => todaySession.value ? `/cycle/week/${todaySession.value.week}/day/${todaySession.value.day}` : '/cycle');
+// A cycle that has not begun is a state, not a blank week: the countdown is measured
+// against the date the server calls today, never against the browser clock.
+const startCountdown = computed(() => {
+  if (!plan.value || !calendar.value || calendar.value.status !== 'upcoming') return null;
+  const day = iso => { const [y, m, d] = iso.split('-').map(Number); return Date.UTC(y, m - 1, d); };
+  const days = Math.round((day(plan.value.meta.startDate) - day(calendar.value.date)) / 86400000);
+  const firstRow = plan.value.workouts.find(row => row.week === 1);
+  return {
+    days,
+    start: plan.value.meta.startDate,
+    first: firstRow ? `/cycle/week/1/day/${firstRow.day}` : '/cycle/week/1',
+    label: days === 1 ? '1 day' : `${days} days`,
+  };
+});
 // Before the calendar arrives the pill names the plan's first date from the same
 // generated facts the landing page uses; it never prints a placeholder sentence.
 const todayCtaDate = computed(() => !calendar.value ? dateLabel(landingFacts.startDate) : calendar.value.day ? dateLabel(calendar.value.date) : calendar.value.nextSession ? dateLabel(calendar.value.nextSession.date) : dateLabel(landingFacts.startDate));
@@ -238,18 +252,30 @@ async function refresh(silent = false) {
   if (!silent) loading.value = true;
   error.value = '';
   try {
-    cycles.value = await get('/api/cycle');
+    // Every projection the first screen needs is requested in one round trip: the server
+    // answers them independently, so awaiting them in sequence only adds latency.
+    const [cycleRows, planRow, analysisRow, geometryRow, todayRow, logRow, performanceRow] = await Promise.all([
+      get('/api/cycle'), get('/api/plan'), get(`/api/analysis?mode=${mode.value}`), soft('/api/geometry'),
+      get('/api/today'), get('/api/log'), soft('/api/performance'),
+    ]);
+    cycles.value = cycleRows;
     if (!cycles.value.active_cycle_id) {
       plan.value = null;
       return;
     }
-    const result = await Promise.all([get('/api/plan'), get(`/api/analysis?mode=${mode.value}`), soft('/api/geometry'), get('/api/today'), get('/api/log'), soft('/api/performance')]);
-    [plan.value, analysis.value, geometry.value, calendar.value] = result;
-    logs.value = result[4].logs;
-    performance.value = result[5];
-    prescriptionInfo.value = await get(`/api/prescription?${new URLSearchParams({ cycle_id: plan.value.meta.planId })}`);
-    try { bodyMetrics.value = await get(`/api/body-metrics?${new URLSearchParams({ cycle_id: plan.value.meta.planId })}`); }
-    catch { bodyMetrics.value = null; }
+    plan.value = planRow;
+    analysis.value = analysisRow;
+    geometry.value = geometryRow;
+    calendar.value = todayRow;
+    logs.value = logRow.logs;
+    performance.value = performanceRow;
+    const cycleId = plan.value.meta.planId;
+    const [prescription, body] = await Promise.all([
+      get(`/api/prescription?${new URLSearchParams({ cycle_id: cycleId })}`),
+      get(`/api/body-metrics?${new URLSearchParams({ cycle_id: cycleId })}`).catch(() => null),
+    ]);
+    prescriptionInfo.value = prescription;
+    bodyMetrics.value = body;
   } catch (failure) { error.value = failure.message || 'The server is unavailable. Reconnect and try again.'; }
   finally { if (!silent) loading.value = false; loaded.value = true; }
 }
@@ -411,9 +437,10 @@ watch([() => route.fullPath, loading], async () => {
                 <template v-else-if="page === 'cycle'">
           <template v-if="planView === 'cycle'">
             <div class="eyebrow">RR / 01 · CYCLE — {{ plan.meta.weeks }} WEEKS · {{ plan.meta.sessions }} SESSIONS · {{ analysis.cycle.total }} SETS</div><h1 class="plan-title">The cycle.</h1><p class="hero-subtitle">{{ dateLabel(plan.meta.startDate) }} — {{ dateLabel(plan.meta.endDate) }}</p>
+            <p v-if="startCountdown" class="cycle-prestart-band" data-testid="cycle-prestart-band"><span class="section-label">NOT STARTED</span><span>The cycle begins {{ dateLabel(startCountdown.start) }} — {{ startCountdown.label }} from today. Nothing is scheduled to be logged yet.</span><RouterLink :to="startCountdown.first" class="inline-link">Preview the first session →</RouterLink></p>
             <BlockWeekNav :blocks="plan.blocks" :weeks="plan.weeks" :current-week="Number(calendar?.week || 1)" />
             <RouterLink to="/calendar" class="inline-link" data-testid="open-calendar">Open the calendar →</RouterLink>
-            <div class="plan-metrics"><div class="metric"><span class="section-label">START</span><strong>{{ dateLabel(plan.meta.startDate) }}</strong><small>{{ plan.meta.startDate.slice(0, 4) }} · {{ plan.meta.weeks }} WEEKS</small></div><div class="metric"><span class="section-label">TEST DAY</span><strong>{{ plan.testPlan?.dates?.sbd ? dateLabel(plan.testPlan.dates.sbd) : 'Not set' }}</strong><small>{{ plan.testPlan?.dates?.sbd ? `W${String(plan.weeks.find(w => w.kind === 'test')?.n || 0).padStart(2, '0')} · SBD` : 'Add a date in outlook' }}</small></div><div class="metric"><span class="section-label">CYCLE TONNAGE</span><strong>{{ display(analysis.cycle.tonnageKg / 1000) }} t</strong><small>{{ analysis.cycle.auxSets }} AUX SETS</small></div></div>
+            <div class="plan-metrics"><div class="metric"><span class="section-label">{{ startCountdown ? 'STARTS IN' : 'START' }}</span><strong>{{ startCountdown ? startCountdown.label : dateLabel(plan.meta.startDate) }}</strong><small>{{ plan.meta.startDate.slice(0, 4) }} · {{ plan.meta.weeks }} WEEKS</small></div><div class="metric"><span class="section-label">TEST DAY</span><strong>{{ plan.testPlan?.dates?.sbd ? dateLabel(plan.testPlan.dates.sbd) : 'Not set' }}</strong><small>{{ plan.testPlan?.dates?.sbd ? `W${String(plan.weeks.find(w => w.kind === 'test')?.n || 0).padStart(2, '0')} · SBD` : 'Add a date in outlook' }}</small></div><div class="metric"><span class="section-label">CYCLE TONNAGE</span><strong>{{ display(analysis.cycle.tonnageKg / 1000) }} t</strong><small>{{ analysis.cycle.auxSets }} AUX SETS</small></div></div>
             <LoadProfile :weeks="plan.weeks" :blocks="plan.blocks" :per-week="analysis.perWeek" :test-date="plan.testPlan?.dates?.sbd" />
             <div class="section-head"><div class="eyebrow">BLOCKS IN THIS CYCLE</div><p class="annotation">Each block is a phase with its own ceiling. Open a block to see the weeks inside it, then a week, then a day.</p></div>
             <section class="block-deck" aria-label="Blocks">

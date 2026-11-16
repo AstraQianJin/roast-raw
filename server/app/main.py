@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import json
 import os
 import re
@@ -16,6 +17,7 @@ from datetime import date as Date
 
 from .stats.readiness import score_readiness
 from starlette.middleware.trustedhost import TrustedHostMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 
 from . import membership
 from .calendar import calendar_state, calendar_days
@@ -200,9 +202,13 @@ def create_app(db_path=None, plan_path=None):
     release_version = f'{version_parts[0]}.{int(version_parts[2]):02d}'
     app = FastAPI(title='Roast Raw', version=package_version, lifespan=lifespan)
     app.state.store = base
+    analysis_cache: dict = {}
     allowed_hosts = ['127.0.0.1', 'localhost', 'testserver']
     allowed_hosts += [host.strip() for host in os.environ.get('RR_ALLOWED_HOSTS', '').split(',') if host.strip()]
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
+    # The plan document is half a megabyte of JSON; compressed it is roughly a tenth,
+    # which is the difference between a one-second pause and a click on entry.
+    app.add_middleware(GZipMiddleware, minimum_size=1024)
 
     public_api = {'/api/health', '/api/login', '/api/register', '/api/logout', '/api/session'}
 
@@ -755,7 +761,20 @@ def create_app(db_path=None, plan_path=None):
     @app.get('/api/analysis')
     def analysis(mode: Literal['plan', 'log'] = 'plan', cycle_id: str | None = None):
         selected = active_plan(cycle_id)
-        return analyze(selected, store.logs(selected['meta']['planId']), mode)
+        logs = store.logs(selected['meta']['planId'])
+        # Eleven weeks of rows cost about 1.4 s to analyse; the answer only changes when
+        # the plan or a log does. The key hashes both, because two cycles may share a
+        # plan id while carrying different prescriptions.
+        plan_hash = hashlib.sha1(json.dumps(selected, sort_keys=True, ensure_ascii=False).encode('utf-8')).hexdigest()
+        log_hash = hashlib.sha1(json.dumps(logs, sort_keys=True, ensure_ascii=False).encode('utf-8')).hexdigest()
+        key = (plan_hash, mode, log_hash)
+        hit = analysis_cache.get(key)
+        if hit is None:
+            hit = analyze(selected, logs, mode)
+            if len(analysis_cache) >= 4:
+                analysis_cache.clear()
+            analysis_cache[key] = hit
+        return hit
 
     @app.get('/api/today')
     def today():

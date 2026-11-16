@@ -624,11 +624,17 @@ code { color: var(--ink); font-family: var(--mono); white-space: normal; overflo
 .role-readings dd.reading-note { font: 11px/1.7 var(--sans); }
 .counts-reading { min-width: 0; padding-top: 16px; border-top: 1px solid var(--line); }
 .counts-reading h3 { font-size: 24px; }
-.report-details, .source-details { min-width: 0; border-top: 1px solid var(--line); }
-.report-details { margin-top: 22px; padding-bottom: 6px; }
-.source-details { margin-top: 16px; }
-summary { min-height: 44px; min-width: 44px; padding: 12px 4px; cursor: pointer; font: 12px/1.6 var(--sans); color: var(--ink); }
+.report-details, .source-details { min-width: 0; }
+.report-details { margin-top: 18px; }
+.source-details { margin-top: 12px; }
+/* A folded row is a control, not a hairline: it keeps a box, breathing room above and
+   below the label, and a clearer state once it opens. */
+summary { min-height: 52px; min-width: 44px; padding: 16px 12px 15px; border: 1px solid var(--line-soft); border-radius: 2px; background: var(--panel); cursor: pointer; font: 12px/1.6 var(--sans); color: var(--ink); }
+summary::marker { color: var(--muted); }
 summary:hover { background: var(--panel2); }
+.report-details[open] summary, .source-details[open] summary { border-color: var(--line); background: var(--panel2); border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.report-details[open] > :not(summary), .source-details[open] > :not(summary) { padding-left: 12px; padding-right: 12px; }
+.report-details[open] > :not(summary) { padding-bottom: 14px; }
 summary:focus-visible, .week-control select:focus-visible, .delete-confirm-label input:focus-visible, .actions button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .week-control { display: block; min-width: 0; margin-top: 18px; color: var(--muted); font-size: 12px; }
 .week-control select { display: block; min-width: 0; width: 100%; max-width: 100%; min-height: 44px; margin-top: 6px; padding: 10px 8px; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 2px; font: 12px var(--sans); }
