@@ -57,6 +57,9 @@ try {
   await mkdir(SHOTS_DIR, { recursive: true });
   const shot = async name => browser.screenshot(join(SHOTS_DIR, `${name}-${WIDTH}.png`));
   await browser.viewport(WIDTH, 900);
+  // Evidence stills are taken with reduced motion requested, so the reveal animation
+  // cannot leave whole sections at opacity 0 in a full-page capture.
+  await browser.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
 
   // ---- 1. public landing ---------------------------------------------------
   await browser.navigate(`${base}/`);
@@ -93,6 +96,12 @@ try {
   assert.ok(landingShell.afterSections, 'the module bar comes after the last section, not in the hero');
   assert.ok(landingShell.minHeight >= 44, `module doors reach 44 px (${landingShell.minHeight})`);
   ok('landing keeps no host address and puts four doors at the bottom', landingShell);
+  // The reveal animation hides sections until they are intersected; a full-page still
+  // needs one pass down and back so the evidence shows the page a reader actually gets.
+  await browser.evaluate('window.scrollTo(0, document.body.scrollHeight)');
+  await delay(900);
+  await browser.evaluate('window.scrollTo(0, 0)');
+  await delay(400);
 
   // ---- 1b. 0.50: the landing no longer sells ------------------------------
   await browser.viewport(1280, 900);
