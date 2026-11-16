@@ -19,7 +19,9 @@ h3 { font-size: 21px; }
 b, strong, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .shell { max-width: 1080px; margin: auto; padding: 0 24px; }
 .masthead { display: flex; min-height: 76px; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--ink); gap: 12px; }
-.brand { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; font-family: var(--serif); font-style: italic; font-weight: 400; font-size: clamp(22px, 2.6vw, 28px); line-height: 1; letter-spacing: -.02em; text-transform: none; white-space: nowrap; }
+.brand { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; font-family: var(--serif); font-style: italic; font-weight: 400; font-size: clamp(22px, 2.6vw, 28px); line-height: 1; letter-spacing: -.02em; text-transform: none; white-space: nowrap; -webkit-tap-highlight-color: transparent; }
+.brand:focus, .brand:active { background: none; }
+.brand:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
 .brand-mark { width: 23px; height: 23px; flex: none; color: var(--accent); }
 .edition { font: 10px var(--mono); color: var(--muted); margin-left: auto; }
 .masthead-signout { min-height: 32px; padding: 0 8px; margin-left: 10px; background: none; border: 1px solid var(--line2); border-radius: 6px; font: 700 9px var(--mono); letter-spacing: .08em; color: var(--muted); cursor: pointer; }

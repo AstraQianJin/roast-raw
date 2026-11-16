@@ -6,17 +6,17 @@
 
 ---
 
-## 0 · 状态快照（2026-11-16 · 0.47）
+## 0 · 状态快照（2026-11-16 · 0.49）
 
 | 项 | 值 |
 |---|---|
-| 版本 | `web/package.json` = **0.0.47**；已部署 `http://82.157.146.30/`（health `version 0.47`、`ACCESS-CONTRACT-OK`、AI `configured: true`）；**未 push** |
+| 版本 | `web/package.json` = **0.0.49**；本地提交；**未部署**，**未 push** |
 | 工作树 | 以本节所在提交为准 |
-| 最近提交 | `c0a8c09` 0.46 · `a36fd75` 0.46 docs · `6f9538b` 0.47（前序 0.41–0.45 见 `git log`） |
-| 门禁 | 0.47：`verify.js` exit 0（6814 检查、356 用例）；`build` exit 0；`browser.mjs` 24 项 exit 0；`--sabotage` exit 1 |
+| 最近提交 | `83e8440` 0.48 · `6f9538b` 0.47（前序 0.41–0.46 见 `git log`） |
+| 门禁 | 0.49：`verify.js` exit 0（6814 检查、356 用例）；`build` exit 0；`browser.mjs` 24 项 exit 0；`--sabotage` exit 1 |
 | 红基线 | 无 |
-| 发布 | 0.46 发布并改期（`rpl-raw-2026-11-23` active）；0.47 已发布 |
-| 证据落点 | `RR\shots\0.46\`、`RR\shots\0.47\`（22/15 张截图与 `release-evidence.json`） |
+| 发布 | 0.45 已部署上线；0.46–0.49 依用户指令仅本地提交与截图验证，未部署、未 push |
+| 证据落点 | `RR\shots\0.49\`（24 项浏览器检查、7 张全量视口截图） |
 | 老项目 | 两个老项目已迁 `RR\ref-projects\`；`rplref` 瘦身记录见 `RR\ref-projects\rplref\_repo\MIRROR_SLIMMED.md` |
 
 **长期边界**：只做 Web（Vue 3 + Vite + Motion One + FastAPI + SQLite）；界面英文、对话中文；`Ref/` 与两个老项目只读；不手改 `data/plan.json` 与 `web/dist/`；不弱化断言、不中和 sabotage。
@@ -84,6 +84,20 @@
 - `perWeek` 的 `tonnageKg` 现在给未四舍五入的原值，周期总数仍是 `r1` 后的一个数；页面上的 `139.6 t` 与周卡相加不再出现 `139.5`。
 - 截图不进仓库：`tests/browser.mjs` 写 `SHOTS_DIR`（默认 `..\RR\shots\<release>`），`docs/shots/` 已进 `.gitignore`，6 张 `old-ref-*.png` 留在 `docs/ref-shots/`。
 
+
+---
+
+## 1C · 0.49 单版：纯粹训练架构与全单行极简重构（用户 2026-11-16 裁定）
+
+| # | 要求 | 交付 |
+|---|---|---|
+| 1 | Cycle/Block/Week/Day 只显示十几个周方块单行排列，不显 Cycle/B1..B4 | `BlockWeekNav.vue` 重构：彻底移除顶栏块标签，不管在 Cycle、Block、Week 还是 Day，恒定呈现 13 周单行方块（`grid-template-columns: repeat(var(--count, 13), minmax(0, 1fr))`），选周反色，deload 斜纹，test 双描边。 |
+| 2 | Block 下按周不同颜色区分强度，每周占一行，仿照 Cycle 下的 Block 样式 | `.week-deck` 改为纵向单列单行卡片（`display: flex; flex-direction: column`），每卡顶部 4px 依顶强度着色（深青 $\le 70\%$、蔚蓝 $71-76\%$、靛紫 $77-82\%$、绛红 $> 82\%$），衬线标题，SBD 摘要与吨位组数横排。 |
+| 3 | Week 下 Day 同样单行卡片，折叠摘要极简（仅主项+重量+组数） | `.day-stack` 单列单行卡片，顶部强度色条；折叠态去除冗余标签与徽章，仅呈现纯粹主项动作、重量与结构（如 `Low-bar Squat · 110.5 kg · 1×3 TOP, 1×6 BACK-OFF`）。 |
+| 4 | Day 作为独立页面而不是折叠在周里；恢复/热身沉底，主动作在顶 | 拆分 Day 独立视图模板（`planView === 'day'` 走独立路由 `/cycle/week/:w/day/:d`），首屏聚焦纯粹动作表格；热身与装备沉底/收起，右侧配日级容量标尺与会话肌群。 |
+| 5 | 回归最纯粹训练视图，清理训练无关冗余 | 日历入口迁入 Vault；主导航保留核心项，移除 ORACLE（AI）与冗余计数条，保留 SBD 周组数、肌群周/日分析、Block 容量强度分析，测试锚点与自动化断言向后兼容。 |
+
+**门禁**：`verify.js` exit 0（6814 检查、356 用例）；`build` exit 0；`browser.mjs` 24 项 exit 0；截图 `RR\shots\0.49\`（7 张全宽截图）。
 
 ---
 
