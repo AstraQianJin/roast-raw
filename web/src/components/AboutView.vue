@@ -24,12 +24,12 @@ import { RouterLink } from 'vue-router';
       <article>
         <span class="section-label">03 / WHAT IS STORED</span>
         <h2>One SQLite file.</h2>
-        <p>The plan, your logged rows and their full save history, recovery and body readings, the questionnaire, competition attempts, membership codes and, if you use ORACLE, the text of those calls. Dates are fixed to Asia/Shanghai. Every migration takes a snapshot first.</p>
+        <p>The plan, your logged rows and their full save history, recovery and body readings, and competition attempts. Dates are fixed to Asia/Shanghai. Every migration takes a snapshot first.</p>
       </article>
       <article>
         <span class="section-label">04 / WHAT LEAVES THE SERVER</span>
         <h2>Nothing by default.</h2>
-        <p>No analytics, no third-party scripts, no web fonts fetched from another domain. ORACLE is the single exception: when you press the button on the Pro tier, the brief is sent to the configured model provider and the answer comes back. Without a key configured, that button reports that it is unavailable instead of pretending.</p>
+        <p>No analytics, no third-party scripts, no web fonts fetched from another domain, and no model provider. Nothing you record is sent anywhere; the only network call this page makes is to its own server.</p>
       </article>
       <article>
         <span class="section-label">05 / ACCESS</span>

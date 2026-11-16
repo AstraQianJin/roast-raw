@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const { spawnSync } = require('node:child_process');
 const { readFileSync: rawReadFileSync, existsSync } = require('node:fs');
-const { rmSync } = require('node:fs');
+const { readdirSync, rmSync } = require('node:fs');
 // Checks read the same sources repeatedly; the gate holds one copy per file for its run.
 const fileCache = new Map();
 function readFileSync(path, encoding) {
@@ -419,6 +419,29 @@ function pureViewCheck() {
   ['scope="week" kicker="WEEKLY CAPACITY"', 'kicker="SESSION CAPACITY"', '<LoadProfile'].forEach(needle => {
     assert.ok(app.includes(needle), `the training views keep ${needle}`);
   });
+  checks++;
+  // 0.56: the gate now holds the deletion at file level too, so a restore cannot be
+  // half-done — no module, no route, no countdown copy may survive in the source tree.
+  ['components/WarmupSuggestions.vue', 'components/GearPlates.vue', 'components/ShareButton.vue', 'components/ShareCard.vue',
+    'components/CyclePrestart.vue', 'components/QuestionnaireView.vue', 'components/AiOutlook.vue', 'components/MembershipMatrix.vue',
+    'components/PrescriptionSettings.vue', 'gear-settings.js', 'share.js'].forEach(relative => {
+    assert.ok(!existsSync(join(root, 'web', 'src', relative)), `${relative} stays deleted`);
+  });
+  checks++;
+  const main = readFileSync(join(root, 'web', 'src', 'main.js'), 'utf8');
+  assert.ok(main.includes("path: '/oracle', redirect: '/analysis'") && main.includes("path: '/questionnaire', redirect: '/analysis'"), 'both retired routes redirect to Assay instead of 404');
+  checks++;
+  const srcFiles = [];
+  const walk = dir => readdirSync(dir, { withFileTypes: true }).forEach(entry => {
+    if (entry.name === 'node_modules' || entry.name === 'dist') return;
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) walk(path);
+    else if (/\.(vue|js|css)$/.test(entry.name)) srcFiles.push(path);
+  });
+  walk(join(root, 'web', 'src'));
+  const banned = /STARTS IN|\bORACLE\b|Gear setup|Prescription settings|Share card|Warm-up suggestion/i;
+  const offenders = srcFiles.filter(path => !path.endsWith('main.js')).filter(path => banned.test(readFileSync(path, 'utf8'))).map(path => path.slice(root.length + 1));
+  assert.deepEqual(offenders, [], `no retired copy survives in the source tree (${offenders.join(', ')})`);
   checks++;
   console.log('PASS pure view: three sections, four intensity bands, weeks and days as rows, a session page of its own');
 }

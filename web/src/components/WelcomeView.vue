@@ -124,11 +124,13 @@ const condBars = computed(() => condMin.map((minutes, i) => ({
 })));
 const condRange = computed(() => `${Math.min(...condMin)}–${Math.max(...condMin)}`);
 
-const facts = [
-  { k: 'SBD', t: 'Analysis by lift', d: 'Top sets, working sets and e1RM, per lift and per week.' },
-  { k: 'MUSCLE', t: '16-leaf weekly map', d: 'Weighted contributions, front and back, week by week.' },
-  { k: 'AI', t: 'Block outlook', d: 'Reads completion, intensity and volume, then proposes the next block.' },
-  { k: 'CLOUD', t: 'Same ledger, two devices', d: 'Phone and browser read one cycle. Backup is optional.' },
+// The four modules, as the bottom nav bar: the landing page ends by handing the
+// reader to the app itself, in the order a session actually moves through it.
+const moduleNav = [
+  { k: '01 · TODAY', t: 'The day you are on', d: 'Load, sets and the log on one screen.', to: '/cycle' },
+  { k: '02 · CYCLE', t: 'Thirteen weeks, one line', d: 'Blocks, weeks and sessions in one ribbon.', to: '/cycle' },
+  { k: '03 · ASSAY', t: 'Three pillars', d: 'SBD sets, muscle heat and block load.', to: '/analysis' },
+  { k: '04 · VAULT', t: 'Archive and export', d: 'Every cycle kept; CSV and JSON on demand.', to: '/archive' },
 ];
 
 const chain = [
@@ -137,7 +139,7 @@ const chain = [
   { n: '03', k: 'PLATE MATH', d: 'Barbells, pin machines, loaded plates, dumbbells and bodyweight land on a load you can pick up.' },
   { n: '04', k: 'SET-BY-SET LOG', d: 'Check-offs and the day summary share one screen. No upload step.' },
   { n: '05', k: 'CAPACITY', d: 'Working sets, SBD equivalents and reference bands on one track.' },
-  { n: '06', k: 'EXPORT & SHARE', d: 'JSON export and a 1080 × 1440 session card, with no watermark.' },
+  { n: '06', k: 'EXPORT', d: 'The vault writes the recorded rows as CSV and the whole cycle review as JSON.' },
 ];
 
 const personas = [
@@ -195,9 +197,6 @@ onBeforeUnmount(() => { cleanup(); });
           </div>
         </div>
       </div>
-      <div class="wl-facts rv">
-        <div v-for="fact in facts" :key="fact.k" class="wl-fact"><b>{{ fact.k }}</b><span>{{ fact.t }}</span><em>{{ fact.d }}</em></div>
-      </div>
       <p class="wl-fine">Single-user release {{ releaseVersion }} · Records live on your server · No offline cache, no sync service unless you turn backup on.</p>
     </section>
 
@@ -244,19 +243,8 @@ onBeforeUnmount(() => { cleanup(); });
       </div>
     </section>
 
-    <section class="wl-sec" id="cloud">
-      <div class="wl-sec-head rv"><span class="wl-num">03 /</span><h2>Finish on the phone, open the same ledger on the web.</h2><p class="wl-deck">The same cycle and the same set log render in a browser — no export, no re-entry. Turn cloud backup on and a new phone picks it up; turn it off and only that device is affected.</p></div>
-      <div class="wl-browser rv">
-        <div class="wl-browser-bar"><i></i><i></i><i></i><span>82.157.146.30/cycle</span></div>
-        <div class="wl-browser-body">
-          <div class="wl-browser-side"><b>W05</b><span>STRENGTH BASE</span><span>S 80 · B 82.5 · D 85</span></div>
-          <div class="wl-browser-rows"><div v-for="week in 5" :key="week"><span>W{{ String(week).padStart(2, '0') }}</span><i :style="{ width: `${30 + week * 9}%` }"></i><b>{{ 12 + week }}</b></div></div>
-        </div>
-      </div>
-    </section>
-
     <section class="wl-sec wl-tour-sec" id="screens">
-      <div class="wl-sec-head rv"><span class="wl-num">04 /</span><h2>The journal, on the record.</h2><p class="wl-deck">Captured at phone width from the current build. Drag the deck with your finger: the frame you hold follows it, and the ones behind fan out and fade as they lose the front.</p></div>
+      <div class="wl-sec-head rv"><span class="wl-num">03 /</span><h2>The journal, on the record.</h2><p class="wl-deck">Captured at phone width from the current build. Drag the deck with your finger: the frame you hold follows it, and the ones behind fan out and fade as they lose the front.</p></div>
       <div class="wl-tour" data-testid="wl-tour">
         <div class="wl-tour-stage">
           <div ref="stage" class="wl-tour-frames" :class="{ 'is-dragging': dragging }" role="group" aria-roledescription="carousel" aria-label="Journal screenshots" tabindex="0" @pointerdown="onPointerDown" @pointermove="onPointerMove" @pointerup="onPointerUp" @pointercancel="onPointerUp" @keydown="onTourKey">
@@ -273,7 +261,7 @@ onBeforeUnmount(() => { cleanup(); });
     </section>
 
     <section class="wl-sec" id="who">
-      <div class="wl-sec-head rv"><span class="wl-num">05 /</span><h2>One journal, three ways to use it.</h2><p class="wl-deck">Plan, prescription, logging and export are one chain. It does not replace a coach and it is not a content community. It just keeps the day-to-day record accurate.</p></div>
+      <div class="wl-sec-head rv"><span class="wl-num">04 /</span><h2>One journal, three ways to use it.</h2><p class="wl-deck">Plan, prescription, logging and export are one chain. It does not replace a coach and it is not a content community. It just keeps the day-to-day record accurate.</p></div>
       <div class="wl-people rv">
         <article v-for="person in personas" :key="person.n" class="wl-person">
           <span class="wl-person-n">{{ person.n }} / {{ person.k }}</span>
@@ -285,14 +273,14 @@ onBeforeUnmount(() => { cleanup(); });
     </section>
 
     <section class="wl-sec" id="chain">
-      <div class="wl-sec-head rv"><span class="wl-num">06 /</span><h2>Six links, plan to review.</h2><p class="wl-deck">Six routes served by one FastAPI process. Nothing leaves the server except the page you asked for.</p></div>
+      <div class="wl-sec-head rv"><span class="wl-num">05 /</span><h2>Six links, plan to review.</h2><p class="wl-deck">Six routes served by one FastAPI process. Nothing leaves the server except the page you asked for.</p></div>
       <div class="wl-chain rv">
         <div v-for="item in chain" :key="item.n" class="wl-link"><span>{{ item.n }}</span><div><b>{{ item.k }}</b><p>{{ item.d }}</p></div></div>
       </div>
     </section>
 
     <section class="wl-sec wl-enter rv" id="download">
-      <span class="wl-num">07 /</span>
+      <span class="wl-num">06 /</span>
       <h2>Get it now.</h2>
       <p class="wl-deck">The web ledger is live. There are no phone apps to download: the buttons below stay closed until an app actually ships.</p>
       <div class="wl-enter-grid">
@@ -302,6 +290,14 @@ onBeforeUnmount(() => { cleanup(); });
       </div>
       <p class="wl-enter-f">GitHub repository: <a href="https://github.com/AstraQianJin/roast-raw" rel="noopener">AstraQianJin/roast-raw</a> · Five tiers, invite codes only · no payment processing yet.</p>
     </section>
+
+    <nav class="wl-modnav rv" aria-label="Modules">
+      <RouterLink v-for="item in moduleNav" :key="item.k" :to="item.to" class="wl-mod">
+        <span class="wl-mod-k">{{ item.k }}</span>
+        <b>{{ item.t }}</b>
+        <em>{{ item.d }}</em>
+      </RouterLink>
+    </nav>
 
     <footer class="wl-foot">
       <div class="wl-foot-brand"><BeanMark class="wl-bean" /> <b>Roast Raw</b><span>Training journal</span></div>
@@ -355,18 +351,19 @@ onBeforeUnmount(() => { cleanup(); });
 .hv-weeks i.on { outline: 2px solid var(--ink); outline-offset: 1px; }
 .hv-meta { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; font: 8.5px var(--mono); letter-spacing: .05em; color: var(--muted); }
 .hv-meta b { color: var(--ink); }
-.wl-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: clamp(28px, 5vh, 48px); }
-.wl-fact { position: relative; min-width: 0; padding: 16px 15px 17px; border: 1px solid color-mix(in srgb, var(--f, var(--accent)) 18%, transparent); border-radius: 13px; background:
-  linear-gradient(168deg, color-mix(in srgb, var(--f, var(--accent)) 13%, #FFFFFF) 0%, #FFFFFF 52%, color-mix(in srgb, var(--f, var(--accent)) 5%, #FFFFFF) 100%);
-  box-shadow: 0 1px 0 #FFFFFF inset, 0 10px 24px -18px color-mix(in srgb, var(--f, var(--accent)) 55%, transparent); }
-.wl-fact::before { content: ''; position: absolute; inset: 0 0 auto; height: 2px; border-radius: 13px 13px 0 0; background: linear-gradient(90deg, var(--f, var(--accent)) 0%, color-mix(in srgb, var(--f, var(--accent)) 25%, transparent) 74%, transparent 100%); }
-.wl-fact:nth-child(1) { --f: var(--main); }
-.wl-fact:nth-child(2) { --f: var(--accessory); }
-.wl-fact:nth-child(3) { --f: var(--variation); }
-.wl-fact:nth-child(4) { --f: var(--gold); }
-.wl-fact b { display: block; font: 500 9.5px var(--mono); letter-spacing: .2em; text-transform: uppercase; color: color-mix(in srgb, var(--f, var(--accent)) 82%, var(--ink)); }
-.wl-fact span { display: block; margin-top: 8px; font: 400 15px/1.3 var(--serif); letter-spacing: -.01em; color: var(--ink); }
-.wl-fact em { display: block; margin-top: 6px; font-style: normal; font-size: 10.5px; line-height: 1.6; color: var(--muted); }
+/* Bottom module bar: four doors into the app, equal width, thumb-sized. */
+.wl-modnav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: clamp(44px, 8vh, 76px); padding-top: clamp(26px, 4vh, 40px); border-top: 1px solid var(--hair); }
+.wl-mod { position: relative; display: flex; flex-direction: column; gap: 6px; min-width: 0; min-height: 96px; padding: 16px 15px 17px; border: 1px solid var(--line-soft); border-radius: 13px; background: #FFFFFF; color: var(--ink); text-decoration: none; box-shadow: 0 6px 18px -14px rgba(17,17,17,.5); transition: transform .18s var(--ease-out), box-shadow .18s var(--ease-out); }
+.wl-mod::before { content: ''; position: absolute; inset: 0 0 auto; height: 2px; border-radius: 13px 13px 0 0; background: var(--f, var(--accent)); }
+.wl-mod:hover { transform: translateY(-2px); box-shadow: 0 14px 26px -16px rgba(17,17,17,.45); }
+.wl-mod:nth-child(1) { --f: var(--main); }
+.wl-mod:nth-child(2) { --f: var(--variation); }
+.wl-mod:nth-child(3) { --f: var(--accessory); }
+.wl-mod:nth-child(4) { --f: var(--gold); }
+.wl-mod-k { font: 500 9px var(--mono); letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+.wl-mod b { font: 400 16px/1.25 var(--serif); letter-spacing: -.01em; }
+.wl-mod em { font-style: normal; font-size: 10.5px; line-height: 1.55; color: var(--muted); }
+.wl-mod::after { content: '→'; position: absolute; right: 13px; bottom: 12px; font: 700 11px var(--mono); color: var(--muted); }
 .wl-fine { margin-top: 14px; font-size: 11px; line-height: 1.75; color: var(--muted); }
 .wl-sec { padding-top: clamp(46px, 8vh, 88px); border-top: 1px solid var(--hair); margin-top: clamp(34px, 6vh, 64px); }
 .wl-sec-head { max-width: 46em; }
@@ -424,36 +421,6 @@ onBeforeUnmount(() => { cleanup(); });
 .wl-note ul { margin-top: 12px; display: grid; gap: 6px; }
 .wl-note li { font-size: 11px; color: var(--ink); padding-left: 14px; position: relative; }
 .wl-note li::before { content: ''; position: absolute; left: 0; top: .55em; width: 5px; height: 5px; background: var(--accent); }
-.wl-share-wrap { display: grid; place-items: center; padding: 10px 0; }
-.wl-share-card { width: min(260px, 72%); aspect-ratio: 3 / 4; border-radius: 16px; background: var(--panel); border: 1px solid var(--hair); box-shadow: 0 22px 50px rgba(17, 17, 17, .16); padding: clamp(14px, 3.4vw, 20px); display: flex; flex-direction: column; }
-.wl-share-k { font: 8px var(--mono); letter-spacing: .12em; color: var(--muted); }
-.wl-share-lift { display: flex; justify-content: space-between; align-items: baseline; margin-top: clamp(12px, 3vh, 22px); }
-.wl-share-lift span { font: 700 11px var(--mono); letter-spacing: .08em; }
-.wl-share-lift b { font: 700 clamp(22px, 5.4vw, 30px) var(--mono); }
-.wl-share-lift i { font-style: normal; font: 9px var(--mono); color: var(--accent); margin-left: 8px; }
-.wl-share-total { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--hair); display: flex; justify-content: space-between; align-items: baseline; }
-.wl-share-total span { font: 8px var(--mono); letter-spacing: .1em; color: var(--muted); }
-.wl-share-total b { font: 700 18px var(--mono); }
-.wl-share-f { margin-top: 10px; font: 7.5px var(--mono); letter-spacing: .08em; color: var(--muted); }
-.wl-ai { margin-top: 26px; border: 1px solid var(--hair); border-radius: 14px; overflow: hidden; }
-.wl-ai-row { display: grid; grid-template-columns: 170px 160px minmax(0, 1fr); gap: 12px; padding: 16px; border-bottom: 1px solid var(--soft); align-items: baseline; }
-.wl-ai-k { font: 8.5px var(--mono); letter-spacing: .12em; color: var(--accent); }
-.wl-ai-state { font: 8.5px var(--mono); letter-spacing: .1em; color: var(--muted); }
-.wl-ai-row p { font-size: 13px; line-height: 1.7; color: var(--ink); }
-.wl-ai-row.muted p { color: var(--muted); }
-.wl-ai-f { padding: 14px 16px; font: 10px var(--mono); color: var(--muted); }
-.wl-browser { margin-top: 26px; border: 1px solid var(--hair); border-radius: 16px; overflow: hidden; background: var(--panel); box-shadow: 0 18px 44px rgba(17, 17, 17, .10); }
-.wl-browser-bar { display: flex; align-items: center; gap: 6px; padding: 10px 12px; border-bottom: 1px solid var(--soft); background: var(--panel2); }
-.wl-browser-bar i { width: 8px; height: 8px; border-radius: 50%; background: var(--soft); }
-.wl-browser-bar span { margin-left: 8px; font: 9px var(--mono); color: var(--muted); }
-.wl-browser-body { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 18px; padding: 18px; }
-.wl-browser-side { border-right: 1px solid var(--soft); padding-right: 18px; }
-.wl-browser-side b { font: 700 30px var(--mono); display: block; }
-.wl-browser-side span { display: block; font: 9px var(--mono); letter-spacing: .1em; color: var(--muted); margin-top: 5px; }
-.wl-browser-rows { display: grid; gap: 10px; }
-.wl-browser-rows div { display: grid; grid-template-columns: 30px minmax(0, 1fr) 28px; align-items: center; gap: 8px; font: 9px var(--mono); color: var(--muted); }
-.wl-browser-rows i { height: 10px; border-radius: 3px; background: var(--ct-strength); opacity: .7; }
-.wl-browser-rows b { text-align: right; color: var(--ink); }
 .wl-tour { position: relative; max-width: 860px; margin: 20px auto 0; }
 .wl-tour-stage { position: relative; display: grid; grid-template-rows: minmax(0, 1fr) auto; height: clamp(440px, 70vh, 660px); }
 .wl-tour-frames { position: relative; min-height: 0; touch-action: pan-y; cursor: grab; overflow-x: clip; overflow-y: visible; }
@@ -498,15 +465,13 @@ onBeforeUnmount(() => { cleanup(); });
 .js .rv { opacity: 0; transform: translateY(14px); }
 .js .rv.in { opacity: 1; transform: none; transition: opacity .6s var(--ease), transform .7s var(--ease); }
 @media (max-width: 880px) {
-  .wl-hero-grid, .wl-two, .wl-people, .wl-chain, .wl-ai-row, .wl-browser-body { grid-template-columns: minmax(0, 1fr); }
+  .wl-hero-grid, .wl-two, .wl-people, .wl-chain { grid-template-columns: minmax(0, 1fr); }
   .wl-hero-grid { gap: 22px; }
-  .wl-browser-side { border-right: 0; border-bottom: 1px solid var(--soft); padding: 0 0 14px; }
-  .wl-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .wl-modnav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 600px) {
   .wl-tour-stage { height: clamp(360px, 62vh, 540px); }
   .wl-note p { font-size: 12.5px; }
-  .wl-ai-row { gap: 6px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .wl-tshot { transition: none; }

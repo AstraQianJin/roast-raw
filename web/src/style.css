@@ -245,6 +245,15 @@ main { padding: 30px 0 48px; }
 .day-line { min-width: 0; font: 11.5px/1.55 var(--mono); color: var(--ink); overflow-wrap: anywhere; }
 .day-line b { font-weight: 700; }
 .day-open { font: 700 9px var(--mono); letter-spacing: .08em; color: var(--ink); white-space: nowrap; }
+/* Narrow phones: the open label drops out of the row's right edge and the movement
+   line takes the full width underneath, so nothing has to be clipped at 320 px. */
+@media (max-width: 560px) {
+  .day-row { grid-template-columns: 28px max-content minmax(0, 1fr); grid-template-areas: "letter date open" "line line line"; gap: 6px 10px; }
+  .day-letter { grid-area: letter; }
+  .day-date { grid-area: date; }
+  .day-open { grid-area: open; justify-self: end; }
+  .day-line { grid-area: line; }
+}
 .session-head { position: relative; margin: 10px 0 16px; padding: 18px 16px 14px; border: 1px solid var(--line-soft); border-radius: 12px; background: linear-gradient(160deg, #FFFFFF, #FAF9F4); box-shadow: 0 8px 20px rgba(17,17,17,.05); }
 .session-band { position: absolute; inset: 0 0 auto; height: 4px; border-radius: 12px 12px 0 0; background: var(--band, var(--accent)); }
 .session-fact { margin: 8px 0 0; font: 12px/1.65 var(--mono); color: var(--ink); overflow-wrap: anywhere; }
@@ -392,7 +401,7 @@ main { padding: 30px 0 48px; }
   .brand { font-size: 23px; }
   .prescription { gap: 5px; }
   .prescription .weight { font-size: 17px; }
-  .day-row { gap: 6px; grid-template-columns: 35px 26px minmax(0,1fr) 10px; }
+  .day-row { gap: 6px; grid-template-columns: 26px max-content minmax(0, 1fr); }
   .day-letter { width: 26px; height: 26px; }
   .main-loads[style*='3'] .load-value b { font-size: 25px; }
   .main-loads[style*='3'] .intensity-label span { display: none; }

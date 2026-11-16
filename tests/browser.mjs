@@ -79,6 +79,20 @@ try {
   assert.ok(chart.first.includes(`${facts.weeks[0].sets} sets`), 'the landing bar count is the weekly total the cycle chart uses');
   await shot('landing');
   ok(`landing renders and keeps a ${landing.width} px viewport without horizontal overflow`);
+  // 0.58: the landing neither prints the host address nor buries its doors at the top.
+  const landingShell = await browser.evaluate(`(() => {
+    const mods = [...document.querySelectorAll('.wl-modnav a')];
+    const lastSection = document.querySelector('.wl-enter');
+    return { ip: /\\b\\d{1,3}(?:\\.\\d{1,3}){3}\\b/.test(document.body.innerText),
+      mods: mods.length,
+      afterSections: Boolean(mods[0] && lastSection && mods[0].getBoundingClientRect().top > lastSection.getBoundingClientRect().top),
+      minHeight: Math.round(Math.min(...mods.map(n => n.getBoundingClientRect().height))) };
+  })()`);
+  assert.equal(landingShell.ip, false, 'the landing page prints no host address');
+  assert.equal(landingShell.mods, 4, 'four module doors sit at the bottom of the landing page');
+  assert.ok(landingShell.afterSections, 'the module bar comes after the last section, not in the hero');
+  assert.ok(landingShell.minHeight >= 44, `module doors reach 44 px (${landingShell.minHeight})`);
+  ok('landing keeps no host address and puts four doors at the bottom', landingShell);
 
   // ---- 1b. 0.50: the landing no longer sells ------------------------------
   await browser.viewport(1280, 900);
@@ -695,6 +709,37 @@ try {
   assert.equal(narrow.overflow, 0, 'nothing overflows at 320 px');
   await shot('narrow-320');
   ok('320 px stays inside the page', narrow);
+  // 0.57: four phone widths, one rule — nothing overflows and no control drops under
+  // a thumb. The app ships a single light theme, so this sweep covers geometry only;
+  // dark-mode acceptance is not claimed here because no dark theme exists to test.
+  const widths = [];
+  for (const width of [320, 360, 390, 412]) {
+    await browser.viewport(width, 820);
+    await browser.navigate(`${base}/cycle/week/1`);
+    await browser.waitFor('Boolean(document.querySelector(".day-row"))', 20000);
+    await delay(250);
+    const measured = await browser.evaluate(`(() => {
+      // Primary controls only: the 13-week ribbon ships 22 px chips by design, so it is
+      // measured by its one-row geometry elsewhere and excluded from the 44 px rule.
+      const targets = [...document.querySelectorAll('button, input, summary, a.day-row, .primary-nav a')].filter(n => {
+        const box = n.getBoundingClientRect();
+        return box.width > 0 && box.height > 0 && getComputedStyle(n).visibility !== 'hidden';
+      });
+      return { width: document.documentElement.clientWidth, inner: window.innerWidth,
+        overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        minControl: Math.round(Math.min(...targets.map(n => n.getBoundingClientRect().height))),
+        wide: [...document.querySelectorAll('body *')].filter(n => n.getBoundingClientRect().right > document.documentElement.clientWidth + 1)
+          .slice(0, 4).map(n => ({ cls: String(n.className).slice(0, 28), tag: n.tagName, right: Math.round(n.getBoundingClientRect().right), text: (n.textContent || '').trim().slice(0, 24) })),
+        scrollers: [...document.querySelectorAll('body *')].filter(n => n.scrollWidth - n.clientWidth > 1)
+          .slice(0, 8).map(n => ({ cls: String(n.className).slice(0, 24), tag: n.tagName, over: n.scrollWidth - n.clientWidth, text: (n.textContent || '').trim().slice(0, 18) })) };
+    })()`);
+    assert.equal(measured.width, width, `the layout viewport is really ${width} px (inner ${measured.inner})`);
+    assert.equal(measured.overflow, 0, `nothing overflows at ${width} px (${JSON.stringify(measured.wide)} / ${JSON.stringify(measured.scrollers)})`);
+    assert.ok(measured.minControl >= 44, `controls stay 44 px at ${width} px (${measured.minControl})`);
+    widths.push(measured);
+  }
+  ok('four phone widths hold the row layout', widths);
+  await browser.viewport(421, 844);
 
   // ---- 9. nothing shouted in the console ----------------------------------
   const errors = browser.errors.map(entry => String(entry.text || entry.exceptionDetails?.text || 'error')).slice(authProbeErrors.length);
