@@ -2,7 +2,6 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import packageInfo from '../../package.json';
 import BeanMark from './BeanMark.vue';
-import MembershipMatrix from './MembershipMatrix.vue';
 import landingFacts from '../landing-facts.json';
 const [major, , patch] = packageInfo.version.split('.');
 const releaseVersion = `${major}.${patch.padStart(2, '0')}`;
@@ -240,40 +239,13 @@ onBeforeUnmount(() => { cleanup(); });
         <div class="wl-note">
           <span class="wl-note-k">WHY IT MATTERS</span>
           <p>Top intensity sits next to the load, not in a separate table. The total is the work you will actually move, not a percentage of a theoretical max.</p>
-          <ul><li>Top set, back-off and AMRAP labelled</li><li>Gear, plates and warm-ups on the same page</li><li>Log folded into the row it belongs to</li></ul>
+          <ul><li>Top set, back-off and AMRAP labelled</li><li>Log folded into the row it belongs to</li></ul>
         </div>
-      </div>
-    </section>
-
-    <section class="wl-sec" id="share">
-      <div class="wl-sec-head rv"><span class="wl-num">03 /</span><h2>A session is already a card.</h2><p class="wl-deck">One tap on a day page renders the session as a 1080 × 1440 card: one print finish, no watermark.</p></div>
-      <div class="wl-two rv">
-        <div class="wl-share-wrap"><div class="wl-share-card">
-          <p class="wl-share-k">ROAST RAW · {{ sample.label }}</p>
-          <div v-for="lift in sample.lifts" :key="`card-${lift.lift}`" class="wl-share-lift"><span>{{ liftLabel(lift) }}</span><b>{{ fmtKg(lift.top_kg) }}</b><i v-if="lift.pct !== undefined">{{ lift.pct }}%</i></div>
-          <div class="wl-share-total"><span>TOTAL LOAD</span><b>{{ fmtKg(sample.day_total_kg) }} kg</b></div>
-          <p class="wl-share-f">{{ sample.set_count }} SETS · {{ sampleDate }} · NO WATERMARK</p>
-        </div></div>
-        <div class="wl-note">
-          <span class="wl-note-k">EXPORT, NOT A FEED</span>
-          <p>The card reads the block you ran, not the block you planned. Share it, keep it, or ignore it — the ledger does not change either way.</p>
-          <ul><li>1080 × 1440 PNG</li><li>No watermark</li><li>Same numbers as the day page</li></ul>
-        </div>
-      </div>
-    </section>
-
-    <section class="wl-sec" id="outlook">
-      <div class="wl-sec-head rv"><span class="wl-num">04 /</span><h2>It reads the block you ran, then proposes the next one.</h2><p class="wl-deck">Optional AI reads completion, intensity and volume from the block you actually ran, then proposes the next. Every line arrives as a comparison; nothing you do not accept reaches the ledger.</p></div>
-      <div class="wl-ai rv">
-        <div class="wl-ai-row"><span class="wl-ai-k">BLOCK B2 · REVIEW</span><span class="wl-ai-state">COMPLETION 92%</span><p>Top-set intensity held; bench volume fell 3% short across two sessions.</p></div>
-        <div class="wl-ai-row"><span class="wl-ai-k">PROPOSAL · B3</span><span class="wl-ai-state">AWAITING ACCEPT</span><p>Raise squat top set 2.5 kg; keep bench volume, add one back-off set.</p></div>
-        <div class="wl-ai-row muted"><span class="wl-ai-k">LEDGER</span><span class="wl-ai-state">UNCHANGED</span><p>Nothing is written until you accept it. Decline and the plan stays as it is.</p></div>
-        <p class="wl-ai-f">AI is optional. Turn it off and every other screen still works.</p>
       </div>
     </section>
 
     <section class="wl-sec" id="cloud">
-      <div class="wl-sec-head rv"><span class="wl-num">05 /</span><h2>Finish on the phone, open the same ledger on the web.</h2><p class="wl-deck">The same cycle and the same set log render in a browser — no export, no re-entry. Turn cloud backup on and a new phone picks it up; turn it off and only that device is affected.</p></div>
+      <div class="wl-sec-head rv"><span class="wl-num">03 /</span><h2>Finish on the phone, open the same ledger on the web.</h2><p class="wl-deck">The same cycle and the same set log render in a browser — no export, no re-entry. Turn cloud backup on and a new phone picks it up; turn it off and only that device is affected.</p></div>
       <div class="wl-browser rv">
         <div class="wl-browser-bar"><i></i><i></i><i></i><span>82.157.146.30/cycle</span></div>
         <div class="wl-browser-body">
@@ -284,7 +256,7 @@ onBeforeUnmount(() => { cleanup(); });
     </section>
 
     <section class="wl-sec wl-tour-sec" id="screens">
-      <div class="wl-sec-head rv"><span class="wl-num">06 /</span><h2>The journal, on the record.</h2><p class="wl-deck">Captured at phone width from the current build. Drag the deck with your finger: the frame you hold follows it, and the ones behind fan out and fade as they lose the front.</p></div>
+      <div class="wl-sec-head rv"><span class="wl-num">04 /</span><h2>The journal, on the record.</h2><p class="wl-deck">Captured at phone width from the current build. Drag the deck with your finger: the frame you hold follows it, and the ones behind fan out and fade as they lose the front.</p></div>
       <div class="wl-tour" data-testid="wl-tour">
         <div class="wl-tour-stage">
           <div ref="stage" class="wl-tour-frames" :class="{ 'is-dragging': dragging }" role="group" aria-roledescription="carousel" aria-label="Journal screenshots" tabindex="0" @pointerdown="onPointerDown" @pointermove="onPointerMove" @pointerup="onPointerUp" @pointercancel="onPointerUp" @keydown="onTourKey">
@@ -301,7 +273,7 @@ onBeforeUnmount(() => { cleanup(); });
     </section>
 
     <section class="wl-sec" id="who">
-      <div class="wl-sec-head rv"><span class="wl-num">07 /</span><h2>One journal, three ways to use it.</h2><p class="wl-deck">Plan, prescription, logging and export are one chain. It does not replace a coach and it is not a content community. It just keeps the day-to-day record accurate.</p></div>
+      <div class="wl-sec-head rv"><span class="wl-num">05 /</span><h2>One journal, three ways to use it.</h2><p class="wl-deck">Plan, prescription, logging and export are one chain. It does not replace a coach and it is not a content community. It just keeps the day-to-day record accurate.</p></div>
       <div class="wl-people rv">
         <article v-for="person in personas" :key="person.n" class="wl-person">
           <span class="wl-person-n">{{ person.n }} / {{ person.k }}</span>
@@ -313,16 +285,14 @@ onBeforeUnmount(() => { cleanup(); });
     </section>
 
     <section class="wl-sec" id="chain">
-      <div class="wl-sec-head rv"><span class="wl-num">08 /</span><h2>Six links, plan to review.</h2><p class="wl-deck">Six routes served by one FastAPI process. The network is used only by the optional AI you turn on.</p></div>
+      <div class="wl-sec-head rv"><span class="wl-num">06 /</span><h2>Six links, plan to review.</h2><p class="wl-deck">Six routes served by one FastAPI process. Nothing leaves the server except the page you asked for.</p></div>
       <div class="wl-chain rv">
         <div v-for="item in chain" :key="item.n" class="wl-link"><span>{{ item.n }}</span><div><b>{{ item.k }}</b><p>{{ item.d }}</p></div></div>
       </div>
     </section>
 
-    <MembershipMatrix />
-
     <section class="wl-sec wl-enter rv" id="download">
-      <span class="wl-num">10 /</span>
+      <span class="wl-num">07 /</span>
       <h2>Get it now.</h2>
       <p class="wl-deck">The web ledger is live. There are no phone apps to download: the buttons below stay closed until an app actually ships.</p>
       <div class="wl-enter-grid">

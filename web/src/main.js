@@ -8,7 +8,7 @@ const paths = [
   '/about',
   '/cycle', '/cycle/block/:blockId', '/cycle/week/:week', '/cycle/week/:week/day/:day', '/cycle/test',
   '/calendar',
-  '/analysis', '/archive', '/archive/:cycleId', '/questionnaire',
+  '/analysis', '/archive', '/archive/:cycleId',
   '/:pathMatch(.*)*',
 ];
 const redirects = [
@@ -18,6 +18,8 @@ const redirects = [
   { path: '/plan/week/:week', redirect: to => `/cycle/week/${to.params.week}` },
   { path: '/plan/test', redirect: '/cycle/test' },
   { path: '/settings', redirect: '/archive#account' },
+  { path: '/questionnaire', redirect: '/analysis' },
+  { path: '/oracle', redirect: '/analysis' },
 ];
 const router = createRouter({
   history: createWebHistory(),

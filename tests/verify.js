@@ -138,63 +138,6 @@ async function plateCheck() {
   console.log('PASS plates: symmetric, collar-on, single-side and shortfall arithmetic agree');
 }
 
-async function plateParityCheck() {
-  // The UI cabinet and the share canvas each solve plates. They must agree on every
-  // symmetric, fully buildable load; the UI is allowed to split an odd half, the canvas
-  // is not, so asymmetric or short loads are out of scope by definition.
-  const { solveLoad } = await import('../web/src/plate-load.js');
-  const { solvePlates } = await import('../web/src/share.js');
-  const mismatches = [];
-  let compared = 0;
-  for (let total = 20; total <= 320; total += 0.5) {
-    for (const collar of [0, 5]) {
-      const ui = solveLoad(total, 20, collar);
-      if (ui.asymmetric || ui.shortKg > 0) continue;
-      const side = ui.sideA.plates.map(plate => plate.kg);
-      const share = solvePlates(total, 20, collar).map(plate => plate.kg);
-      compared++;
-      if (JSON.stringify(side) !== JSON.stringify(share)) mismatches.push({ total, collar, side, share });
-    }
-  }
-  assert.equal(mismatches.length, 0, `plate solutions drifted between the UI and the share card: ${JSON.stringify(mismatches.slice(0, 3))}`);
-  assert.ok(compared > 500, `the parity sweep must cover the working range, compared ${compared}`);
-  checks += 2;
-  console.log(`PASS plate parity: ${compared} symmetric loads agree between the cabinet and the share canvas`);
-}
-
-async function shareCheck() {
-  const { solvePlates, dayShareData } = await import('../web/src/share.js');
-  const kg = plates => plates.reduce((sum, plate) => sum + plate.kg, 0);
-  // The collar switch became a venue setting in 0.33: the default is off, and the
-  // same total is solved twice so both policies stay pinned to their own arithmetic.
-  // 155 − 20 bar − 5 collars = 130 → 65 per side = 25+25+15.
-  same(solvePlates(155, 20, 5).map(plate => plate.kg), [25, 25, 15], 'collar-on share plates for 155 kg');
-  near(kg(solvePlates(155, 20, 5)) * 2 + 25, 155, 1e-9, 'collar-on plate sum reconstructs total');
-  // 155 − 20 = 135 → 67.5 per side = 25+25+15+2.5.
-  same(solvePlates(155, 20, 0).map(plate => plate.kg), [25, 25, 15, 2.5], 'collar-off share plates for 155 kg');
-  same(solvePlates(140, 20, 5).map(plate => plate.kg), [25, 25, 5, 2.5], 'share plates reach micro plates');
-  same(solvePlates(25, 20, 5), [], 'bar plus collars alone draws no plates');
-  same(solvePlates(20, 20, 0), [], 'bar alone draws no plates');
-  const plan = { workouts: [
-    { date: '2026-11-16', week: 1, day: 'A', seq: 1, bucket: 'main', lift: 'S', nameEn: 'High-bar Squat', sets: 3 },
-    { date: '2026-11-16', week: 1, day: 'A', seq: 2, bucket: 'main', lift: 'B', nameEn: 'Mid-grip Bench', sets: 3 },
-    { date: '2026-11-16', week: 1, day: 'A', seq: 3, bucket: 'accessory', lift: null, nameEn: 'Side Plank', sets: 2 },
-    { date: '2026-11-17', week: 1, day: 'B', seq: 1, bucket: 'main', lift: 'D', nameEn: 'Deadlift', sets: 2 },
-  ] };
-  const logs = {
-    '1|A|1': { load: 140, sets: 3, reps: 3, rpe: 8 },
-    '1|A|2': { load: 100, sets: 3, reps: 3, rpe: 8 },
-    '1|A|3': { load: null, sets: 2, reps: 30, rpe: null },
-  };
-  const data = dayShareData(plan, logs, '2026-11-16');
-  same(data.topSet, { name: 'Mid-grip Bench', load: 100, reps: 3, rpe: 8 }, 'share top set is the final logged main lift');
-  near(data.volume, 140 * 9 + 100 * 9, 1e-9, 'null accessory load contributes zero volume, not NaN');
-  same(data.byLift, [['S', 1260], ['B', 900], ['OTHER', 0]], 'volume by lift sorts desc and keeps null-load group');
-  same([data.doneSets, data.plannedSets], [8, 8], 'share counts logged and planned sets');
-  const empty = dayShareData(plan, logs, '2026-11-17');
-  same([empty.volume, empty.topSet, empty.loggedCount], [null, null, 0], 'unlogged date is an explicit empty state');
-  console.log('PASS share math: collar-inclusive plate solve, final-main top set, null-load volume safety, empty state');
-}
 function landingFactsCheck() {
   const facts = json('web/src/landing-facts.json');
   const plan = json('data/plan.json');
@@ -293,26 +236,12 @@ print(json.dumps({'classes': c['classes'], 'planned': c['planned'], 'actual': c[
   console.log(`PASS completion R5: as of ${asOf} main ${planned.main} / var ${planned.var} / acc ${planned.acc} planned sets, ${elapsedSessions} sessions elapsed`);
 }
 function membershipMatrixCheck() {
-  // The landing matrix must read the exported table, not a second copy typed into Vue.
-  const members = json('web/src/membership.json');
-  const vue = readFileSync(join(root, 'web', 'src', 'components', 'MembershipMatrix.vue'), 'utf8');
+  // 0.50: the landing page no longer sells. The tier table is gone from the marketing
+  // surface; what remains of the deck still has to be a pointer-driven, label-free fan.
   const welcome = readFileSync(join(root, 'web', 'src', 'components', 'WelcomeView.vue'), 'utf8');
-  same(members.columns, ['free', 'lite', 'plus', 'pro'], 'four columns; Ultra never takes a column');
-  same(members.tiers.length, 5, 'five tiers exist');
-  assert.ok(vue.includes("import membership from '../membership.json'"), 'the matrix imports the exported table');
-  ['¥', 'US$', '19.9', '69.9', '198', '98'].forEach(text => {
-    assert.ok(!vue.includes(`'${text}`), `no typed-in price (${text}) in the component`);
-  });
-  members.capabilities.forEach(item => {
-    assert.ok(!vue.includes(item.label), `capability label "${item.label}" is not copied into the component`);
-  });
-  assert.ok(vue.includes('<table') && vue.includes('<th scope="col"'), 'a real table with scoped headers');
-  assert.ok(vue.includes('<th scope="row"'), 'row headers name each capability');
-  assert.ok(vue.includes('aria-label'), 'included/not-included cells carry a label, not just a glyph');
-  assert.ok(vue.includes("'0fr'") || vue.includes('grid-template-rows'), 'the collapsed rows animate through grid rows');
-  assert.ok(vue.includes('ResizeObserver'), 'the sticky offset is measured, not hardcoded');
-  assert.ok(vue.includes('prefers-reduced-motion'), 'reduced motion turns the reveal off');
-  assert.ok(welcome.includes('<MembershipMatrix />'), 'the landing page renders the matrix');
+  assert.ok(!welcome.includes('MembershipMatrix'), 'the landing page carries no membership matrix');
+  assert.ok(!readFileSync(join(root, 'web', 'src', 'App.vue'), 'utf8').includes('MembershipMatrix.vue'), 'the matrix component is not imported anywhere');
+  checks++;
   assert.ok(!welcome.includes('data-testid="wl-share"') && !welcome.includes('class="wl-top"'), 'the landing keeps one masthead and no share button of its own');
   assert.ok(!welcome.includes('no tiers'), 'the old "no tiers" copy is gone');
   assert.ok(welcome.includes('data-testid="wl-tour"') && welcome.includes("onPointerDown"), 'the screenshot deck is dragged by the pointer');
@@ -320,7 +249,7 @@ function membershipMatrixCheck() {
   assert.ok(welcome.includes('frameStyle') && welcome.includes('rotate(') && welcome.includes('translate3d'), 'every frame is offset diagonally, turned and faded like a dealt hand');
   assert.ok(!welcome.includes('--tour-p') && !welcome.includes('readTour'), 'the scroll reader is gone, not running beside the deck');
   checks++;
-  console.log(`PASS membership matrix: ${members.capabilities.length} capabilities from membership.json, four columns plus the Ultra strip`);
+  console.log('PASS landing: one masthead, a pointer-dealt fan, and no membership table');
 }
 function membershipPanelCheck() {
   // The account panel reads the session and the membership endpoints; it must not
@@ -374,9 +303,7 @@ function auditFixesCheck() {
   // Defects from the 0.38 independent review, each pinned to the code that closes it.
   const app = readFileSync(join(root, 'web', 'src', 'App.vue'), 'utf8');
   const analysis = readFileSync(join(root, 'web', 'src', 'components', 'AnalysisView.vue'), 'utf8');
-  const matrix = readFileSync(join(root, 'web', 'src', 'components', 'MembershipMatrix.vue'), 'utf8');
   const strip = readFileSync(join(root, 'web', 'src', 'components', 'BarbellStrip.vue'), 'utf8');
-  const card = readFileSync(join(root, 'web', 'src', 'components', 'ShareCard.vue'), 'utf8');
   const browser = readFileSync(join(root, 'tests', 'browser.mjs'), 'utf8');
   const title = readFileSync(join(root, 'server', 'tools', 'gen_data.py'), 'utf8');
   const landing = readFileSync(join(root, 'web', 'src', 'components', 'WelcomeView.vue'), 'utf8');
@@ -390,14 +317,8 @@ function auditFixesCheck() {
   checks++;
   assert.ok(!analysis.includes('item.actual / item.planned * 100'), 'D-02: the whole-cycle ratio is gone from the register');
   checks++;
-  // D-04: toggle buttons expose their state.
-  assert.ok(matrix.includes('aria-expanded="false" aria-controls="mm-extra-rows"'), 'D-04: collapsed toggle announces aria-expanded');
-  checks++;
   // D-05: an omitted prop must not silently count collars.
   assert.ok(/collarPair: { type: Number, default: 0 }/.test(strip), 'D-05: BarbellStrip defaults collars off');
-  checks++;
-  // D-06: the canvas redraws when collars change.
-  assert.ok(card.includes('watch([data, () => props.theme, collarPair], draw'), 'D-06: share card watches the collar pair');
   checks++;
   // D-07: the screenshot folder follows the release instead of a hard-coded number.
   assert.ok(browser.includes("JSON.parse(readFileSync(join(root, 'web', 'package.json'), 'utf8')).version"), 'D-07: SHOTS_DIR derives from package.json');
@@ -414,9 +335,7 @@ function auditFixesCheck() {
   // links are what has to clear 44 px now.
   assert.ok(landing.includes('.wl-foot-links a { display: inline-flex; align-items: center; min-height: 44px;'), 'D-03: landing footer links reach 44 px');
   checks++;
-  assert.ok(readFileSync(join(root, 'web', 'src', 'components', 'MembershipMatrix.vue'), 'utf8').includes('min-height: 44px; color: var(--bg)'), 'D-03: the invite link reaches 44 px');
-  checks++;
-  console.log('PASS audit fixes: D-01..D-07, U-01 and D-03 pinned to their code');
+  console.log('PASS audit fixes: D-01..D-05, D-07 and U-01 pinned to their code');
 }
 function calendarViewCheck() {
   // The calendar is a projection, not a second copy of the plan.
@@ -458,11 +377,11 @@ function copyAndLabelsCheck() {
   ['SBD', 'MEV', 'MRV', 'RPE', 'GPP', 't', 'ses', 'TOP / BACK-OFF'].forEach(term => {
     assert.ok(glossary.includes(`'${term}'`), `the glossary defines ${term}`);
   });
-  // 0.46: a cycle that has not begun says so on the cycle page, not only on Today.
-  assert.ok(app.includes('data-testid="cycle-prestart-band"'), 'the cycle page carries a not-started band');
-  assert.ok(app.includes("calendar.value.status !== 'upcoming'"), 'the band exists only before the start date');
-  assert.ok(app.includes("startCountdown ? 'STARTS IN' : 'START'"), 'the start metric becomes a countdown before day one');
-  checks += 7;
+  // 0.50: the waiting band and its countdown are gone. The cycle page states the real
+  // start date and nothing else; a countdown is not a training fact.
+  assert.ok(!app.includes('cycle-prestart-band') && !app.includes('startCountdown'), 'no not-started band and no countdown survive on the cycle page');
+  assert.ok(!app.includes('CyclePrestart'), 'the pre-start panel is not mounted on Today either');
+  checks += 6;
   console.log('PASS copy and labels: plurals, sign out, row tags, capacity axis, glossary');
 }
 
@@ -473,14 +392,11 @@ function logicAffordanceCheck() {
   assert.ok(attempts.includes('def ceil25('), 'the ladder can step up instead of only flooring');
   assert.ok(attempts.includes('values[index] = ceil25(values[index - 1] + 2.5)'),
     'a would-be tie moves the third attempt up one 2.5 kg step');
-  const ai = readFileSync(join(root, 'web', 'src', 'components', 'AiOutlook.vue'), 'utf8');
-  assert.ok(ai.includes('This call keeps its timing and usage only'), 'a call with no stored text says so');
-  assert.ok(ai.includes('callState.error'), 'a failed history fetch shows its reason instead of nothing');
   const calendar = readFileSync(join(root, 'web', 'src', 'components', 'CalendarView.vue'), 'utf8');
   assert.ok(calendar.includes('SESSION {{ day.day }}'), 'the calendar detail names the session it belongs to');
   assert.ok(calendar.includes('day.rows'), 'the calendar detail lists the prescribed rows themselves');
-  checks += 4;
-  console.log('PASS logic and affordances: the ladder never ties, a history row always answers, the detail names its session');
+  checks += 2;
+  console.log('PASS logic and affordances: the ladder never ties, the detail names its session');
 }
 
 function blockTestDateCheck() {
@@ -619,8 +535,6 @@ try {
     libraryCheck();
     syntheticCheck();
     await plateCheck();
-    await plateParityCheck();
-    await shareCheck();
     landingFactsCheck();
     totalsReconcileCheck();
     blockTestDateCheck();

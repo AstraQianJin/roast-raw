@@ -8,28 +8,20 @@ const [major, , patch] = packageInfo.version.split('.');
 const releaseVersion = `${major}.${patch.padStart(2, '0')}`;
 import MuscleMap from './components/MuscleMap.vue';
 import ExerciseRows from './components/ExerciseRows.vue';
-import WarmupSuggestions from './components/WarmupSuggestions.vue';
 import WeekCapacity from './components/WeekCapacity.vue';
 import CapacityBoard from './components/CapacityBoard.vue';
 import DailyRecord from './components/DailyRecord.vue';
-import PrescriptionSettings from './components/PrescriptionSettings.vue';
 import TrendView from './components/TrendView.vue';
 import ArchiveView from './components/ArchiveView.vue';
 import PlanImport from './components/PlanImport.vue';
-import QuestionnaireView from './components/QuestionnaireView.vue';
-import AiOutlook from './components/AiOutlook.vue';
 import AttemptBoard from './components/AttemptBoard.vue';
-import GearPlates from './components/GearPlates.vue';
-import { collarPairOf, setUseCollars, useCollars } from './gear-settings.js';
 import WelcomeView from './components/WelcomeView.vue';
 import AboutView from './components/AboutView.vue';
 import LoginView from './components/LoginView.vue';
 import RegisterView from './components/RegisterView.vue';
 import CycleStrip from './components/CycleStrip.vue';
 import CalendarView from './components/CalendarView.vue';
-import ShareButton from './components/ShareButton.vue';
 import BeanMark from './components/BeanMark.vue';
-import CyclePrestart from './components/CyclePrestart.vue';
 import LoadProfile from './components/LoadProfile.vue';
 import AnalysisView from './components/AnalysisView.vue';
 import BlockWeekNav from './components/BlockWeekNav.vue';
@@ -72,7 +64,6 @@ const recoveryLockNote = computed(() => session.value?.authenticated
   : 'Read-only record.');
 const authReady = ref(false);
 const mode = ref('plan');
-const outlookTab = ref('questionnaire');
 const page = computed(() => {
   if (['/', '/welcome'].includes(route.path)) return 'welcome';
   if (route.path === '/about') return 'about';
@@ -95,7 +86,7 @@ const week = computed(() => analysis.value?.perWeek.find(week => week.n === curr
 const weekMeta = computed(() => plan.value?.weeks.find(week => week.n === currentWeek.value));
 const validRoute = computed(() => {
   if (['welcome', 'login', 'register'].includes(page.value)) return true;
-  if (!['today', 'cycle', 'analysis', 'archive', 'questionnaire', 'calendar'].includes(page.value)) return false;
+  if (!['today', 'cycle', 'analysis', 'archive', 'calendar'].includes(page.value)) return false;
   if (page.value === 'calendar') return true;
   if (!week.value) return false;
   return !route.params.day || plan.value.workouts.some(row => row.week === currentWeek.value && row.day === route.params.day);
@@ -112,20 +103,8 @@ const days = computed(() => {
 });
 const todaySession = computed(() => calendar.value?.day ? { date: calendar.value.date, week: calendar.value.week, day: calendar.value.day } : calendar.value?.nextSession);
 const todayLink = computed(() => todaySession.value ? `/cycle/week/${todaySession.value.week}/day/${todaySession.value.day}` : '/cycle');
-// A cycle that has not begun is a state, not a blank week: the countdown is measured
-// against the date the server calls today, never against the browser clock.
-const startCountdown = computed(() => {
-  if (!plan.value || !calendar.value || calendar.value.status !== 'upcoming') return null;
-  const day = iso => { const [y, m, d] = iso.split('-').map(Number); return Date.UTC(y, m - 1, d); };
-  const days = Math.round((day(plan.value.meta.startDate) - day(calendar.value.date)) / 86400000);
-  const firstRow = plan.value.workouts.find(row => row.week === 1);
-  return {
-    days,
-    start: plan.value.meta.startDate,
-    first: firstRow ? `/cycle/week/1/day/${firstRow.day}` : '/cycle/week/1',
-    label: days === 1 ? '1 day' : `${days} days`,
-  };
-});
+// A cycle that has not begun shows the date it starts, not a countdown: the training
+// surface states the fact and leaves the waiting to the calendar.
 // Before the calendar arrives the pill names the plan's first date from the same
 // generated facts the landing page uses; it never prints a placeholder sentence.
 const todayCtaDate = computed(() => !calendar.value ? dateLabel(landingFacts.startDate) : calendar.value.day ? dateLabel(calendar.value.date) : calendar.value.nextSession ? dateLabel(calendar.value.nextSession.date) : dateLabel(landingFacts.startDate));
@@ -194,17 +173,6 @@ const display = value => value === null || value === undefined ? '—' : Number(
 // cycle headline, which is rounded once to one decimal.
 const displayT2 = value => value === null || value === undefined ? '—' : Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const DELOAD_NOTE = 'Deload week: lighter loads, same movements. Nothing is skipped and no date moves.';
-const needsMicroPlates = rows => rows.some(row => row.segments.some(segment => segment.load !== null && segment.load % 2.5 !== 0));
-// Competition collars: off unless the venue switch is turned on in settings.
-const collarPair = computed(() => collarPairOf(useCollars.value));
-// Sheiko warm-ups belong to the main lift only: a variation or an accessory gets
-// no ladder and no reserved height, so the session starts at the movement that
-// actually carries the top load.
-const mainWarmups = (date, rows) => {
-  const mains = new Set((rows || []).filter(row => row.bucket === 'main').map(row => row.nameEn));
-  const entries = (plan.value?.warmups || {})[date] || [];
-  return entries.filter(entry => mains.has(entry.movement));
-};
 const blockType = blockId => (plan.value?.blocks.find(block => block.id === blockId)?.cycleType || 'custom').toLowerCase();
 const BLOCK_COLOR = { hyper: 'var(--ct-hyper)', hypertrophy: 'var(--ct-hyper)', strength: 'var(--ct-strength)', transmute: 'var(--ct-transmute)', peak: 'var(--ct-peak)', deload: 'var(--ct-deload)', custom: 'var(--ct-custom)' };
 const blockColor = blockId => BLOCK_COLOR[blockType(blockId)] || 'var(--accent)';
@@ -421,7 +389,7 @@ watch([() => route.fullPath, loading], async () => {
 <template>
   <div class="shell">
     <header class="masthead"><RouterLink to="/" class="brand" aria-label="Roast Raw home"><BeanMark class="brand-mark" />Roast Raw</RouterLink><span class="edition">v{{ releaseVersion }}</span><button v-if="!isPublic" type="button" class="masthead-signout" @click="logout">Sign out</button><RouterLink v-if="!isPublic" :to="todayLink" class="today-cta"><span class="today-dot"></span><span class="today-word">{{ todayCtaLabel }}</span><small>{{ todayCtaDate }}</small></RouterLink><RouterLink v-else-if="page === 'welcome'" :to="session?.authenticated ? '/cycle' : { path: '/login', query: { next: '/cycle' } }" class="masthead-cta">MY CYCLE</RouterLink></header>
-    <nav v-if="!isPublic" class="primary-nav" aria-label="Primary"><RouterLink to="/cycle" :class="{ 'router-link-active': page === 'cycle' }">CYCLE</RouterLink><RouterLink to="/analysis">ASSAY</RouterLink><RouterLink to="/questionnaire">ORACLE</RouterLink><RouterLink to="/archive">VAULT</RouterLink></nav>
+    <nav v-if="!isPublic" class="primary-nav" aria-label="Primary"><RouterLink to="/cycle" :class="{ 'router-link-active': page === 'cycle' }">CYCLE</RouterLink><RouterLink to="/analysis">ASSAY</RouterLink><RouterLink to="/archive">VAULT</RouterLink></nav>
     <main :aria-busy="loading">
       <WelcomeView v-if="page === 'welcome'" />
       <AboutView v-else-if="page === 'about'" />
@@ -441,7 +409,6 @@ watch([() => route.fullPath, loading], async () => {
             <p class="hero-subtitle">{{ calendar.status === 'training' ? plan.weeks.find(week => week.n === calendar.week).blockName : calendar.status === 'upcoming' ? 'A stronger cycle starts here.' : 'The calendar stays. Recovery matters.' }}</p>
             <p v-if="calendar.status !== 'training'" class="notice">{{ calendar.status === 'upcoming' ? `Your plan starts ${dateLabel(plan.meta.startDate)}. There is no session today.` : calendar.status === 'ended' ? 'The scheduled cycle has ended. No training dates have been moved.' : 'No session scheduled today. Missed sessions do not move the calendar.' }}</p>
             <p v-if="calendar.status === 'training' && plan.weeks.find(item => item.n === calendar.week)?.kind === 'deload'" class="notice">{{ DELOAD_NOTE }}</p>
-            <CyclePrestart v-if="calendar.status === 'upcoming'" :plan="plan" :date="calendar.date" />
             <template v-if="todaySession">
               <div class="badges"><span class="badge">{{ calendar.day ? 'TODAY’S SESSION' : 'NEXT SESSION · PREVIEW' }}</span><span class="badge">W{{ String(todaySession.week).padStart(2, '0') }} · DAY {{ todaySession.day }} · {{ dateLabel(todaySession.date) }}</span></div>
               <section v-if="todayLifts.length" class="main-loads" :style="{ '--columns': todayLifts.length }" aria-label="Main lift loads">
@@ -453,11 +420,7 @@ watch([() => route.fullPath, loading], async () => {
               <RouterLink :to="`/cycle/week/${todaySession.week}/day/${todaySession.day}`" class="inline-link">Open the scheduled day →</RouterLink>
               <DailyRecord :cycle-id="plan.meta.planId" :date="todaySession.date" :session-id="`${todaySession.week}|${todaySession.day}`" :readonly="!can('recovery_body')" :readonly-note="recoveryLockNote" @saved="refreshPrescription" />
 
-              <details v-if="can('gear_warmups')" class="gear"><summary>GEAR <span class="chip">{{ needsMicroPlates(todayRows) ? 'MICRO PLATES' : 'SESSION SETUP' }}</span><span v-if="plan.meta.profile.bar_kg" class="chip">{{ display(plan.meta.profile.bar_kg) }} KG BAR</span><span class="chip" data-testid="collar-chip">COLLARS {{ useCollars ? '+5 KG' : 'OFF' }}</span></summary><p>{{ needsMicroPlates(todayRows) ? 'Some prescribed loads need micro plates. Prepare equipment before the session; loads remain unchanged.' : 'Standard plates cover these prescribed loads. Prepare equipment before the session.' }}</p><p v-if="plan.meta.profile.bar_kg">Plan bar reference: {{ display(plan.meta.profile.bar_kg) }} kg. {{ useCollars ? 'Competition collars add their 5 kg pair to every plate breakdown.' : 'No collars are counted; the bar is the only fixed weight.' }}</p><p v-if="todayRows.some(row => prescriptionInfo?.systemLoads[row.week + '|' + row.day + '|' + row.seq])">Pull-up and dip loads include bodyweight. Check the dated bodyweight reading before choosing assistance or added weight.</p><GearPlates :rows="todayRows" :bar-kg="plan.meta.profile.bar_kg || 20" :collar-pair="collarPair" /></details>
-              <WarmupSuggestions v-if="can('gear_warmups')" :entries="mainWarmups(todaySession.date, todayRows)" />
-              <LockedFeature v-else compact label="Gear & Sheiko warm-ups" tier="lite" />
               <ExerciseRows :rows="todayRows" :cycle-id="plan.meta.planId" :logs="logs" :system-loads="prescriptionInfo?.systemLoads || {}" @saved="savedLog" />
-              <ShareButton :plan="plan" :logs="logs" :default-date="todaySession.date" />
             </template>
           </div>
           <aside><MuscleMap v-if="geometry" compact :geometry="geometry" :leaves="todayAnalysis ? todayLeaves : leaves" :heat-scale="analysis.heatScale" :week-number="currentWeek" :week-count="plan.weeks.length" :scope="todayAnalysis ? 'session' : 'week'" @week="selectWeek" /><LockedFeature v-else compact label="Muscle-group map" tier="plus" /><WeekCapacity :week="todayAnalysis || week" :ranges="analysis.ranges" :scope="todayAnalysis ? 'session' : 'week'" :kicker="todayAnalysis ? 'SESSION CAPACITY' : 'WEEKLY CAPACITY'" /></aside>
@@ -465,10 +428,8 @@ watch([() => route.fullPath, loading], async () => {
                 <template v-else-if="page === 'cycle'">
           <template v-if="planView === 'cycle'">
             <div class="eyebrow">RR / 01 · CYCLE — {{ plan.meta.weeks }} WEEKS · {{ plan.meta.sessions }} SESSIONS · {{ analysis.cycle.total }} SETS</div><h1 class="plan-title">The cycle.</h1><p class="hero-subtitle">{{ dateLabel(plan.meta.startDate) }} — {{ dateLabel(plan.meta.endDate) }}</p>
-            <p v-if="startCountdown" class="cycle-prestart-band" data-testid="cycle-prestart-band"><span class="section-label">NOT STARTED</span><span>The cycle begins {{ dateLabel(startCountdown.start) }} — {{ startCountdown.label }} from today. Nothing is scheduled to be logged yet.</span><RouterLink :to="startCountdown.first" class="inline-link">Preview the first session →</RouterLink></p>
             <BlockWeekNav :blocks="plan.blocks" :weeks="plan.weeks" :current-week="Number(calendar?.week || 1)" />
-            <RouterLink to="/calendar" class="inline-link" data-testid="open-calendar">Open the calendar →</RouterLink>
-            <div class="plan-metrics"><div class="metric"><span class="section-label">{{ startCountdown ? 'STARTS IN' : 'START' }}</span><strong>{{ startCountdown ? startCountdown.label : dateLabel(plan.meta.startDate) }}</strong><small>{{ plan.meta.startDate.slice(0, 4) }} · {{ plan.meta.weeks }} WEEKS</small></div><div class="metric"><span class="section-label">TEST DAY</span><strong>{{ plan.testPlan?.dates?.sbd ? dateLabel(plan.testPlan.dates.sbd) : 'Not set' }}</strong><small>{{ plan.testPlan?.dates?.sbd ? `W${String(plan.weeks.find(w => w.kind === 'test')?.n || 0).padStart(2, '0')} · SBD` : 'Add a date in outlook' }}</small></div><div class="metric"><span class="section-label">CYCLE TONNAGE</span><strong>{{ display(analysis.cycle.tonnageKg / 1000) }} t</strong><small>{{ analysis.cycle.auxSets }} AUX SETS</small></div></div>
+            <div class="plan-metrics"><div class="metric"><span class="section-label">START</span><strong>{{ dateLabel(plan.meta.startDate) }}</strong><small>{{ plan.meta.startDate.slice(0, 4) }} · {{ plan.meta.weeks }} WEEKS</small></div><div class="metric"><span class="section-label">TEST DAY</span><strong>{{ plan.testPlan?.dates?.sbd ? dateLabel(plan.testPlan.dates.sbd) : 'Not set' }}</strong><small>{{ plan.testPlan?.dates?.sbd ? `W${String(plan.weeks.find(w => w.kind === 'test')?.n || 0).padStart(2, '0')} · SBD` : 'Add a date in outlook' }}</small></div><div class="metric"><span class="section-label">CYCLE TONNAGE</span><strong>{{ display(analysis.cycle.tonnageKg / 1000) }} t</strong><small>{{ analysis.cycle.auxSets }} AUX SETS</small></div></div>
             <LoadProfile :weeks="plan.weeks" :blocks="plan.blocks" :per-week="analysis.perWeek" :test-date="plan.testPlan?.dates?.sbd" />
             <div class="section-head"><div class="eyebrow">BLOCKS IN THIS CYCLE</div><p class="annotation">Each block is a phase with its own ceiling. Open a block to see the weeks inside it, then a week, then a day.</p></div>
             <section class="block-deck" aria-label="Blocks">
@@ -512,7 +473,7 @@ watch([() => route.fullPath, loading], async () => {
             </div>
             <p v-if="weekMeta.kind === 'deload'" class="notice">{{ DELOAD_NOTE }}</p>
             <LockedFeature v-if="weekMeta.kind === 'test' && !can('test_week')" label="Test week & meet attempts" tier="lite" />
-            <AttemptBoard v-else-if="weekMeta.kind === 'test'" :cycle-id="plan.meta.planId" :bar-kg="plan.meta.profile.bar_kg || 20" :collar-pair="collarPair" :rows="plan.workouts.filter(row => row.week === currentWeek)" :logs="logs" :system-loads="prescriptionInfo?.systemLoads || {}" @saved="savedLog" />
+            <AttemptBoard v-else-if="weekMeta.kind === 'test'" :cycle-id="plan.meta.planId" :bar-kg="plan.meta.profile.bar_kg || 20" :rows="plan.workouts.filter(row => row.week === currentWeek)" :logs="logs" :system-loads="prescriptionInfo?.systemLoads || {}" @saved="savedLog" />
             <div class="day-stack">
             <div v-for="day in days" :id="day.id ? `day-${currentWeek}-${day.id}` : undefined" :key="day.date" :tabindex="route.params.day && route.params.day === day.id ? -1 : undefined" class="day-card" :class="{ open: route.params.day && route.params.day === day.id, rest: !day.rows.length }" :style="{ '--seg': blockColor(weekMeta.blockId) }">
               <template v-if="day.rows.length">
@@ -531,11 +492,7 @@ watch([() => route.fullPath, loading], async () => {
                   <div class="day-detail-head"><span>SESSION PLAN</span><span>{{ dayTotalsFor(day.id).total }} SETS · {{ day.rows.length }} PRESCRIBED ROWS</span></div>
                   <DailyRecord :cycle-id="plan.meta.planId" :date="day.date" :session-id="`${currentWeek}|${day.id}`" :readonly="!can('recovery_body')" :readonly-note="recoveryLockNote" @saved="refreshPrescription" />
 
-                  <WarmupSuggestions v-if="can('gear_warmups')" :entries="mainWarmups(day.date, day.rows)" />
                   <ExerciseRows :rows="day.rows" :cycle-id="plan.meta.planId" :logs="logs" :system-loads="prescriptionInfo?.systemLoads || {}" @saved="savedLog" />
-                  <LockedFeature v-if="!can('gear_warmups')" compact label="Gear & Sheiko warm-ups" tier="lite" />
-                  <details v-else class="gear"><summary>GEAR <span class="chip">{{ needsMicroPlates(day.rows) ? 'MICRO PLATES' : 'SESSION SETUP' }}</span><span v-if="plan.meta.profile.bar_kg" class="chip">{{ display(plan.meta.profile.bar_kg) }} KG BAR</span><span class="chip" data-testid="collar-chip">COLLARS {{ useCollars ? '+5 KG' : 'OFF' }}</span></summary><p>{{ needsMicroPlates(day.rows) ? 'Prepare micro plates for the prescribed loads.' : 'Standard plates cover these prescribed loads.' }} All loads stay as prescribed; bodyweight movements use dated total system weight when shown.</p><GearPlates :rows="day.rows" :bar-kg="plan.meta.profile.bar_kg || 20" :collar-pair="collarPair" /></details>
-                  <ShareButton :plan="plan" :logs="logs" :default-date="day.date" />
                 </section>
               </template>
               <div v-else class="rest-row"><span>{{ day.label }} · {{ day.weekday }}</span><span>REST</span></div>
@@ -560,17 +517,9 @@ watch([() => route.fullPath, loading], async () => {
             <h2>Cycle tools.</h2>
             <MembershipPanel :session="session" @changed="refreshSessionOnce" />
             <details class="account-tools"><summary>Import a cycle</summary><PlanImport /></details>
-            <details class="account-tools"><summary>Gear setup</summary><div class="gear-setup" data-testid="gear-settings"><label class="gear-toggle"><input type="checkbox" :checked="useCollars" data-testid="collar-toggle" @change="setUseCollars($event.target.checked)"><span><strong>Competition collars</strong><small>Off by default. On: every plate breakdown counts the 5 kg collar pair. Off: the bar is the only fixed weight on the bar. This is a device-level venue fact, kept on this device and never exported with a plan.</small></span></label></div></details>
-            <details class="account-tools"><summary>Prescription settings</summary><PrescriptionSettings :cycle-id="plan.meta.planId" @changed="refresh()" /></details>
-            <div class="account-actions"><a class="quiet-button" :href="`/api/export/logs.csv?cycle_id=${encodeURIComponent(plan.meta.planId)}`" download>Export my log (.csv)</a><a class="quiet-button" :href="`/api/export/tests.csv?cycle_id=${encodeURIComponent(plan.meta.planId)}`" download>Export test results (.csv)</a><button type="button" class="quiet-button" @click="logout">Sign out on this device</button></div>
+            <div class="account-actions"><RouterLink to="/calendar" class="quiet-button" data-testid="open-calendar">Open the calendar</RouterLink><a class="quiet-button" :href="`/api/export/logs.csv?cycle_id=${encodeURIComponent(plan.meta.planId)}`" download>Export my log (.csv)</a><a class="quiet-button" :href="`/api/export/tests.csv?cycle_id=${encodeURIComponent(plan.meta.planId)}`" download>Export test results (.csv)</a><button type="button" class="quiet-button" @click="logout">Sign out on this device</button></div>
             <p class="annotation">The CSV carries the rows you recorded for this cycle, with the prescribed load beside the actual one. Prescribed and actual sets stay separate, and exporting does not end a cycle.</p>
           </section>
-        </template>
-        <template v-else-if="page === 'questionnaire'">
-          <header class="outlook-hero"><div><div class="eyebrow">RR / 03 · ORACLE — AI COMPUTE / NEXT CYCLE</div><h1>Read the cycle.<br>Write the next one.</h1><p class="analysis-deck">Questionnaire, research and AI in one page. It reads the cycle you actually ran, compares lines side by side, and proposes the next block. Nothing reaches the ledger until you accept it.</p></div><div class="outlook-badge"><span>AI</span><strong>{{ outlookTab === 'questionnaire' ? '7 STEPS' : 'BRIEF' }}</strong></div></header>
-          <nav class="analysis-tabs" aria-label="Outlook sections"><button type="button" :aria-pressed="outlookTab === 'questionnaire'" @click="outlookTab = 'questionnaire'">Questionnaire</button><button type="button" :aria-pressed="outlookTab === 'ai'" @click="outlookTab = 'ai'">AI brief</button><button type="button" :aria-pressed="outlookTab === 'both'" @click="outlookTab = 'both'">Both</button></nav>
-          <div v-show="outlookTab !== 'ai'" class="outlook-panel"><div class="panel-label">01 / QUESTIONNAIRE</div><QuestionnaireView /></div>
-          <div v-show="outlookTab !== 'questionnaire'" class="outlook-panel"><div class="panel-label">02 / AI BRIEF</div><AiOutlook v-if="can('oracle_ai')" :cycle-id="plan.meta.planId" /><LockedFeature v-else label="ORACLE AI brief" tier="pro" /></div>
         </template>
 
       </template>

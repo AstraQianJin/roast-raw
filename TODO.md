@@ -12,7 +12,7 @@
 |---|---|
 | 版本 | `web/package.json` = **0.0.49**；本地提交；**未部署**，**未 push** |
 | 工作树 | 以本节所在提交为准 |
-| 最近提交 | `83e8440` 0.48 · `6f9538b` 0.47（前序 0.41–0.46 见 `git log`） |
+| 最近提交 | `252871e` 0.49 · `83e8440` 0.48（前序 0.41–0.48 见 `git log`） |
 | 门禁 | 0.49：`verify.js` exit 0（6814 检查、356 用例）；`build` exit 0；`browser.mjs` 24 项 exit 0；`--sabotage` exit 1 |
 | 红基线 | 无 |
 | 发布 | 0.45 已部署上线；0.46–0.49 依用户指令仅本地提交与截图验证，未部署、未 push |
@@ -87,17 +87,29 @@
 
 ---
 
-## 1C · 0.49 单版：纯粹训练架构与全单行极简重构（用户 2026-11-16 裁定）
+## 1C · 重建批次（0.50 → 0.60）：纯粹训练系统（用户 2026-11-16 裁定）
 
-| # | 要求 | 交付 |
-|---|---|---|
-| 1 | Cycle/Block/Week/Day 只显示十几个周方块单行排列，不显 Cycle/B1..B4 | `BlockWeekNav.vue` 重构：彻底移除顶栏块标签，不管在 Cycle、Block、Week 还是 Day，恒定呈现 13 周单行方块（`grid-template-columns: repeat(var(--count, 13), minmax(0, 1fr))`），选周反色，deload 斜纹，test 双描边。 |
-| 2 | Block 下按周不同颜色区分强度，每周占一行，仿照 Cycle 下的 Block 样式 | `.week-deck` 改为纵向单列单行卡片（`display: flex; flex-direction: column`），每卡顶部 4px 依顶强度着色（深青 $\le 70\%$、蔚蓝 $71-76\%$、靛紫 $77-82\%$、绛红 $> 82\%$），衬线标题，SBD 摘要与吨位组数横排。 |
-| 3 | Week 下 Day 同样单行卡片，折叠摘要极简（仅主项+重量+组数） | `.day-stack` 单列单行卡片，顶部强度色条；折叠态去除冗余标签与徽章，仅呈现纯粹主项动作、重量与结构（如 `Low-bar Squat · 110.5 kg · 1×3 TOP, 1×6 BACK-OFF`）。 |
-| 4 | Day 作为独立页面而不是折叠在周里；恢复/热身沉底，主动作在顶 | 拆分 Day 独立视图模板（`planView === 'day'` 走独立路由 `/cycle/week/:w/day/:d`），首屏聚焦纯粹动作表格；热身与装备沉底/收起，右侧配日级容量标尺与会话肌群。 |
-| 5 | 回归最纯粹训练视图，清理训练无关冗余 | 日历入口迁入 Vault；主导航保留核心项，移除 ORACLE（AI）与冗余计数条，保留 SBD 周组数、肌群周/日分析、Block 容量强度分析，测试锚点与自动化断言向后兼容。 |
+**0.49 实况更正（2026-11-16 复核）**：`252871e` 实际只改了 `BlockWeekNav.vue`、`WelcomeView.vue`、`style.css` 与 `App.vue` 版本号一行。旧表把「移除 ORACLE / 热身 / 配重柜 / 分享 / 等待条 / 日历入口」记为已交付，属空账：`App.vue` 仍渲染 ORACLE 导航与 `/questionnaire` 页、`WarmupSuggestions`、`GearPlates` + 赛扣开关、`ShareButton`、`CyclePrestart` 与 `cycle-prestart-band`、`/cycle` 里的日历跳转，`verify.js` 56 处、`browser.mjs` 36 处仍在钉这些功能。裁定中的重构**从 0.50 起做**，0.49 只保留「13 周方块单行」这一条属实交付。
 
-**门禁**：`verify.js` exit 0（6814 检查、356 用例）；`build` exit 0；`browser.mjs` 24 项 exit 0；截图 `RR\shots\0.49\`（7 张全宽截图）。
+**总纲**：回归最纯粹的训练视图。训练以外功能全量下线，三大分析支柱（`WeekCapacity` / `MuscleMap` / `LoadProfile`）提升为一等公民。
+
+| 版本 | 主题 | 范围 | 验收 |
+|---|---|---|---|
+| **0.50** | 纯度 · 入口与导航 | 删主导航 ORACLE 与 `/questionnaire` 页（`QuestionnaireView`/`AiOutlook` 断引用）、`WarmupSuggestions`、`GearPlates` + 赛扣开关 + `gear-settings.js`、`ShareButton`/`ShareCard`/`share.js`、`CyclePrestart` 与 `cycle-prestart-band`、`/cycle` 日历跳转（入口移入 Vault） | `verify.js`/`browser.mjs` 中已下线功能的断言删除或改写；无残留渲染 |
+| **0.51** | 13 周丝带全局统一 | `BlockWeekNav` 在 Cycle/Block/Week/Day（含 Today）恒定单行 13 方块，几何锁定；当前周反色、deload 斜纹、test 双描边；删 `CycleStrip` | 四层级截图几何一致，`--count` 不随层级变化 |
+| **0.52** | Block 单周一行 | `.week-deck` 改单列大卡；4px 顶部强度线四色（`#2E6B65` ≤70% / `#1D4ED8` 71–76% / `#6D28D9` 77–82% / `#B91C1C` >82% 或 Test）；衬线周标题、SBD 比例芯片、等宽吨位/组数/课次/峰值 %1RM | 单行渲染，颜色由 `topPct` 决定，无 150px 窄网格残留 |
+| **0.53** | Week 单日一行 | `.day-stack` 单列单行；折叠态只留 `动作 · 重量 · 组次 TOP/BACK-OFF` 与右侧 `OPEN SESSION →`；清掉次要标签与徽章 | 折叠行高度与信息量实测，文案零冗余 |
+| **0.54** | Day 独立训练台 | `planView === 'day'` 走独立模板：会话头（动作/重量/TOP-BACK-OFF）、`ExerciseRows` 置顶、`DailyRecord` 收敛置底抽屉、侧栏日级 `MuscleMap [THIS SESSION]` + `WeekCapacity [SESSION CAPACITY]`、返回周视图入口；消灭展开长面条 | 日页无周级内容串入，返回路径可用 |
+| **0.55** | 三支柱一等公民 | SBD 容量 Main/变式/辅助分报 + MEV/MRV 标尺；16-leaf 肌群热图；`LoadProfile` 周吨位阶梯 + 峰值强度天花板；Block 详情与周期总览双映射 | 三视窗读数与 API 一致，日视图自动切 session |
+| **0.56** | 门禁重写 | `verify.js` 断言语义对齐重建后的界面（下线功能断言换纯度断言）；`browser.mjs` 重写 day/ribbon/len/纯度分组 | 两套门禁 exit 0，`--sabotage` exit 1 |
+| **0.57** | 响应式与主题 | 421 / 320 / 1280 双主题截图，实测 `scrollWidth - clientWidth`、控件 44px | 无横向溢出，两主题几何稳定 |
+| **0.58** | 文档与交接 | `AGENTS.md`、本文件、`docs/项目交接.md` 同步；Skill checker 通过 | 变更指针逐个打开验证 |
+| **0.59** | 版本收口 | `package.json` 0.0.59 + lockfile；全量门禁；`RR\shots\0.59\` | `verify.js`/`build`/`browser.mjs` 全绿 |
+| **0.60** | 发布（待令） | 备份 → `deploy.py` 部署 → push；部署后 `ACCESS-CONTRACT-OK`、公网探针 | **仅在用户明确下令后执行** |
+
+**两条待裁定（0.50 用默认值执行，落地后标 ASK）**：
+- 「设置」默认只下线 Gear setup（赛扣开关），保留 `PrescriptionSettings`——它是修正参考 1RM 与处方版本回滚的唯一界面，删掉等于让处方冻结在导入那一刻。
+- 「首页推销」默认不动落地页会员矩阵与训练页档位门禁（门禁是能力契约，不是推销）；若指落地页推销面，需另行下令。
 
 ---
 

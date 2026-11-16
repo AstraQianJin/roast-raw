@@ -80,50 +80,30 @@ try {
   await shot('landing');
   ok(`landing renders and keeps a ${landing.width} px viewport without horizontal overflow`);
 
-  // ---- 1b. the membership matrix at a desk width -------------------------
+  // ---- 1b. 0.50: the landing no longer sells ------------------------------
   await browser.viewport(1280, 900);
   await browser.navigate(`${base}/`);
-  await browser.waitFor('Boolean(document.querySelector("[data-testid=membership]"))', 20000);
-  await browser.evaluate(`document.querySelector('#membership').scrollIntoView({ block: 'start' }); true`);
   await delay(600);
-  const matrix = await browser.evaluate(`(() => {
-    const section = document.querySelector('[data-testid=membership]');
-    const heads = [...section.querySelectorAll('thead th[data-tier]')].map(n => ({ tier: n.dataset.tier, text: n.innerText.replace(/\\s+/g, ' ').trim() }));
-    const table = section.querySelector('[data-testid=mm-table]');
-    return {
-      heads,
-      prices: [...table.querySelectorAll('[data-testid=mm-price]')].map(n => n.innerText.trim()),
-      rows: 6 + (section.querySelector('.mm-extra-wrap').getBoundingClientRect().height > 1 ? 7 : 0),
-      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-    };
-  })()`);
-  assert.deepEqual(matrix.heads.map(head => head.tier), ['free', 'lite', 'plus', 'pro'], 'four tier columns, Ultra excluded');
-  assert.deepEqual(matrix.prices, ['¥0', '¥68', '¥198', '¥98/mo'], 'CNY prices come from the export, pro carries /mo');
-  assert.equal(matrix.rows, 6, 'six rows are shown before the fold');
-  assert.equal(matrix.overflow, 0, 'the matrix does not scroll sideways at 1280');
-  await browser.evaluate(`document.querySelector('[data-testid=mm-usd]').click(); true`);
-  await delay(300);
-  const usd = await browser.evaluate(`[...document.querySelectorAll('[data-testid=mm-price]')].map(n => n.innerText.trim())`);
-  assert.deepEqual(usd, ['US$0', 'US$19.9', 'US$69.9', 'US$19.9/mo'], 'switching currency flips every price');
-  await browser.evaluate(`document.querySelector('[data-testid=mm-more]').click(); true`);
-  await delay(400);
-  const expandedRows = await browser.evaluate(`6 + (document.querySelector('.mm-extra-wrap').getBoundingClientRect().height > 1 ? 7 : 0)`);
-  assert.equal(expandedRows, 13, 'showing every row reveals the whole capability list');
-  ok('membership matrix: four tiers, two currencies, expandable rows', { prices: matrix.prices, rowCount: expandedRows });
+  const landingDesk = await browser.evaluate(`({
+    membership: Boolean(document.querySelector('[data-testid=membership]')),
+    overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    width: window.innerWidth,
+  })`);
+  assert.equal(landingDesk.membership, false, 'the tier table left the landing page');
+  assert.equal(landingDesk.overflow, 0, 'the landing does not scroll sideways at 1280');
+  ok('landing sells nothing and stays inside 1280', landingDesk);
 
-  // ---- 1c. the same table on a phone ---------------------------------------
+  // ---- 1c. the same page on a phone ---------------------------------------
   await browser.viewport(390, 844);
   await browser.navigate(`${base}/`);
   await delay(500);
-  const phoneMatrix = await browser.evaluate(`(() => {
-    const section = document.querySelector('[data-testid=membership]');
-    const rail = section.querySelector('[data-testid=mm-rail]');
-    return { cards: rail.querySelectorAll('.mm-card').length, list: section.querySelectorAll('[data-testid=mm-list] li').length,
-      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth };
-  })()`);
-  assert.equal(phoneMatrix.cards, 4, 'four tier cards on a phone');
-  assert.equal(phoneMatrix.overflow, 0, 'the card rail does not push the page sideways');
-  ok('membership cards on a phone', phoneMatrix);
+  const landingPhone = await browser.evaluate(`({
+    membership: Boolean(document.querySelector('[data-testid=membership]')),
+    overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  })`);
+  assert.equal(landingPhone.membership, false, 'no tier cards on a phone either');
+  assert.equal(landingPhone.overflow, 0, 'the landing does not push the phone page sideways');
+  ok('landing on a phone carries no price rail', landingPhone);
   await browser.viewport(WIDTH, 900);
 
   // ---- 1d. the screenshot deck follows the finger, not the page scroll ----
@@ -352,6 +332,7 @@ try {
     rows: document.querySelectorAll('.exercise').length,
     main: document.querySelectorAll('.exercise.main').length,
     gear: Boolean(document.querySelector('[data-testid=gear-plates]')),
+    warmup: Boolean(document.querySelector('.warmups')),
     movements: [...document.querySelectorAll('.exercise')].map(n => n.innerText.replace(/\\s+/g, ' ')),
     overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
     innerWidth: window.innerWidth,
@@ -362,7 +343,8 @@ try {
   const rowTags = await browser.evaluate(`[...document.querySelectorAll('.ex-row-tag')].map(n => n.innerText.trim())`);
   assert.ok(rowTags.length >= 1, 'a repeated movement carries a TOP / BACK-OFF row tag');
   assert.ok(rowTags.every(tag => /TOP|BACK-OFF|WORK/.test(tag)), `row tags use the prescribed wording (${rowTags.join(', ')})`);
-  assert.ok(day.gear, 'the plate cabinet is on the session day');
+  assert.ok(!day.gear, 'the plate cabinet is gone from the session day');
+  assert.ok(!day.warmup, 'no suggested-warm-up list is injected into a session');
   assert.equal(day.overflow, 0, 'the session day does not scroll sideways');
   await shot('session-day');
   // 0.44: the anatomy figure must be big enough to read. The week page carries the
@@ -639,7 +621,7 @@ try {
   assert.match(testSaved.kicker, /1 \/ 9 RECORDED/, 'the recorded counter moves');
   ok('a battery item is saved', testSaved);
 
-  // ---- 6. the collar switch: default off, remembered per device -----------
+  // ---- 6. 0.50: the venue switch and the share card are gone -------------
   await browser.navigate(`${base}/analysis`);
   await browser.waitFor('Boolean(document.querySelector(".kpi"))', 20000);
   await delay(400);
@@ -653,47 +635,18 @@ try {
   ok('ASSAY states completion and a single tonnage', assay);
 
   await browser.navigate(`${base}/archive`);
-  await browser.waitFor('Boolean(document.querySelector("[data-testid=collar-toggle]"))', 20000);
-  const collar = await browser.evaluate(`(async () => {
-    const box = document.querySelector('[data-testid=collar-toggle]');
-    box.closest('details').open = true;
-    const before = { checked: box.checked, stored: localStorage.getItem('rr.gear.collars') };
-    box.click();
-    await new Promise(r => setTimeout(r, 300));
-    return { before, after: { checked: box.checked, stored: localStorage.getItem('rr.gear.collars') } };
-  })()`);
-  assert.equal(collar.before.checked, false, 'collars start switched off');
-  assert.equal(collar.before.stored, null, 'nothing is stored until the owner chooses');
-  assert.equal(collar.after.stored, '1', 'switching on stores the choice on this device');
-  await browser.navigate(`${base}/cycle/week/1/day/A`);
-  await browser.waitFor('Boolean(document.querySelector("[data-testid=collar-chip]"))', 20000);
-  const chip = await browser.evaluate(`document.querySelector('[data-testid=collar-chip]').innerText.replace(/\\s+/g, ' ').trim()`);
-  assert.match(chip, /\+5 KG/, 'the gear summary shows the collar pair once enabled');
-  await shot('gear-collars');
-  ok('collars default off and follow the switch', collar.after);
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=membership-panel]") || document.querySelector("#account"))', 20000);
+  const vault = await browser.evaluate(`({
+    gear: Boolean(document.querySelector('[data-testid=collar-toggle]')),
+    settings: Boolean(document.querySelector('[data-testid=prescription-settings]')),
+    calendar: Boolean(document.querySelector('[data-testid=open-calendar]')),
+  })`);
+  assert.equal(vault.gear, false, 'the collar switch left the vault');
+  assert.equal(vault.settings, false, 'the prescription settings panel left the vault');
+  assert.equal(vault.calendar, true, 'the calendar entry moved into the vault');
+  ok('vault carries the calendar and no training-day knobs', vault);
 
-  // ---- 7. the share card draws --------------------------------------------
-  const share = await browser.evaluate(`(async () => {
-    const button = [...document.querySelectorAll('button')].find(n => /share/i.test(n.textContent));
-    if (!button) return { opened: false };
-    button.click();
-    await new Promise(r => setTimeout(r, 1200));
-    const card = document.querySelector('[data-testid=share-card]');
-    if (!card) return { opened: false };
-    const canvas = card.querySelector('canvas');
-    const ctx = canvas.getContext('2d');
-    const pixels = ctx.getImageData(0, canvas.height - 120, canvas.width, 100).data;
-    let ink = 0;
-    for (let i = 3; i < pixels.length; i += 4) if (pixels[i] > 0) ink += 1;
-    return { opened: true, width: canvas.width, height: canvas.height, ink };
-  })()`);
-  assert.ok(share.opened, 'the share card opens from a day page');
-  assert.equal(share.width, 1080, 'the card keeps its 1080 px canvas');
-  assert.ok(share.ink > 0, 'the card actually paints');
-  await shot('share-card');
-  ok('the share card opens and paints', share);
-
-  // ---- 8. the narrow floor -------------------------------------------------
+  // ---- 7. the narrow floor -------------------------------------------------
   await browser.viewport(320, 800);
   await browser.navigate(`${base}/cycle/week/1/day/A`);
   await browser.waitFor('Boolean(document.querySelector("[data-testid=daily-record]"))', 20000);
