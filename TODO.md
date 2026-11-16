@@ -6,17 +6,17 @@
 
 ---
 
-## 0 · 状态快照（2026-11-15 追加批次 · 0.46）
+## 0 · 状态快照（2026-11-16 · 0.47）
 
 | 项 | 值 |
 |---|---|
-| 版本 | `web/package.json` = **0.0.46**；已部署 `http://82.157.146.30/`（health `version 0.46`、`ACCESS-CONTRACT-OK`、AI `configured: true`）；**未 push**（本批未获授权） |
+| 版本 | `web/package.json` = **0.0.47**；已部署 `http://82.157.146.30/`（health `version 0.47`、`ACCESS-CONTRACT-OK`、AI `configured: true`）；**未 push** |
 | 工作树 | 以本节所在提交为准 |
-| 最近提交 | `c0a8c09` 0.46（前序 0.41–0.45 见 `git log`） |
-| 门禁 | 0.46：`verify.js` exit 0（6814 检查、356 用例）；`build` exit 0；`browser.mjs` 22 项 exit 0；`--sabotage` exit 1 |
+| 最近提交 | `c0a8c09` 0.46 · `a36fd75` 0.46 docs · `6f9538b` 0.47（前序 0.41–0.45 见 `git log`） |
+| 门禁 | 0.47：`verify.js` exit 0（6814 检查、356 用例）；`build` exit 0；`browser.mjs` 24 项 exit 0；`--sabotage` exit 1 |
 | 红基线 | 无 |
-| 发布 | 0.46 已部署（备份 `/opt/roast-raw-backups/roast-raw-20261116-083451.tar.gz` + `db-<stamp>.sqlite3`）；计划已 `roll_cycle.py` 切到 `rpl-raw-2026-11-23`，`/api/today` 返回 `status upcoming`（server today 2026-11-16） |
-| 证据落点 | `RR\shots\0.46\`（22 项浏览器断言与 7 张截图） |
+| 发布 | 0.46 发布并改期（`rpl-raw-2026-11-23` active）；0.47 已发布 |
+| 证据落点 | `RR\shots\0.46\`、`RR\shots\0.47\`（22/15 张截图与 `release-evidence.json`） |
 | 老项目 | 两个老项目已迁 `RR\ref-projects\`；`rplref` 瘦身记录见 `RR\ref-projects\rplref\_repo\MIRROR_SLIMMED.md` |
 
 **长期边界**：只做 Web（Vue 3 + Vite + Motion One + FastAPI + SQLite）；界面英文、对话中文；`Ref/` 与两个老项目只读；不手改 `data/plan.json` 与 `web/dist/`；不弱化断言、不中和 sabotage。
