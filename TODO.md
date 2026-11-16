@@ -15,7 +15,7 @@
 | 最近提交 | `025f36c` 0.56 · `3704aa4` 0.55 · `8f21457` 0.51 · `6be8e4e` 0.50 · `252871e` 0.49 |
 | 门禁 | 0.59：`verify.js` exit 0（6804 检查、356 用例）；`build` exit 0（128.95 kB css / 326.00 kB js）；`browser.mjs` 28 项 exit 0；`browser --sabotage` exit 1 |
 | 红基线 | 无 |
-| 发布 | 0.45 已上线；0.50–0.59 依「一次性完成」推进到 0.60 发布 |
+| 发布 | 0.59 已部署（`ACCESS-CONTRACT-OK`，公网 health version 0.59）+ push `21fe910..d4db5c3`；重建批次 0.50–0.60 收口 |
 | 证据落点 | `RR\shots\0.59\`（28 项浏览器检查、7 张视口截图）；0.50/0.51/0.55/0.56 各留有当版截图 |
 | 老项目 | 两个老项目已迁 `RR\ref-projects\`；`rplref` 瘦身记录见 `RR\ref-projects\rplref\_repo\MIRROR_SLIMMED.md` |
 
@@ -105,7 +105,7 @@
 | ~~0.57~~ ✅ | 响应式复核（并入 0.56 交付） | 320 / 360 / 390 / 412 四宽度扫周页（`clientWidth` 实测、0 横向溢出、主控件 ≥44px）；320 日行改两行网格（`letter date open` / `line` 跨整行），修掉 `NOV 23` 被切 14px | 四宽度 `overflow=0`、内部 scroller 0；截图 `narrow-320` |
 | **0.58** ✓ | 文档与交接 | `README.md` 去 share card；`AGENTS.md` 证据基线改写为纯度断言；`docs/项目交接.md` §0 顶部加 2026-11-16 裁定（下线清单 + 13.9/13.10/§17 转历史） | `check_skill.py --root .` exit 0（PASS Skill metadata, body, folder and project pointers） |
 | **0.59** | 版本收口 | `package.json` 0.0.59 + lockfile；全量门禁；`RR\shots\0.59\` | `verify.js`/`build`/`browser.mjs` 全绿 + `--sabotage` exit 1 |
-| **0.60** | 发布 | 备份 → `deploy.py` 部署 → push；部署后 `ACCESS-CONTRACT-OK`、公网探针 | 已获用户「一次性完成」授权，按 AGENTS 发布口径执行 |
+| **0.60** ✅ | 发布 | 备份 → `deploy.py` 部署 → push；部署后 `ACCESS-CONTRACT-OK`、公网探针 | `ACCESS-CONTRACT-OK`，公网 `/` 200、`health` version 0.59、匿名 API 401；push `21fe910..d4db5c3` |
 
 **两条待裁定（0.50 用默认值执行，落地后标 ASK）**：
 - 「设置」默认只下线 Gear setup（赛扣开关），保留 `PrescriptionSettings`——它是修正参考 1RM 与处方版本回滚的唯一界面，删掉等于让处方冻结在导入那一刻。
