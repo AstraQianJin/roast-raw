@@ -155,16 +155,20 @@ try {
     figure: document.querySelector('.wl-cap-name').innerText,
     on: document.querySelectorAll('.wl-tshot.is-on').length,
     behind: [...document.querySelectorAll('.wl-tshot')].filter(c => parseFloat(c.style.opacity) < 1).length,
-    rail: document.querySelector('.wl-tour-rail i').style.width,
-    dot: [...document.querySelectorAll('.wl-tour-dots button')].map(b => b.getBoundingClientRect().height).sort((a, b) => a - b)[0],
+    turned: [...document.querySelectorAll('.wl-tshot')].filter(c => /rotate\\(-?[0-9.]+deg\\)/.test(c.style.transform)).length,
+    dropped: [...document.querySelectorAll('.wl-tshot')].filter(c => { const m = /translate3d\\([^)]*\\)/.exec(c.style.transform); return m ? parseFloat(m[0].split(',')[1]) > 0 : false; }).length,
+    dots: document.querySelectorAll('.wl-tour-dots, .wl-tour-rail').length,
+    loaded: [...document.querySelectorAll('.wl-tshot img')].filter(i => i.naturalWidth > 0).length,
     scroll: window.scrollY,
     overflow: document.documentElement.scrollWidth - window.innerWidth,
   }))()`);
   assert.notEqual(tourState.figure, firstFigure, 'a left drag moved the deck on');
   assert.equal(tourState.on, 1, 'exactly one figure is in front');
   assert.equal(tourState.behind, 3, 'the other three sit behind it, faded');
-  assert.ok(parseFloat(tourState.rail) >= 49 && parseFloat(tourState.rail) <= 51, `the rail tracks the current frame (${tourState.rail})`);
-  assert.ok(tourState.dot >= 44, 'dots are at least 44 px');
+  assert.equal(tourState.turned, 4, 'all four frames carry a rotation, so the set reads as a fan');
+  assert.equal(tourState.dropped, 3, 'the three frames behind the front card are lowered, not lined up beside it');
+  assert.equal(tourState.dots, 0, 'no dots or rail sit under the deck');
+  assert.equal(tourState.loaded, 4, 'all four frames have painted their screenshot');
   assert.ok(Math.abs(tourState.scroll - deck.scroll) < 2, 'dragging the deck did not move the page');
   assert.equal(tourState.overflow, 0, 'the deck does not push the page sideways');
   ok('screenshot deck is dragged by the finger', tourState);
@@ -377,6 +381,31 @@ try {
     await shot('anatomy-week');
   }
   ok('session page text unclipped and the anatomy figure is legible', anatomy);
+  // 0.47: the day reads its own capacity and muscle load. The week's board must not
+  // appear under a session that only trains one day of it.
+  const weekScope = await browser.evaluate(`(() => ({
+    cap: document.querySelector('.week-capacity')?.dataset.scope || '',
+    kicker: document.querySelector('.week-capacity .section-kicker')?.innerText.replace(/\\s+/g, ' ').trim() || '',
+    map: document.querySelector('[data-testid=muscle-week]')?.innerText.trim() || '',
+  }))()`);
+  assert.equal(weekScope.cap, 'week', 'the week page keeps the weekly capacity board');
+  assert.match(weekScope.kicker, /WEEKLY CAPACITY/, 'the week page labels its capacity as weekly');
+  assert.match(weekScope.map, /^W\d{2}$/, 'the week page names a week above the muscle map');
+  await browser.navigate(`${base}/cycle/week/1/day/A`);
+  await browser.waitFor('Boolean(document.querySelector("[data-testid=daily-record]"))', 20000);
+  await delay(400);
+  const scope = await browser.evaluate(`(() => ({
+    cap: document.querySelector('.week-capacity')?.dataset.scope || '',
+    kicker: document.querySelector('.week-capacity .section-kicker')?.innerText.replace(/\\s+/g, ' ').trim() || '',
+    map: document.querySelector('[data-testid=muscle-week]')?.innerText.trim() || '',
+    total: document.querySelector('[data-testid=weekly-total]')?.innerText.trim() || '',
+    weekTotal: document.querySelector('.day-detail-head')?.innerText.replace(/\\s+/g, ' ').trim() || '',
+  }))()`);
+  assert.equal(scope.cap, 'session', 'an open day swaps the weekly board for its own capacity');
+  assert.match(scope.kicker, /SESSION CAPACITY/, 'the day labels its capacity as a session');
+  assert.equal(scope.map, 'THIS SESSION', 'the muscle map states that it is this session');
+  assert.ok(scope.total && scope.total !== '732', `the day total is the session's own set count (${scope.total})`);
+  ok('a day carries its own capacity and muscle map', scope);
   await browser.navigate(`${base}/cycle/week/1/day/A`);
   await browser.waitFor('Boolean(document.querySelector("[data-testid=daily-record]"))', 20000);
   ok('session day renders', day);
@@ -431,6 +460,20 @@ try {
   await browser.waitFor('Boolean(document.querySelector(".plan-metrics"))', 20000);
   const blockMetric = await browser.evaluate(`[...document.querySelectorAll('.plan-metrics .metric')].map(n => n.innerText.replace(/\\s+/g, ' ').trim()).find(text => /BLOCK TONNAGE/.test(text))`);
   assert.ok(blockMetric.includes(`${handBlockT} t`), 'the block page shows the same sub-total as the block card');
+  // 0.47: the week row is one line of small squares, numbered only, whatever the block length.
+  const squares = await browser.evaluate(`(() => {
+    const items = [...document.querySelectorAll('.bw-weeks a')];
+    const tops = [...new Set(items.map(n => Math.round(n.getBoundingClientRect().top)))];
+    const boxes = items.map(n => n.getBoundingClientRect());
+    return { count: items.length, rows: tops.length, text: items.map(n => n.innerText.trim()).join(','),
+             ratio: boxes.length ? Math.round(boxes[0].width / boxes[0].height * 100) / 100 : 0,
+             labelled: document.querySelectorAll('.bw-weeks small, .bw-weeks i').length };
+  })()`);
+  assert.equal(squares.rows, 1, 'the weeks stay on one row');
+  assert.match(squares.text, /^\d+(,\d+)+$/, 'each square carries its week number and nothing else');
+  assert.equal(squares.labelled, 0, 'no dot or kind label sits inside the squares');
+  assert.ok(squares.ratio >= 0.9 && squares.ratio <= 1.1, `the squares stay square (${squares.ratio})`);
+  ok('the week row is one line of numbered squares', squares);
   const blockTestLine = await browser.evaluate(`[...document.querySelectorAll('.load .note')].map(n => n.innerText.trim()).find(text => /test/i.test(text)) || ''`);
   assert.equal(blockTestLine, 'No test in this block', 'B1 shows no test day: the test week belongs to another block');
   const blockPageText = await browser.evaluate(`document.querySelector('.load').innerText.replace(/\\s+/g, ' ')`);
@@ -440,9 +483,9 @@ try {
   assert.ok(weekCard.includes(`${handWeekT} t`), 'the week card tonnage carries two decimals');
   assert.ok(new RegExp(`\\b${handWeekSets}\\b`).test(weekCard), 'the week card counts the same sets as its rows');
   await browser.navigate(`${base}/cycle/week/1`);
-  await browser.waitFor('Boolean(document.querySelector(".week-summary"))', 20000);
-  const weekHead = await browser.evaluate(`document.querySelector('.week-summary').innerText.replace(/\\s+/g, ' ').trim()`);
-  assert.ok(weekHead.includes(`${handWeekT} t`), 'the week header tonnage matches the week card to 0.01 t');
+  await browser.waitFor('Boolean(document.querySelector(".seg-brief"))', 20000);
+  const weekHead = await browser.evaluate(`document.querySelector('.seg-brief .seg-facts').innerText.replace(/\\s+/g, ' ').trim()`);
+  assert.ok(weekHead.includes(`${handWeekT} t`), 'the week brief tonnage matches the week card to 0.01 t');
   await shot('totals-week');
   ok('one number on every page', { day: `${handDaySets} sets`, week: `${handWeekSets} sets / ${handWeekT} t`, cycle: `${handCycleSets} sets / ${handCycleT} t`, block: `${handBlockT} t` });
 

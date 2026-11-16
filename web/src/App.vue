@@ -155,12 +155,40 @@ const todaySetCount = computed(() => todayTotals.value.total);
 const todayTonnage = computed(() => perDayTotals(todaySession.value?.week, todaySession.value?.day)?.tonnageKg || 0);
 const dayTotalsFor = sessionDay => perDayTotals(currentWeek.value, sessionDay)?.sets || emptySets;
 const weekTonnage = number => analysis.value?.perWeek?.find(row => row.n === number)?.tonnageKg ?? 0;
-const leaves = computed(() => analysis.value.leafOrder.map(id => {
-  const values = week.value.leaves[id];
+// The session view reads its own per-session analysis; it never borrows the week's
+// capacity or muscle load. server/app/stats/engine.py builds both on one cycle scale.
+const sessionAnalysis = computed(() => {
+  const day = route.params.day;
+  if (!analysis.value || !day) return null;
+  return (analysis.value.perSession || []).find(entry => entry.week === currentWeek.value && entry.day === day) || null;
+});
+const todayAnalysis = computed(() => {
+  const session = todaySession.value;
+  if (!analysis.value || !session) return null;
+  return (analysis.value.perSession || []).find(entry => entry.week === session.week && entry.day === session.day) || null;
+});
+const leafList = source => analysis.value.leafOrder.map(id => {
+  const values = source.leaves[id];
   const range = analysis.value.ranges.leaf[id];
   const verdict = range.mev === null || range.mrv === null ? 'No separate reference' : range.scope === 'group_back' ? 'Group-scope reference' : values.d < range.mev ? 'Below MEV' : values.d > range.mrv ? 'Above MRV' : 'Within reference range';
   return { id, name: geometry.value.leaves[id].en, weighted: values.w, raw: values.raw, heat: values.heat, direct: values.d, primaryWeighted: values.primaryWeighted, secondaryWeighted: values.secondaryWeighted, mev: range.mev, mrv: range.mrv, scope: range.scope, verdict };
-}));
+});
+const leaves = computed(() => leafList(week.value));
+const sessionLeaves = computed(() => sessionAnalysis.value ? leafList(sessionAnalysis.value) : leaves.value);
+const todayLeaves = computed(() => todayAnalysis.value ? leafList(todayAnalysis.value) : leaves.value);
+// Editorial brief: the heaviest prescribed main lift of a day, with the numbers that
+// decide the session — load, intensity and working sets. No sentence is hand-typed.
+const topMainOf = rows => rows.filter(row => row.bucket === 'main' && row.loadKg !== null).sort((a, b) => (b.pct || 0) - (a.pct || 0))[0] || null;
+const briefOf = rows => {
+  const row = topMainOf(rows);
+  if (!row) return null;
+  return { name: row.nameEn, load: row.loadKg, pct: (row.pct || 0) * 100, sets: rows.filter(item => item.nameEn === row.nameEn).reduce((sum, item) => sum + (item.sets || 0), 0) };
+};
+const dayBrief = day => briefOf(day.rows);
+const weekBrief = computed(() => {
+  const best = days.value.map(day => ({ day, brief: briefOf(day.rows) })).filter(item => item.brief).sort((a, b) => b.brief.pct - a.brief.pct)[0];
+  return best ? { ...best.brief, day: best.day } : null;
+});
 const display = value => value === null || value === undefined ? '—' : Number(value).toLocaleString('en-US', { maximumFractionDigits: 1 });
 // Sub-totals carry two decimals: adding the four block values then lands on the
 // cycle headline, which is rounded once to one decimal.
@@ -432,7 +460,7 @@ watch([() => route.fullPath, loading], async () => {
               <ShareButton :plan="plan" :logs="logs" :default-date="todaySession.date" />
             </template>
           </div>
-          <aside><MuscleMap v-if="geometry" compact :geometry="geometry" :leaves="leaves" :heat-scale="analysis.heatScale" :week-number="currentWeek" :week-count="plan.weeks.length" @week="selectWeek" /><LockedFeature v-else compact label="Muscle-group map" tier="plus" /><WeekCapacity :week="week" :ranges="analysis.ranges" /></aside>
+          <aside><MuscleMap v-if="geometry" compact :geometry="geometry" :leaves="todayAnalysis ? todayLeaves : leaves" :heat-scale="analysis.heatScale" :week-number="currentWeek" :week-count="plan.weeks.length" :scope="todayAnalysis ? 'session' : 'week'" @week="selectWeek" /><LockedFeature v-else compact label="Muscle-group map" tier="plus" /><WeekCapacity :week="todayAnalysis || week" :ranges="analysis.ranges" :scope="todayAnalysis ? 'session' : 'week'" :kicker="todayAnalysis ? 'SESSION CAPACITY' : 'WEEKLY CAPACITY'" /></aside>
         </div>
                 <template v-else-if="page === 'cycle'">
           <template v-if="planView === 'cycle'">
@@ -456,12 +484,12 @@ watch([() => route.fullPath, loading], async () => {
           </template>
           <template v-else-if="planView === 'block'">
             <div class="eyebrow">BLOCK {{ blockMeta?.id }} · {{ (blockMeta?.cycleType || 'custom').toUpperCase() }}</div><h1 class="plan-title">{{ blockMeta?.nameEn }}</h1><p class="hero-subtitle">W{{ String(blockWeeks[0]?.n || 0).padStart(2, '0') }} — W{{ String(blockWeeks.at(-1)?.n || 0).padStart(2, '0') }} · {{ blockWeeks.length }} WEEKS</p>
-            <div class="plan-metrics"><div class="metric"><span class="section-label">SESSIONS</span><strong>{{ blockWeeks.reduce((sum, item) => sum + (item.sessions || 0), 0) }}</strong><small>ACROSS THIS BLOCK</small></div><div class="metric"><span class="section-label">BLOCK TONNAGE</span><strong>{{ displayT2(blockTonnage / 1000) }} t</strong><small>PLANNED WORK</small></div><div class="metric"><span class="section-label">TOP %1RM</span><strong>{{ display(blockTopPct) }}%</strong><small>{{ (blockMeta?.cycleType || 'custom').toUpperCase() }} CEILING</small></div></div>
             <BlockWeekNav :blocks="plan.blocks" :weeks="plan.weeks" :block-id="blockMeta?.id || ''" :current-week="Number(calendar?.week || 0)" />
-            <LoadProfile :weeks="blockWeeks" :blocks="plan.blocks" :per-week="blockPerWeek" :test-date="blockTestDate" scope="block" />
+            <p class="seg-line" :style="{ '--seg': blockColor(blockMeta?.id || '') }">W{{ String(blockWeeks[0]?.n || 0).padStart(2, '0') }}–W{{ String(blockWeeks.at(-1)?.n || 0).padStart(2, '0') }} · {{ blockWeeks.length }} weeks reaching {{ display(blockTopPct) }}%1RM · {{ displayT2(blockTonnage / 1000) }} t across {{ blockWeeks.reduce((sum, item) => sum + (item.sessions || 0), 0) }} sessions.</p>
+            <div class="plan-metrics"><div class="metric"><span class="section-label">SESSIONS</span><strong>{{ blockWeeks.reduce((sum, item) => sum + (item.sessions || 0), 0) }}</strong><small>ACROSS THIS BLOCK</small></div><div class="metric"><span class="section-label">BLOCK TONNAGE</span><strong>{{ displayT2(blockTonnage / 1000) }} t</strong><small>PLANNED WORK</small></div><div class="metric"><span class="section-label">TOP %1RM</span><strong>{{ display(blockTopPct) }}%</strong><small>{{ (blockMeta?.cycleType || 'custom').toUpperCase() }} CEILING</small></div></div>
             <div class="section-head"><div class="eyebrow">WEEKS IN THIS BLOCK</div><p class="annotation">A week is the unit you actually train. Each card carries its load, its sessions and its phase.</p></div>
             <section class="week-deck" aria-label="Weeks in this block">
-              <RouterLink v-for="week in blockWeeks" :key="week.n" :to="`/cycle/week/${week.n}`" class="week-card" :class="week.kind">
+              <RouterLink v-for="week in blockWeeks" :key="week.n" :to="`/cycle/week/${week.n}`" class="week-card" :class="week.kind" :style="{ '--seg': blockColor(blockMeta?.id || '') }">
                 <header><b>W{{ String(week.n).padStart(2, '0') }}</b><span class="week-kind">{{ week.kind === 'training' ? blockMeta?.cycleType || 'TRAINING' : week.kind }}</span></header>
                 <p class="week-dates">{{ dateLabel(week.dateStart) }} — {{ dateLabel(week.dateEnd) }}</p>
                 <div class="week-lift-row"><span v-for="code in ['S', 'B', 'D']" :key="code" :class="`l-${code}`"><b>{{ code }}</b>{{ display(analysis.perWeek.find(row => row.n === week.n)?.topPctByLift?.[code] ?? week.topPctByLift?.[code]) }}<small>%</small></span></div>
@@ -470,24 +498,30 @@ watch([() => route.fullPath, loading], async () => {
                 <span class="week-open"><span>{{ week.kind === 'test' ? 'MEET / TEST WEEK' : week.kind === 'deload' ? 'RECOVERY WEEK' : `PEAK ${display(analysis.perWeek.find(row => row.n === week.n)?.topPct || 0)}%` }}</span><b>OPEN →</b></span>
               </RouterLink>
             </section>
+            <LoadProfile :weeks="blockWeeks" :blocks="plan.blocks" :per-week="blockPerWeek" :test-date="blockTestDate" scope="block" />
           </template>
           <template v-else>
             <div class="eyebrow">{{ weekMeta.blockId }} · {{ week.kind.toUpperCase() }} WEEK</div><p class="breadcrumb"><RouterLink to="/cycle">Cycle</RouterLink> / <RouterLink :to="`/cycle/block/${weekMeta.blockId}`">{{ weekMeta.blockId }}</RouterLink> / Week {{ currentWeek }}</p>
             <BlockWeekNav :blocks="plan.blocks" :weeks="plan.weeks" :block-id="weekMeta.blockId" :current-week="currentWeek" />
             <div class="workspace"><div>
-            <div class="week-header"><span class="week-number">{{ currentWeek }}</span><div><h2>{{ weekMeta.blockName }}</h2><small>{{ week.kind.toUpperCase() }} WEEK</small></div><div class="week-summary"><strong>{{ displayT2(weekTonnage(currentWeek) / 1000) }} t</strong><small>{{ week.sessions }} SESSIONS</small></div></div>
+            <div class="seg-brief" :style="{ '--seg': blockColor(weekMeta.blockId) }">
+              <div class="seg-brief-head"><span class="section-label">WEEK {{ currentWeek }} · {{ week.kind.toUpperCase() }}</span><span class="seg-range">{{ dateLabel(weekMeta.dateStart) }} — {{ dateLabel(weekMeta.dateEnd) }}</span></div>
+              <h2 v-if="weekBrief" class="seg-headline">{{ weekBrief.name }} carries this week at {{ display(weekBrief.load) }} kg — {{ display(weekBrief.pct) }}% of 1RM and {{ weekBrief.sets }} working sets on {{ weekBrief.day.label }}.</h2>
+              <h2 v-else class="seg-headline">{{ weekMeta.blockName }} · week {{ currentWeek }}.</h2>
+              <dl class="seg-facts"><div><dt>TONNAGE</dt><dd>{{ displayT2(weekTonnage(currentWeek) / 1000) }} t</dd></div><div><dt>SESSIONS</dt><dd>{{ week.sessions }}</dd></div><div><dt>CEILING</dt><dd>S {{ display(week.topPctByLift.S) }} · B {{ display(week.topPctByLift.B) }} · D {{ display(week.topPctByLift.D) }}</dd></div></dl>
+            </div>
             <p v-if="weekMeta.kind === 'deload'" class="notice">{{ DELOAD_NOTE }}</p>
             <LockedFeature v-if="weekMeta.kind === 'test' && !can('test_week')" label="Test week & meet attempts" tier="lite" />
             <AttemptBoard v-else-if="weekMeta.kind === 'test'" :cycle-id="plan.meta.planId" :bar-kg="plan.meta.profile.bar_kg || 20" :collar-pair="collarPair" :rows="plan.workouts.filter(row => row.week === currentWeek)" :logs="logs" :system-loads="prescriptionInfo?.systemLoads || {}" @saved="savedLog" />
-            <div class="top-intensity"><span>TOP %1RM <b>{{ display(week.topPct) }}%</b></span><span>S {{ display(week.topPctByLift.S) }} · B {{ display(week.topPctByLift.B) }} · D {{ display(week.topPctByLift.D) }}</span></div>
             <div class="day-stack">
-            <div v-for="day in days" :id="day.id ? `day-${currentWeek}-${day.id}` : undefined" :key="day.date" :tabindex="route.params.day && route.params.day === day.id ? -1 : undefined" class="day-card" :class="{ open: route.params.day && route.params.day === day.id, rest: !day.rows.length }">
+            <div v-for="day in days" :id="day.id ? `day-${currentWeek}-${day.id}` : undefined" :key="day.date" :tabindex="route.params.day && route.params.day === day.id ? -1 : undefined" class="day-card" :class="{ open: route.params.day && route.params.day === day.id, rest: !day.rows.length }" :style="{ '--seg': blockColor(weekMeta.blockId) }">
               <template v-if="day.rows.length">
                 <RouterLink class="day-head" :to="route.params.day === day.id ? `/cycle/week/${currentWeek}` : `/cycle/week/${currentWeek}/day/${day.id}`" :aria-expanded="route.params.day === day.id">
                   <span class="day-tile"><b>{{ day.label }}</b><small>{{ day.weekday }}</small></span>
                   <span class="day-letter">{{ day.id }}</span>
                   <span class="day-main">
                     <span class="day-kicker">SESSION {{ day.id }} · {{ titleCase(dayTitle(day.id)) }}</span>
+                    <span v-if="dayBrief(day)" class="day-brief" data-testid="day-brief"><b>{{ dayBrief(day).name }}</b> {{ display(dayBrief(day).load) }} kg · {{ display(dayBrief(day).pct) }}% · {{ dayBrief(day).sets }} sets</span>
                     <span v-if="topLifts(day.rows).length" class="top-load"><small>TOP</small><b v-for="lift in topLifts(day.rows)" :key="lift.code">{{ lift.code }} {{ display(lift.load) }}</b></span>
                     <span v-else class="day-kicker">ACCESSORY / CONDITIONING</span>
                   </span>
@@ -507,10 +541,10 @@ watch([() => route.fullPath, loading], async () => {
               <div v-else class="rest-row"><span>{{ day.label }} · {{ day.weekday }}</span><span>REST</span></div>
             </div>
             </div>
-            <WeekCapacity :week="week" :ranges="analysis.ranges" />
+            <WeekCapacity :week="sessionAnalysis || week" :ranges="analysis.ranges" :scope="sessionAnalysis ? 'session' : 'week'" :kicker="sessionAnalysis ? 'SESSION CAPACITY' : 'WEEKLY CAPACITY'" />
             <figure class="cond-card" aria-label="Conditioning equivalent minutes"><div class="cond-head"><div><div class="eyebrow">CONDITIONING</div><h3>Equivalent minutes <em>ESTIMATE</em></h3></div><strong>{{ conditioningWeek }}<small> min/wk</small></strong></div><div class="cond-band"><div class="cond-zone"></div><div class="cond-bars"><i v-for="bar in conditioningBars" :key="bar.n" :class="[bar.kind, { on: bar.n === currentWeek }]" :style="{ height: `${Math.min(100, bar.minutes / 60 * 100)}%` }" :title="`Week ${bar.n}: ${bar.minutes} min`"></i></div></div><div class="cond-scale"><span>0</span><span>20</span><span>60</span></div><p class="cond-note">Moderate-intensity equivalent from planned cardio. It is an estimate, not a measured load.</p></figure>
             <details class="gear gpp" data-testid="gpp"><summary>GPP <span class="chip">CARDIO / RECOVERY / WEAK POINT</span></summary><p class="micro-copy">Planned supporting work. These targets are not recorded completion and do not add SBD equivalent sets.</p><p v-if="!weekGpp.length && !weekCardio.length">No supporting work prescribed for this week.</p><article v-for="item in weekGpp" :key="item.item_idx"><h3>{{ item.item || item.domain || 'Supporting work' }}</h3><p>{{ item.rx_text || `${display(item.target_value)} ${item.target_unit || ''}` }}</p><small v-if="item.note">{{ item.note }}</small></article><article v-for="item in weekCardio" :key="item.day"><h3>Cardio · {{ dateLabel(item.date) }} <small v-if="item.optional">OPTIONAL</small></h3><p>{{ item.note }}</p><p v-if="item.duration_min">{{ display(item.duration_min) }} min · {{ item.zone || 'Prescribed effort' }}<template v-if="item.hr_low && item.hr_high"> · HR {{ item.hr_low }}–{{ item.hr_high }}</template></p></article></details>
-            </div><aside class="week-aside"><LockedFeature v-if="!geometry" compact label="Muscle-group map" tier="plus" /><MuscleMap v-else compact :geometry="geometry" :leaves="leaves" :heat-scale="analysis.heatScale" :week-number="currentWeek" :week-count="plan.weeks.length" @week="selectWeek" /></aside></div>
+            </div><aside class="week-aside"><LockedFeature v-if="!geometry" compact label="Muscle-group map" tier="plus" /><MuscleMap v-else compact :geometry="geometry" :leaves="sessionAnalysis ? sessionLeaves : leaves" :heat-scale="analysis.heatScale" :week-number="currentWeek" :week-count="plan.weeks.length" :scope="sessionAnalysis ? 'session' : 'week'" @week="selectWeek" /></aside></div>
           </template>
         </template>
 <AnalysisView v-else-if="page === 'analysis'" :plan="plan" :analysis="analysis" :geometry="geometry" :performance="performance" :capabilities="session?.capabilities || []" :current-week="currentWeek" :mode="mode" :logs="logs" @week="selectWeek" @mode="changeMode" />

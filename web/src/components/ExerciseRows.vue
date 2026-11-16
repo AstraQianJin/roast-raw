@@ -97,12 +97,16 @@ const logSummary = row => {
 </template>
 
 <style scoped>
-.exercise { padding: 12px 8px 10px; border: 0; border-top: 1px solid var(--line-soft); border-radius: 0; background: none; box-shadow: none; margin: 0; }
-.exercise:nth-of-type(even) { background: var(--panel2); }
-.exercise:first-of-type { border-top: 1px solid var(--line2); }
+/* A movement is a card again, not a table row: the left rule carries the role —
+   main red, variation blue, accessory green — and the tint fades out to the right
+   so the three groups read before any label is read. */
+.exercise { position: relative; padding: 11px 11px 10px 12px; margin: 0 0 7px; border: 1px solid var(--line-soft); border-left: 4px solid var(--role); border-radius: 11px; background: linear-gradient(100deg, color-mix(in srgb, var(--role) 9%, #FFFFFF) 0%, #FFFFFF 44%, #FCFBF6 100%); box-shadow: 0 6px 16px rgba(17, 17, 17, .045); }
+.exercise.main { --role: var(--main); }
+.exercise.sbdVar, .exercise.nonSbdVar { --role: var(--variation); }
+.exercise.accessory { --role: var(--accessory); }
 .ex-head { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: baseline; gap: 8px; }
 .ex-title { display: flex; align-items: baseline; gap: 8px; min-width: 0; flex-wrap: wrap; }
-.ex-index { font: 700 8px var(--mono); color: var(--muted); }
+.ex-index { font: 700 8px var(--mono); color: var(--role, var(--muted)); }
 .ex-name { margin: 0; font: 600 13px/1.35 var(--sans); letter-spacing: -.01em; }
 .ex-rpe { font: 600 8px var(--mono); letter-spacing: .06em; color: var(--muted); white-space: nowrap; }
 .ex-row-tag { font: 700 8px var(--mono); letter-spacing: .08em; color: var(--ink); border: 1px solid var(--line2); border-radius: 3px; padding: 1px 4px; white-space: nowrap; }

@@ -125,6 +125,19 @@ def _leaves(volume):
             for key in volume['leaves']}
 
 
+def _attach_heat(entry, planned_peak):
+    """Five bands on one fixed cycle scale, shared by weeks and sessions."""
+    for leaf in entry['leaves'].values():
+        leaf['heat'] = {}
+        for label, field in (('Both', 'raw'), ('Primary', 'primaryWeighted'), ('Secondary', 'secondaryWeighted')):
+            share = leaf[field] / planned_peak if planned_peak else 0
+            leaf['heat'][label] = {
+                'band': min(4, math.ceil(share * 4)) if share > 0 else 0,
+                'percent': min(100, max(0, share * 100)),
+            }
+    return entry
+
+
 def analyze(plan, logs=None, mode='plan', today=None):
     if mode not in ('plan', 'log'):
         raise ValueError('mode must be plan or log')
@@ -136,8 +149,10 @@ def analyze(plan, logs=None, mode='plan', today=None):
     # equivalent volume stay here because they depend on movement mapping, not rows.
     headline = plan_totals(plan, logs, mode)
     week_totals = {entry['n']: entry for entry in headline['perWeek']}
+    day_totals = {(entry['week'], entry['day']): entry for entry in headline['perDay']}
     cycle = _blank()
     per_week = []
+    per_day_volume = {}
     unresolved = set()
     actual = dict(cycle['roles'])
     planned = dict(cycle['roles'])
@@ -151,6 +166,10 @@ def analyze(plan, logs=None, mode='plan', today=None):
             contribution, errors = row_volume(row, log if mode == 'log' else None, policy)
             unresolved.update(errors)
             _add(volume, contribution)
+            # A day is what the athlete actually walks into: its own equivalent volume
+            # and muscle load are kept next to the week so the session view can read
+            # them instead of borrowing the week's numbers.
+            _add(per_day_volume.setdefault((row['week'], row['day']), _blank()), contribution)
             _add(planned_volume, contribution if mode == 'plan' else row_volume(row, policy=policy)[0])
             _, bucket, _, _ = classification(row, policy)
             planned[bucket] += row['sets']
@@ -170,19 +189,27 @@ def analyze(plan, logs=None, mode='plan', today=None):
             'topPct': meta.get('topPct'), 'topPctByLift': meta.get('topPctByLift'),
         })
     for week in per_week:
-        for leaf in week['leaves'].values():
-            leaf['heat'] = {}
-            for label, field in (('Both', 'raw'), ('Primary', 'primaryWeighted'), ('Secondary', 'secondaryWeighted')):
-                share = leaf[field] / planned_peak if planned_peak else 0
-                leaf['heat'][label] = {
-                    'band': min(4, math.ceil(share * 4)) if share > 0 else 0,
-                    'percent': min(100, max(0, share * 100)),
-                }
+        _attach_heat(week, planned_peak)
+    per_session = []
+    for (week_number, session_day), volume in sorted(per_day_volume.items()):
+        totals = day_totals.get((week_number, session_day), {})
+        entry = _attach_heat({
+            'week': week_number, 'day': session_day,
+            'date': totals.get('date'), 'blockId': totals.get('blockId'),
+            'total': totals.get('sets', {}).get('total', 0),
+            'roles': totals.get('roles', {}), 'sets': totals.get('sets', {}),
+            'lifts': volume['lifts'], 'equivalent': _equivalent(volume),
+            'groups': {key: {'d': volume['groups'][key], 'w': volume['groupsWeighted'][key]}
+                       for key in C.MUSCLE_GROUPS},
+            'leaves': _leaves(volume), 'tonnageKg': totals.get('tonnageKg', 0.0),
+        }, planned_peak)
+        per_session.append(entry)
     return {
         'schema': 'RPL-Analysis-v1', 'mode': mode, 'weeks': len(plan['weeks']),
         'deload': [week['n'] for week in plan['weeks'] if week['kind'] == 'deload'],
         'test': [week['n'] for week in plan['weeks'] if week['kind'] == 'test'],
         'perWeek': per_week,
+        'perSession': per_session,
         'perDay': headline['perDay'], 'perBlock': headline['perBlock'], 'perLift': headline['perLift'],
         'totalBasis': headline['basis'],
         'heatScale': {'maximum': planned_peak, 'basis': 'Highest planned weekly muscle-weighted volume across this cycle'},

@@ -25,11 +25,9 @@ const tone = id => {
         <b>{{ block.id }}</b><span>{{ block.nameEn }}</span>
       </RouterLink>
     </div>
-    <div class="bw-weeks" role="list">
-      <RouterLink v-for="week in blockWeeks" :key="week.n" :to="`/cycle/week/${week.n}`" class="bw-week" :class="[week.kind, { on: week.n === currentWeek }]" role="listitem">
-        <b>W{{ String(week.n).padStart(2, '0') }}</b>
-        <i></i>
-        <small v-if="week.kind !== 'training'">{{ week.kind }}</small>
+    <div class="bw-weeks" :class="{ dense: blockWeeks.length > 13 }" role="list" :aria-label="`${blockWeeks.length} weeks`" :style="{ '--count': blockWeeks.length }">
+      <RouterLink v-for="week in blockWeeks" :key="week.n" :to="`/cycle/week/${week.n}`" class="bw-week" :class="[week.kind, { on: week.n === currentWeek }]" :style="{ '--seg': tone(week.blockId || activeBlock) }" role="listitem" :aria-label="`Week ${week.n}${week.kind === 'training' ? '' : `, ${week.kind}`}`" :title="`Week ${week.n}${week.kind === 'training' ? '' : ` · ${week.kind}`}`">
+        <b>{{ week.n }}</b>
       </RouterLink>
     </div>
   </nav>
@@ -45,17 +43,21 @@ const tone = id => {
 .bw-block span { text-transform: uppercase; }
 .bw-block.on, .bw-all.on { background: var(--ink); color: #FFFFFF; }
 .bw-block.on b { background: #FFFFFF; color: var(--ink); border: 1px solid var(--seg, var(--ink)); }
-.bw-weeks { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 3px; margin-top: 4px; }
-.bw-week { display: grid; place-items: center; gap: 2px; min-height: 40px; border-radius: 9px; font: 700 10px var(--mono); color: var(--muted); }
-.bw-week i { width: 5px; height: 5px; border-radius: 50%; background: var(--line); }
-.bw-week small { font: 600 7px var(--mono); letter-spacing: .05em; text-transform: uppercase; opacity: .8; }
-.bw-week.on { background: var(--accent); color: #FFFFFF; }
-.bw-week.on i { background: #FFFFFF; }
-.bw-week.deload i { background: var(--ct-deload); }
-.bw-week.test i { background: var(--ink); }
-.bw-week.test.on i { background: #FFFFFF; }
+/* One row of small squares, never two: each week is one unit of the block and the
+   whole block must stay readable at a glance on a 360 px phone, from 9 to 17 weeks. */
+.bw-weeks { display: grid; grid-template-columns: repeat(var(--count, 1), minmax(0, 1fr)); gap: 3px; margin-top: 8px; }
+.bw-week { min-width: 0; aspect-ratio: 1; display: grid; place-items: center; border: 1px solid var(--seg, var(--accent)); background: #FFFFFF; color: var(--ink); font: 700 9px var(--mono); text-decoration: none; transition: background .16s var(--ease-out), color .16s var(--ease-out); }
+.bw-week.dense, .bw-weeks.dense .bw-week { font-size: 8px; }
+.bw-week.deload { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--seg, var(--accent)) 16%, #FFFFFF) 0 3px, #FFFFFF 3px 6px); }
+.bw-week.test { border-width: 2px; }
+.bw-week.on { background: var(--seg, var(--accent)); color: #FFFFFF; }
+.bw-week.on.test { border-color: var(--ink); }
 @media (max-width: 880px) {
-  .bw-week { min-height: 38px; }
   .bw-block span { display: none; }
+  .bw-weeks { gap: 2px; }
+}
+@media (max-width: 400px) {
+  .bw-week { font-size: 8px; }
+  .bw-weeks.dense .bw-week { font-size: 7px; }
 }
 </style>

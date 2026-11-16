@@ -38,23 +38,23 @@ const shots = [
   { src: '/shots/archive-390-light.png', k: 'ARCHIVE', title: 'Past cycles stay readable, exportable and comparable.' },
 ];
 let cleanup = () => {};
-// The deck is dragged, not scrolled: the front frame follows the finger, the frames
-// behind it sit at a smaller scale and fade out as they lose the front.
+// The deck is dragged, not scrolled: the front frame follows the finger. The frames
+// behind it stack like a dealt hand — offset diagonally downward, turned a few
+// degrees and fading out with distance, so the set reads as a fan, not a queue.
 const shotCount = shots.length;
 const clampIndex = value => Math.max(0, Math.min(shotCount - 1, value));
 const dragPct = computed(() => (dragX.value / Math.max(1, width.value)) * 100);
 function frameStyle(i) {
-  const shift = (i - index.value) * 100 + dragPct.value;
-  const away = Math.min(1.25, Math.abs(shift) / 100);
+  const offset = (i - index.value) + dragPct.value / 100;
+  const away = Math.min(1.6, Math.abs(offset));
   return {
-    transform: `translate3d(${shift.toFixed(2)}%, ${(away * 14).toFixed(1)}px, 0) scale(${(1 - away * 0.09).toFixed(3)})`,
-    opacity: String(Math.max(0.05, 1 - away * 0.82)),
-    filter: away > 0.02 ? `grayscale(${Math.min(1, away).toFixed(2)})` : 'none',
-    zIndex: String(shotCount - Math.round(away * 100)),
+    transform: `translate3d(${(offset * 15).toFixed(2)}%, ${(away * 32).toFixed(1)}px, 0) rotate(${(offset * 3.2).toFixed(2)}deg) scale(${(1 - away * 0.05).toFixed(3)})`,
+    opacity: String(Math.max(0.16, 1 - away * 0.44)),
+    filter: away > 0.02 ? `saturate(${Math.max(0.4, 1 - away * 0.32).toFixed(2)})` : 'none',
+    zIndex: String(shotCount - Math.round(away * 10)),
     pointerEvents: i === index.value ? 'auto' : 'none',
   };
 }
-const railWidth = computed(() => `${((index.value + 1) / shotCount) * 100}%`);
 
 function onPointerDown(event) {
   if (event.pointerType === 'mouse' && event.button !== 0) return;
@@ -323,22 +323,18 @@ onBeforeUnmount(() => { clearTimeout(shareTimer); cleanup(); });
     </section>
 
     <section class="wl-sec wl-tour-sec" id="screens">
-      <div class="wl-sec-head rv"><span class="wl-num">06 /</span><h2>The journal, on the record.</h2><p class="wl-deck">Captured at phone width from the current build. Drag the deck with your finger: the frame you hold follows it, and the ones behind fade as they lose the front.</p></div>
+      <div class="wl-sec-head rv"><span class="wl-num">06 /</span><h2>The journal, on the record.</h2><p class="wl-deck">Captured at phone width from the current build. Drag the deck with your finger: the frame you hold follows it, and the ones behind fan out and fade as they lose the front.</p></div>
       <div class="wl-tour" data-testid="wl-tour">
         <div class="wl-tour-stage">
           <div ref="stage" class="wl-tour-frames" :class="{ 'is-dragging': dragging }" role="group" aria-roledescription="carousel" aria-label="Journal screenshots" tabindex="0" @pointerdown="onPointerDown" @pointermove="onPointerMove" @pointerup="onPointerUp" @pointercancel="onPointerUp" @keydown="onTourKey">
             <figure v-for="(shot, i) in shots" :key="shot.src" class="wl-tshot" :class="{ 'is-on': i === index }" :style="frameStyle(i)" :aria-hidden="i !== index">
-              <img :src="shot.src" :alt="`${shot.k} page screenshot`" loading="lazy" draggable="false">
+              <img :src="shot.src" :alt="`${shot.k} page screenshot`" draggable="false" decoding="sync">
             </figure>
           </div>
           <div class="wl-tour-caption" aria-live="polite">
-            <nav class="wl-tour-dots" aria-label="Screenshot position">
-              <button v-for="(shot, i) in shots" :key="`d-${shot.src}`" type="button" :aria-label="`Show ${shot.k}`" :aria-current="index === i ? 'true' : 'false'" @click="index = i"><i></i></button>
-            </nav>
             <p class="wl-cap-name">Figure {{ index + 1 }} · {{ shots[index].k }}</p>
             <p class="wl-cap-desc">{{ shots[index].title }}</p>
           </div>
-          <div class="wl-tour-rail" aria-hidden="true"><i :style="{ width: railWidth }"></i></div>
         </div>
       </div>
     </section>
@@ -531,20 +527,14 @@ onBeforeUnmount(() => { clearTimeout(shareTimer); cleanup(); });
 .wl-browser-rows i { height: 10px; border-radius: 3px; background: var(--ct-strength); opacity: .7; }
 .wl-browser-rows b { text-align: right; color: var(--ink); }
 .wl-tour { position: relative; max-width: 860px; margin: 20px auto 0; }
-.wl-tour-stage { position: relative; display: grid; grid-template-rows: minmax(0, 1fr) auto; height: clamp(460px, 74vh, 700px); }
+.wl-tour-stage { position: relative; display: grid; grid-template-rows: minmax(0, 1fr) auto; height: clamp(440px, 70vh, 660px); }
 .wl-tour-frames { position: relative; min-height: 0; touch-action: pan-y; cursor: grab; overflow-x: clip; overflow-y: visible; }
 .wl-tour-frames.is-dragging { cursor: grabbing; }
-.wl-tshot { position: absolute; inset: 0; margin: auto; height: 100%; width: auto; aspect-ratio: 390 / 844; overflow: hidden; border: 1px solid var(--hair); border-radius: 18px; background: var(--panel2); box-shadow: 0 24px 60px rgba(17, 17, 17, .18); transition: transform .42s var(--ease), opacity .42s var(--ease), filter .42s var(--ease); will-change: transform, opacity; }
-.wl-tshot.is-on { box-shadow: 0 34px 80px rgba(17, 17, 17, .24); }
+.wl-tshot { position: absolute; inset: 0; margin: auto; height: 100%; width: auto; aspect-ratio: 390 / 844; overflow: hidden; border: 1px solid var(--hair); border-radius: 14px; background: var(--panel2); box-shadow: 0 18px 44px rgba(17, 17, 17, .16); transition: transform .42s var(--ease), opacity .42s var(--ease), filter .42s var(--ease); will-change: transform, opacity; transform-origin: 50% 18%; }
+.wl-tshot.is-on { box-shadow: 0 30px 70px rgba(17, 17, 17, .22); }
 .wl-tour-frames.is-dragging .wl-tshot { transition: none; }
 .wl-tshot img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top center; -webkit-user-drag: none; }
-.wl-tour-rail { position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--hair); }
-.wl-tour-rail i { display: block; height: 1px; background: var(--ink); transition: width .2s linear; }
 .wl-tour-caption { text-align: center; margin: 10px auto 0; padding-bottom: 14px; max-width: 34em; }
-.wl-tour-dots { display: flex; justify-content: center; gap: 4px; margin-bottom: 10px; }
-.wl-tour-dots button { display: grid; place-items: center; width: 44px; height: 44px; min-height: 44px; padding: 0; border: 0; background: none; cursor: pointer; }
-.wl-tour-dots button i { display: block; width: 5px; height: 5px; background: var(--hair); transition: background .2s, transform .2s; }
-.wl-tour-dots button[aria-current="true"] i { background: var(--ink); transform: scale(1.4); }
 .wl-cap-name { font: 9.5px var(--mono); letter-spacing: .13em; text-transform: uppercase; color: var(--ink); }
 .wl-cap-desc { margin: 5px auto 0; font-family: var(--serif); font-size: 13px; line-height: 1.7; color: var(--muted); max-width: 38ch; }
 .wl-people { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--soft); border: 1px solid var(--soft); border-radius: 14px; overflow: hidden; margin-top: 26px; }
@@ -591,7 +581,7 @@ onBeforeUnmount(() => { clearTimeout(shareTimer); cleanup(); });
   .wl-ai-row { gap: 6px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .wl-tshot, .wl-tour-rail i { transition: none; }
+  .wl-tshot { transition: none; }
   .js .rv, .js .rv.in { transition: none; opacity: 1; transform: none; }
 }
 </style>

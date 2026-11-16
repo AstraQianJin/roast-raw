@@ -316,7 +316,8 @@ function membershipMatrixCheck() {
   assert.ok(welcome.includes('data-testid="wl-share"') && welcome.includes('Link copied'), 'the share control and its feedback exist');
   assert.ok(!welcome.includes('no tiers'), 'the old "no tiers" copy is gone');
   assert.ok(welcome.includes('data-testid="wl-tour"') && welcome.includes("onPointerDown"), 'the screenshot deck is dragged by the pointer');
-  assert.ok(welcome.includes('wl-tour-dots') && welcome.includes('frameStyle'), 'dots select a frame and every frame carries a drag offset');
+  assert.ok(!welcome.includes('wl-tour-dots') && !welcome.includes('wl-tour-rail'), 'the deck carries no dots or rail under it');
+  assert.ok(welcome.includes('frameStyle') && welcome.includes('rotate(') && welcome.includes('translate3d'), 'every frame is offset diagonally, turned and faded like a dealt hand');
   assert.ok(!welcome.includes('--tour-p') && !welcome.includes('readTour'), 'the scroll reader is gone, not running beside the deck');
   checks++;
   console.log(`PASS membership matrix: ${members.capabilities.length} capabilities from membership.json, four columns plus the Ultra strip`);

@@ -56,6 +56,21 @@
 
 **顺手修的既有工具问题**：`server/tools/deploy.py` 原用 `scp` 上传 payload，本机 sshd 关掉了 sftp 子系统导致 `Connection closed`；改成同一 ssh 通道 `cat >` 管道上传。本次发布遇到宿主 ssh 连接被拒（HTTP 仍 200），非代码问题，见 §0 发布记录。
 
+---
+
+## 1B · 0.47 单版：视觉与信息层级重构（用户 2026-11-16）
+
+| # | 要求 | 交付 |
+|---|---|---|
+| 1 | 展示图回到“扑克扇形”，去掉下方四个圆点 | `WelcomeView.vue` 的 `frameStyle` 改成扇形：每张卡按 `(i − index + dragPct)` 做 `x = offset × 15 %`、`y = |offset| × 32 px`、`rotate = offset × 3.2°`、按距离缩放与降饱和，前排阴影最重；拖动、翻页阈值、`←/→`、`pan-y` 纵向交还页面全部保留。`wl-tour-dots` 与 `wl-tour-rail` 连同其 CSS 一并删除，`browser.mjs` 断言改为 `dots: 0`＋`turned: 4`＋`dropped: 3`＋`loaded: 4`。 |
+| 2 | 手机周次条回到一行纯小方块（9–17 周自适应、不许两行） | `BlockWeekNav.vue` 的 `.bw-week` 去掉圆角卡、`W01` 文字与 `deload/test` 小字，改成 `display:grid; grid-template-columns: repeat(var(--count), minmax(0, 1fr)); aspect-ratio:1` 的正方块，卡里只放周号；颜色由块相位（`--seg`）给边框，当前周反色填充，deload 斜纹、test 双描边。`browser.mjs` 增“一行、方块、无标签”三条断言。 |
+| 3 | 动作行恢复角色左侧细线（主项红 / 变式蓝 / 辅助绿） | 根因是 `ExerciseRows.vue` 的 scoped 样式把 `.exercise` 重置成“无边框、无背景、无圆角”的表格行，把 `style.css` 里的 `border-left: 3px solid var(--role)` 整条覆盖掉了。改为卡片：`border-left: 4px solid var(--role)`＋`linear-gradient(100deg, color-mix(--role 9%) → #FFFFFF 44%)`＋淡投影，`main` 用 `--main`、`sbdVar/nonSbdVar` 用 `--variation`、`accessory` 用 `--accessory`。 |
+| 4 | Block→Week、Week→Day、Day→动作都套“细线＋渐隐”，卡片尽量上移 | `.week-card` 与 `.day-card` 改为 4 px 左细线＋同族渐隐，颜色取所在块相位；块页顺序改为 周次方块 → 编辑式摘要 → 指标 → 周卡 → `LoadProfile`；周页改为 周次方块 → 周摘要 → 日卡（原 `week-header`／`top-intensity` 合并进摘要）。 |
+| 5 | 周次下方给 Cycle/Block/Week/Day 各一版编辑式摘要 | Cycle 页保留 NOT STARTED 带与三指标；Block 页加 `seg-line`（“W01–W04 · 4 weeks reaching 82.5 %1RM · 56.24 t across 16 sessions”）；Week 页加 `seg-brief`（衬线大标题“Mid-grip bench carries this week at 73 kg — 75 % of 1RM and 4 working sets on Nov 25.”＋吨位/课次/顶强度三项）；Day 卡加 `day-brief`（最重主项的 动作 + 重量 + 强度 + 组数）。所有数字来自 plan/analysis，不手写。 |
+| 6 | 日视图不该借用周的 SBD 与肌群 | `server/app/stats/engine.py` 新增按天聚合的 `perSession`（`lifts` / `equivalent` / `groups` / `leaves`，与周共用同一个 cycle 峰值刻度算 `heat`）；`App.vue` 在日路由打开时把 `WeekCapacity` 切到该会话数据并把标题改 `SESSION CAPACITY`，`MuscleMap` 切到该会话 `leaves` 并标 `THIS SESSION`（今日页同样按当日会话）。`browser.mjs` 断言 `data-scope=session`、标题、`THIS SESSION` 与当日 17 组。 |
+
+**门禁**：`verify.js` exit 0（6814 检查、356 用例，sabotage 照旧 exit 1）；`build` exit 0；`browser.mjs` 24 项 exit 0（新增扇形、周方块、日级容量/肌群三条）；截图 `RR\shots\0.47\`（15 张）。
+
 
 **0.38 审查基线**：审查报告 `RR\review-0.38.md`（0 FAIL / 5 部分 / 10 PASS，缺陷 D-01～D-09、U-01/U-02）。本轮按报告关闭：D-01 兑换后重取 plan/analysis/geometry 且缺 geometry 时降级占位；D-02 动作 register 改用 R5 已到期口径（`asOf` + `min(actual, planned)`）；D-03 落地页 nav/footer/邀请链接全部 44px 命中区；D-04 `aria-expanded` + `aria-controls`；D-05 `BarbellStrip` 赛扣默认 0；D-06 分享卡 watch 赛扣；D-07 `SHOTS_DIR` 跟随 `package.json` 版本；D-09 UI 与画布片组对拍断言；D-08 文档漂移（§12 指向、31 链接/20 表、`user_version=7`、12 项能力）已改。U-01 按用户裁定：测试周注记拆到 `testTitleEn`，仅测试周显示。版本 0.0.38。
 

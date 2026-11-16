@@ -159,7 +159,19 @@ main { padding: 30px 0 48px; }
 .block-open b { color: var(--seg, var(--accent)); }
 
 .week-deck { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 14px; }
-.week-card { position: relative; display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 14px 13px 12px; border: 1px solid var(--line-soft); border-radius: 15px; background: linear-gradient(165deg, #FFFFFF 0%, #FAF9F4 100%); box-shadow: 0 8px 20px rgba(17, 17, 17, .055); overflow: hidden; transition: transform .2s var(--ease-out), box-shadow .2s var(--ease-out); }
+/* Editorial brief under the week squares: one sentence that names the load that
+   decides the period, then the three facts that back it up. Sits above the cards. */
+.seg-line { margin: 8px 0 0; padding-left: 10px; border-left: 3px solid var(--seg, var(--accent)); font: 11.5px/1.7 var(--sans); color: var(--muted); }
+.seg-brief { position: relative; margin: 4px 0 12px; padding: 13px 15px 12px; border: 1px solid var(--line-soft); border-left: 4px solid var(--seg, var(--accent)); border-radius: 12px; background: linear-gradient(100deg, color-mix(in srgb, var(--seg, var(--accent)) 8%, #FFFFFF) 0%, #FFFFFF 52%, #FBF9F4 100%); box-shadow: 0 8px 20px rgba(17, 17, 17, .05); }
+.seg-brief-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.seg-range { font: 9px var(--mono); letter-spacing: .06em; color: var(--muted); white-space: nowrap; }
+.seg-headline { margin: 7px 0 0; font-family: var(--serif); font-weight: 400; font-size: clamp(19px, 2.4vw, 26px); line-height: 1.22; letter-spacing: -.02em; }
+.seg-facts { display: flex; flex-wrap: wrap; gap: 5px 18px; margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--line-soft); }
+.seg-facts dt { font: 600 8px var(--mono); letter-spacing: .1em; color: var(--muted); }
+.seg-facts dd { margin-top: 2px; font: 700 13px var(--mono); }
+.day-brief { display: block; margin-top: 4px; font: 10.5px/1.5 var(--mono); color: var(--muted); }
+.day-brief b { color: var(--seg, var(--ink)); font-weight: 700; }
+.week-card { position: relative; display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 13px 12px 11px; border: 1px solid var(--line-soft); border-left: 4px solid var(--seg, var(--accent)); border-radius: 12px; background: linear-gradient(100deg, color-mix(in srgb, var(--seg, var(--accent)) 7%, #FFFFFF) 0%, #FFFFFF 46%, #FAF9F4 100%); box-shadow: 0 8px 20px rgba(17, 17, 17, .055); overflow: hidden; transition: transform .2s var(--ease-out), box-shadow .2s var(--ease-out); }
 .week-card:hover { transform: translateY(-2px); box-shadow: 0 14px 28px rgba(17, 17, 17, .10); }
 .week-card header { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 .week-card header b { font: 700 16px var(--mono); }
@@ -250,7 +262,7 @@ main { padding: 30px 0 48px; }
 .top-intensity span:last-child { font: 10px var(--mono); }
 .day-row { display: grid; grid-template-columns: 41px 28px minmax(0, 1fr) 14px; align-items: center; gap: 9px; padding: 15px 0; border-bottom: 1px solid var(--line); min-height: 74px; }
 .day-stack { display: grid; gap: 10px; margin-top: 14px; }
-.day-card { border: 1px solid var(--line-soft); border-radius: 16px; background: linear-gradient(165deg, #FFFFFF 0%, #FBFAF5 100%); box-shadow: 0 8px 22px rgba(17,17,17,.045); overflow: hidden; transition: box-shadow .22s var(--ease-out), transform .22s var(--ease-out); }
+.day-card { border: 1px solid var(--line-soft); border-left: 4px solid var(--seg, var(--accent)); border-radius: 13px; background: linear-gradient(100deg, color-mix(in srgb, var(--seg, var(--accent)) 6%, #FFFFFF) 0%, #FFFFFF 44%, #FBFAF5 100%); box-shadow: 0 8px 22px rgba(17,17,17,.045); overflow: hidden; transition: box-shadow .22s var(--ease-out), transform .22s var(--ease-out); }
 .day-card:hover { box-shadow: 0 14px 30px rgba(17,17,17,.09); transform: translateY(-1px); }
 .day-card.open { border-color: var(--line2); box-shadow: 0 18px 40px rgba(17,17,17,.10); }
 .day-head { display: grid; grid-template-columns: 56px 30px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px 14px; }
@@ -285,7 +297,7 @@ main { padding: 30px 0 48px; }
 .day-info .day-status { display: block; font-size: 8.5px; letter-spacing: .1em; color: var(--muted); }
 .day-open { font: 10px var(--mono); color: var(--muted); text-align: right; }
 .week-aside { margin-top: 24px; }
-.day-card.rest { border-style: dashed; background: transparent; box-shadow: none; opacity: .68; }
+.day-card.rest { border-style: dashed; border-left-width: 1px; background: transparent; box-shadow: none; opacity: .68; }
 .day-card.rest:hover { transform: none; box-shadow: none; }
 .rest-row { min-height: 44px; display: flex; justify-content: space-between; align-items: center; padding: 0 14px; color: var(--muted); font-size: 10px; }
 .week-capacity { margin-top: 24px; }

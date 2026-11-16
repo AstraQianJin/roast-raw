@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 
-const props = defineProps({ geometry: Object, leaves: Array, heatScale: Object, weekNumber: Number, weekCount: Number, compact: Boolean });
+const props = defineProps({ geometry: Object, leaves: Array, heatScale: Object, weekNumber: Number, weekCount: Number, compact: Boolean, scope: { type: String, default: 'week' } });
 const emit = defineEmits(['week']);
 const filter = ref('Both');
 const selected = ref(null);
@@ -21,13 +21,14 @@ const number = value => Number(value).toFixed(1);
     <div class="section-kicker"><span>MUSCLE MAP</span><span>16 LEAVES</span></div>
     <div class="map-heading">
       <h2 id="muscle-title">The work,<br><em>beneath the surface.</em></h2>
-      <div class="week-stepper" aria-label="Muscle map week">
+      <div v-if="scope === 'session'" class="week-stepper" aria-label="Muscle map session"><strong data-testid="muscle-week">THIS SESSION</strong></div>
+      <div v-else class="week-stepper" aria-label="Muscle map week">
         <button aria-label="Previous muscle week" :disabled="weekNumber <= 1" @click="emit('week', weekNumber - 1)">‹</button>
         <strong data-testid="muscle-week">W{{ String(weekNumber).padStart(2, '0') }}</strong>
         <button aria-label="Next muscle week" :disabled="weekNumber >= weekCount" @click="emit('week', weekNumber + 1)">›</button>
       </div>
     </div>
-    <p class="annotation">Weekly weighted sets · select a muscle to inspect.</p>
+    <p class="annotation">{{ scope === 'session' ? 'This session, weighted sets · select a muscle to inspect.' : 'Weekly weighted sets · select a muscle to inspect.' }}</p>
     <div class="map-legend" aria-label="Five volume bands">
       <span v-for="(label, i) in ['0', '1–25%', '26–50%', '51–75%', '76–100%']" :key="label"><i :class="`heat-${i}`"></i>{{ label }}</span>
     </div>

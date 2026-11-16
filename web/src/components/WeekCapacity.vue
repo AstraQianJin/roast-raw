@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-const props = defineProps({ week: Object, ranges: Object });
+const props = defineProps({ week: Object, ranges: Object, kicker: { type: String, default: 'WEEKLY CAPACITY' }, scope: { type: String, default: 'week' } });
 const lifts = { S: 'SQUAT', B: 'BENCH', D: 'DEADLIFT' };
 const liftColor = { S: 'var(--main)', B: 'var(--variation)', D: 'var(--accessory)' };
 const scale = computed(() => Math.max(
@@ -14,8 +14,8 @@ const pct = value => `${value / scale.value * 100}%`;
 </script>
 
 <template>
-  <section class="week-capacity" aria-label="Weekly capacity">
-    <div class="section-kicker"><span>WEEKLY CAPACITY</span><span>SBD EQUIVALENT</span></div>
+  <section class="week-capacity" aria-label="Weekly capacity" :data-scope="scope">
+    <div class="section-kicker"><span>{{ kicker }}</span><span>SBD EQUIVALENT</span></div>
     <div v-for="(label, code) in lifts" :key="code" class="volume-row">
       <header><span>{{ label }}</span><small>MEV {{ ranges.sbd[code].mev }} / MRV {{ ranges.sbd[code].mrv }}</small><strong :data-testid="`equivalent-${code}`">{{ display(week.equivalent[code].total) }}</strong></header>
       <div class="cap-track" :style="{ '--lift': liftColor[code] }">
