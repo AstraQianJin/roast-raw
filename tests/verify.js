@@ -313,7 +313,7 @@ function membershipMatrixCheck() {
   assert.ok(vue.includes('ResizeObserver'), 'the sticky offset is measured, not hardcoded');
   assert.ok(vue.includes('prefers-reduced-motion'), 'reduced motion turns the reveal off');
   assert.ok(welcome.includes('<MembershipMatrix />'), 'the landing page renders the matrix');
-  assert.ok(welcome.includes('data-testid="wl-share"') && welcome.includes('Link copied'), 'the share control and its feedback exist');
+  assert.ok(!welcome.includes('data-testid="wl-share"') && !welcome.includes('class="wl-top"'), 'the landing keeps one masthead and no share button of its own');
   assert.ok(!welcome.includes('no tiers'), 'the old "no tiers" copy is gone');
   assert.ok(welcome.includes('data-testid="wl-tour"') && welcome.includes("onPointerDown"), 'the screenshot deck is dragged by the pointer');
   assert.ok(!welcome.includes('wl-tour-dots') && !welcome.includes('wl-tour-rail'), 'the deck carries no dots or rail under it');
@@ -409,8 +409,10 @@ function auditFixesCheck() {
   assert.ok(plan.days.some(day => /\(W\d+\s+TEST\)/.test(day.testTitleEn || '')), 'U-01: the test note survives on testTitleEn');
   assert.ok(app.includes('weekMeta.value?.kind === \'test\' && meta.testTitleEn'), 'U-01: the UI shows the note only in the test week');
   checks += 3;
-  // D-03: landing links reach a 44 px hit area.
-  assert.ok(landing.includes('.wl-top-nav a { display: inline-flex; align-items: center; min-height: 44px;') && landing.includes('.wl-foot-links a { display: inline-flex; align-items: center; min-height: 44px;'), 'D-03: landing nav and footer links reach 44 px');
+  // D-03: landing links reach a 44 px hit area. The landing header and its section nav
+  // were removed in 0.48 — the app masthead carries the only brand line — so the footer
+  // links are what has to clear 44 px now.
+  assert.ok(landing.includes('.wl-foot-links a { display: inline-flex; align-items: center; min-height: 44px;'), 'D-03: landing footer links reach 44 px');
   checks++;
   assert.ok(readFileSync(join(root, 'web', 'src', 'components', 'MembershipMatrix.vue'), 'utf8').includes('min-height: 44px; color: var(--bg)'), 'D-03: the invite link reaches 44 px');
   checks++;
