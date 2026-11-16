@@ -270,8 +270,10 @@ def main():
     with tempfile.TemporaryDirectory() as folder:
         payload = build_payload(folder)
         print(f'Payload built: {payload.stat().st_size} bytes')
-        run(['scp', '-o', 'BatchMode=yes', str(payload), f'{REMOTE_HOST}:/tmp/rr-payload.tar.gz'],
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        # scp is refused by this host's sshd (sftp subsystem), so stream the bytes over
+        # the same ssh channel the rest of the deployment already uses.
+        run(['ssh', '-o', 'BatchMode=yes', REMOTE_HOST, 'cat > /tmp/rr-payload.tar.gz'],
+            input=payload.read_bytes(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         write_env(password, deepseek_key, username)
         output = remote(REMOTE_SETUP)
         tail = '\n'.join(output.splitlines()[-5:])

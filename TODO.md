@@ -6,17 +6,17 @@
 
 ---
 
-## 0 · 状态快照（2026-11-15 · 0.37 收工）
+## 0 · 状态快照（2026-11-15 追加批次 · 0.46）
 
 | 项 | 值 |
 |---|---|
-| 版本 | `web/package.json` = **0.0.45**；已部署 `http://82.157.146.30/`（0.45）、已 push `origin/master`（`0673ae1`） |
+| 版本 | `web/package.json` = **0.0.46**；已部署 `http://82.157.146.30/`（health `version 0.46`、`ACCESS-CONTRACT-OK`、AI `configured: true`）；**未 push**（本批未获授权） |
 | 工作树 | 以本节所在提交为准 |
-| 最近提交 | `772d4a9` 0.41 · `b560652` 0.42 · `d71d3ac` 0.43 · `f05a600` 0.44 · `0673ae1` 0.45 |
-| 门禁 | 0.45：`verify.js` exit 0（6813 检查、356 用例）；`build` exit 0；`browser.mjs` 22 项 exit 0；`--sabotage` exit 1；`check_skill.py` PASS |
+| 最近提交 | `c0a8c09` 0.46（前序 0.41–0.45 见 `git log`） |
+| 门禁 | 0.46：`verify.js` exit 0（6814 检查、356 用例）；`build` exit 0；`browser.mjs` 22 项 exit 0；`--sabotage` exit 1 |
 | 红基线 | 无 |
-| 部署 | 0.45 已发布：health `version 0.45`、`ACCESS-CONTRACT-OK`、`/api/ai/status` `configured: true`（今日配额 20/20） |
-| 证据落点 | `RR\shots\0.41\`–`0.45\` 各一份 `*-evidence.json`，0.45 另记部署与 push 结果 |
+| 发布 | 0.46 已部署（备份 `/opt/roast-raw-backups/roast-raw-20261116-083451.tar.gz` + `db-<stamp>.sqlite3`）；计划已 `roll_cycle.py` 切到 `rpl-raw-2026-11-23`，`/api/today` 返回 `status upcoming`（server today 2026-11-16） |
+| 证据落点 | `RR\shots\0.46\`（22 项浏览器断言与 7 张截图） |
 | 老项目 | 两个老项目已迁 `RR\ref-projects\`；`rplref` 瘦身记录见 `RR\ref-projects\rplref\_repo\MIRROR_SLIMMED.md` |
 
 **长期边界**：只做 Web（Vue 3 + Vite + Motion One + FastAPI + SQLite）；界面英文、对话中文；`Ref/` 与两个老项目只读；不手改 `data/plan.json` 与 `web/dist/`；不弱化断言、不中和 sabotage。
@@ -41,6 +41,21 @@
 **0.40 收工口径**：已部署 `http://82.157.146.30/`（0.0.40）、已 push `origin/master`（`6c0c595..9597dc7`）。
 
 **接手指令**：0.38 已由独立会话审查并收口（`ed2380c`）；0.39 日历 `9597dc7`；0.40 已部署与 push。历史口径：0.38 = 一个**未写过本轮代码**的会话审查 0.29–0.37，逐条实测 §4 `P1` 清单与 `docs/项目交接.md` §12 推断项，清单逐条关闭后交用户。0.39 发布（push + 部署）**只在用户另行下令后**执行。
+
+---
+
+## 1A · 0.46 单版：用户 2026-11-15 追加的五件事（已实现，本地提交 `c0a8c09`）
+
+| # | 要求 | 交付 |
+|---|---|---|
+| 1 | 落地页展示图改回跟手左右滑动，其他卡片在后渐隐渐显 | `WelcomeView.vue` 丢掉滚动读取（`readTour`/`--tour-p`/62vh×4 高塔），换成 pointer 拖拽：`dragX` 跟手位移、松手按 `max(28px, 14% 宽)` 翻页、首尾阻尼 0.3、纵向手势交还页面滚动（`touch-action: pan-y`）；每张卡片按 `(i − index) × 100% + dragPct` 位移并缩放/降透明度/灰度。圆点只选帧不滚页面，`←/→` 可切。`verify.js` 与 `browser.mjs` 对应断言同步重写（`Input.dispatchMouseEvent` 真实按下→移动→松开，断言四张卡都带位移、松手后 Figure 2、1 前 3 后、rail 50%、页面未滚、无横向溢出）。 |
+| 2 | 计划推迟到下周一 + 未开始状态 | 生产计划 `rpl-raw-2026-11-16` 经 `server/tools/roll_cycle.py`（快照→归档→播种）切到 `rpl-raw-2026-11-23`（`data/plan.json` 早已是这一份）。UI 侧新增 `/cycle` 的 `NOT STARTED` 带（`data-testid="cycle-prestart-band"`，只有 `calendar.status==='upcoming'` 才渲染）与 `STARTS IN {{n}} days` 指标；Today 侧原有 `CyclePrestart` 保留。`verify.js` 增 3 条静态断言。 |
+| 3 | Vault 折叠面板太矮、字与边框没间距 | `ArchiveView.vue` 的 `summary` 从 44 px 高 / `12px 4px` 内边距改为 52 px 高 / `16px 12px` 内边距，加边框与底色，展开态换 `--panel2` 并去掉下方圆角；`[open]` 子元素左右 12 px、底部 14 px 留白；`.report-details` 22 px/6 px 收紧为 18 px。 |
+| 4 | 从首页点进计划卡约 1 秒 | 三段：① `main.py` 挂 `GZipMiddleware(1024)`——`/api/plan` 线上 512 KB 压到约十分之一（此前实测 1959 ms）；② `/api/analysis` 加进程内缓存，键是「计划内容哈希 + log 哈希 + mode」（实测 1701 ms），计划或日志一变自动失效；③ `App.vue.refresh()` 原来 `/api/cycle` 先跑、再 `Promise.all` 五路、再顺序取 prescription/body-metrics，改成 8 路一次并发。 |
+| 5 | 所有页面、功能、文案列到桌面 `审查.md`（英文） | `C:\Users\Astra\Desktop\审查.md`：路由表、15 个界面逐屏（目的/控件/状态/原文文案）、能力清单、逐组件文案（从 `.vue` 模板机械抽取）、API 表面、统计口径、档位门禁、遗留项。 |
+
+**顺手修的既有工具问题**：`server/tools/deploy.py` 原用 `scp` 上传 payload，本机 sshd 关掉了 sftp 子系统导致 `Connection closed`；改成同一 ssh 通道 `cat >` 管道上传。本次发布遇到宿主 ssh 连接被拒（HTTP 仍 200），非代码问题，见 §0 发布记录。
+
 
 **0.38 审查基线**：审查报告 `RR\review-0.38.md`（0 FAIL / 5 部分 / 10 PASS，缺陷 D-01～D-09、U-01/U-02）。本轮按报告关闭：D-01 兑换后重取 plan/analysis/geometry 且缺 geometry 时降级占位；D-02 动作 register 改用 R5 已到期口径（`asOf` + `min(actual, planned)`）；D-03 落地页 nav/footer/邀请链接全部 44px 命中区；D-04 `aria-expanded` + `aria-controls`；D-05 `BarbellStrip` 赛扣默认 0；D-06 分享卡 watch 赛扣；D-07 `SHOTS_DIR` 跟随 `package.json` 版本；D-09 UI 与画布片组对拍断言；D-08 文档漂移（§12 指向、31 链接/20 表、`user_version=7`、12 项能力）已改。U-01 按用户裁定：测试周注记拆到 `testTitleEn`，仅测试周显示。版本 0.0.38。
 
