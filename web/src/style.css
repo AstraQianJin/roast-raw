@@ -156,7 +156,7 @@ main { padding: 30px 0 48px; }
 .block-open { margin-top: auto; padding-top: 8px; border-top: 1px solid var(--line-soft); font: 700 9px var(--mono); letter-spacing: .08em; color: var(--muted); display: flex; justify-content: space-between; }
 .block-open b { color: var(--seg, var(--accent)); }
 
-.week-deck { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 14px; }
+.week-deck { display: grid; gap: 8px; margin-top: 14px; }
 /* Editorial brief under the week squares: one sentence that names the load that
    decides the period, then the three facts that back it up. Sits above the cards. */
 .seg-line { margin: 8px 0 0; padding-left: 10px; border-left: 3px solid var(--seg, var(--accent)); font: 11.5px/1.7 var(--sans); color: var(--muted); }
@@ -169,33 +169,26 @@ main { padding: 30px 0 48px; }
 .seg-facts dd { margin-top: 2px; font: 700 13px var(--mono); }
 .day-brief { display: block; margin-top: 4px; font: 10.5px/1.5 var(--mono); color: var(--muted); }
 .day-brief b { color: var(--seg, var(--ink)); font-weight: 700; }
-.week-card { position: relative; display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 13px 12px 11px; border: 1px solid var(--line-soft); border-left: 4px solid var(--seg, var(--accent)); border-radius: 12px; background: linear-gradient(100deg, color-mix(in srgb, var(--seg, var(--accent)) 7%, #FFFFFF) 0%, #FFFFFF 46%, #FAF9F4 100%); box-shadow: 0 8px 20px rgba(17, 17, 17, .055); overflow: hidden; transition: transform .2s var(--ease-out), box-shadow .2s var(--ease-out); }
-.week-card:hover { transform: translateY(-2px); box-shadow: 0 14px 28px rgba(17, 17, 17, .10); }
-.week-card header { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
-.week-card header b { font: 700 16px var(--mono); }
-.week-kind { padding: 2px 5px; border-radius: 5px; background: var(--panel2); font: 600 8px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-.week-card.deload .week-kind { background: var(--ct-deload-s); color: var(--ct-deload); }
-.week-card.test .week-kind { background: var(--ink); color: #FFFFFF; }
-.week-dates { font: 9px var(--mono); color: var(--muted); }
-.week-card dl { display: flex; justify-content: space-between; gap: 8px; margin: 2px 0 0; }
-.week-lift-row { display: flex; gap: 10px; padding: 6px 0 2px; border-top: 1px solid var(--line-soft); border-bottom: 1px solid var(--line-soft); }
+/* 0.51: one week per row. The 4 px top line carries the whole intensity code —
+   recovery, accumulation, transmutation, peak — and nothing else on the card is
+   coloured, so a block reads as a ladder of ceilings. */
+.week-card { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px 18px; min-width: 0; padding: 16px 16px 13px; border: 1px solid var(--line-soft); border-radius: 12px; background: #FFFFFF; box-shadow: 0 6px 16px rgba(17, 17, 17, .05); overflow: hidden; transition: transform .2s var(--ease-out), box-shadow .2s var(--ease-out); }
+.week-band { position: absolute; inset: 0 0 auto; height: 4px; background: var(--band, var(--accent)); }
+.week-card:hover { transform: translateY(-1px); box-shadow: 0 12px 26px rgba(17, 17, 17, .10); }
+.week-title { grid-column: 1; grid-row: 1; font-family: var(--serif); font-weight: 400; font-size: 18px; line-height: 1.2; letter-spacing: -.02em; }
+.week-phase { grid-column: 1; grid-row: 2; font: 9px var(--mono); letter-spacing: .08em; color: var(--muted); text-transform: uppercase; }
+.week-open { grid-column: 2; grid-row: 1 / span 2; align-self: center; font: 700 9px var(--mono); letter-spacing: .08em; color: var(--ink); white-space: nowrap; }
+.week-lift-row { grid-column: 1 / -1; display: flex; gap: 14px; margin-top: 9px; padding: 7px 0; border-top: 1px solid var(--line-soft); border-bottom: 1px solid var(--line-soft); }
 .week-lift-row span { display: flex; align-items: baseline; gap: 3px; font: 700 12px var(--mono); }
 .week-lift-row b { font-size: 9px; }
 .week-lift-row small { font: 8px var(--mono); color: var(--muted); }
 .week-lift-row .l-S { color: var(--t1); }
 .week-lift-row .l-B { color: var(--t2); }
 .week-lift-row .l-D { color: var(--t3); }
-.week-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-.week-stats dt { font: 600 7.5px var(--mono); letter-spacing: .08em; color: var(--muted); }
-.week-stats dd { margin: 1px 0 0; font: 700 13px var(--mono); }
-.week-stats dd small { font: 8px var(--mono); color: var(--muted); }
-.week-card dt { font: 600 8px var(--mono); letter-spacing: .08em; color: var(--muted); }
-.week-card dd { margin: 1px 0 0; font: 700 14px var(--mono); }
-.week-card dd small { font: 8px var(--mono); color: var(--muted); }
-.week-meter { height: 4px; margin-top: 3px; border-radius: 3px; background: var(--line-soft); overflow: hidden; }
-.week-meter i { display: block; height: 100%; background: var(--accent); }
-.week-open { font: 8px var(--mono); letter-spacing: .05em; color: var(--muted); display: flex; justify-content: space-between; }
-.week-open b { color: var(--ink); }
+.week-stats { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 0; padding-top: 8px; }
+.week-stats dt, .week-card dt { font: 600 7.5px var(--mono); letter-spacing: .08em; color: var(--muted); }
+.week-stats dd, .week-card dd { margin: 1px 0 0; font: 700 13px var(--mono); }
+.week-stats dd small, .week-card dd small { font: 8px var(--mono); color: var(--muted); }
 
 .vault-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 22px 0 26px; }
 .vault-cell { padding: 14px 14px 13px; border: 1px solid var(--line-soft); border-radius: 16px; background: linear-gradient(160deg, #FFFFFF, #F9F8F3); box-shadow: 0 10px 24px rgba(17,17,17,.05); }
@@ -240,46 +233,28 @@ main { padding: 30px 0 48px; }
 .top-intensity { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); padding-bottom: 12px; gap: 8px; font-size: 10px; }
 .top-intensity b { font-size: 19px; }
 .top-intensity span:last-child { font: 10px var(--mono); }
-.day-row { display: grid; grid-template-columns: 41px 28px minmax(0, 1fr) 14px; align-items: center; gap: 9px; padding: 15px 0; border-bottom: 1px solid var(--line); min-height: 74px; }
-.day-stack { display: grid; gap: 10px; margin-top: 14px; }
-.day-card { border: 1px solid var(--line-soft); border-left: 4px solid var(--seg, var(--accent)); border-radius: 13px; background: linear-gradient(100deg, color-mix(in srgb, var(--seg, var(--accent)) 6%, #FFFFFF) 0%, #FFFFFF 44%, #FBFAF5 100%); box-shadow: 0 8px 22px rgba(17,17,17,.045); overflow: hidden; transition: box-shadow .22s var(--ease-out), transform .22s var(--ease-out); }
-.day-card:hover { box-shadow: 0 14px 30px rgba(17,17,17,.09); transform: translateY(-1px); }
-.day-card.open { border-color: var(--line2); box-shadow: 0 18px 40px rgba(17,17,17,.10); }
-.day-head { display: grid; grid-template-columns: 56px 30px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px 14px; }
-.day-tile { display: grid; place-items: center; height: 54px; border: 1px solid var(--line-soft); border-radius: 13px; background: #FFFFFF; box-shadow: inset 0 -3px 0 var(--line-soft); }
-.day-tile b { font: 700 12px var(--mono); letter-spacing: -.02em; }
-.day-tile small { font: 600 8px var(--mono); letter-spacing: .08em; color: var(--muted); }
-.day-letter { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--ink); color: #FFFFFF; font: 800 12px var(--mono); }
-.day-kicker { display: block; font: 600 8px var(--mono); letter-spacing: .1em; color: var(--muted); text-transform: uppercase; }
-.day-main { min-width: 0; }
-.day-main .top-load { display: flex; flex-wrap: nowrap; align-items: baseline; gap: 0 8px; margin-top: 5px; font: 600 12px var(--mono); overflow: hidden; }
-.day-main .top-load small { color: var(--muted); font-size: 8px; letter-spacing: .1em; margin-right: 2px; flex: none; }
-.day-main .top-load b { font: 700 17px/1.2 var(--mono); letter-spacing: -.03em; white-space: nowrap; }
-.day-side { display: grid; justify-items: end; gap: 7px; }
-.day-status { padding: 3px 7px; border-radius: 999px; background: var(--panel2); font: 700 8px var(--mono); letter-spacing: .08em; color: var(--muted); }
-.day-status.complete { background: var(--ct-deload-s); color: var(--ct-deload); }
-.day-status.skipped, .day-status.missed { background: #FBE9E7; color: #9A2118; }
-.day-chevron { display: grid; place-items: center; width: 26px; height: 26px; border: 1px solid var(--line-soft); border-radius: 50%; font: 600 13px var(--mono); background: #FFFFFF; }
-.day-detail { padding: 14px; border-top: 1px dashed var(--line2); background: linear-gradient(180deg, #FCFBF6 0%, #FFFFFF 32%); }
-.day-detail-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font: 700 9px var(--mono); letter-spacing: .12em; color: var(--accent); }
-.day-detail-head span:last-child { color: var(--muted); letter-spacing: .06em; }
-@media (min-width: 881px) {
-  .day-card.open { grid-column: 1 / -1; }
-}
-.day-date { font: 10px/1.5 var(--mono); color: var(--muted); }
-.day-date strong { color: var(--ink); display: block; font-size: 11px; }
-.day-letter { border: 1px solid var(--gold-line); color: var(--gold); background: var(--gold-soft); border-radius: 7px; display: grid; place-items: center; width: 28px; height: 28px; font: 800 12px var(--mono); }
-.day-info { min-width: 0; }
-.day-info .top-load { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 10px; font: 600 12px var(--mono); }
-.day-info .top-load small { color: var(--muted); font-size: 8.5px; letter-spacing: .1em; margin-right: 2px; }
-.day-info .top-load b { font: 700 16px/1.2 var(--mono); letter-spacing: -.02em; }
-.day-title { display: block; font-size: 11px; line-height: 1.5; margin: 4px 0 2px; color: var(--ink); }
-.day-info .day-status { display: block; font-size: 8.5px; letter-spacing: .1em; color: var(--muted); }
-.day-open { font: 10px var(--mono); color: var(--muted); text-align: right; }
+/* 0.51: one day per row, folded. A day states the movement, the load and the set
+   scheme; everything else belongs on the session page this row opens. */
+.day-stack { display: grid; gap: 6px; margin-top: 14px; }
+.day-row { display: grid; grid-template-columns: 28px 60px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px 14px; min-height: 52px; border: 1px solid var(--line-soft); border-top: 3px solid var(--band, var(--accent)); border-radius: 11px; background: #FFFFFF; text-decoration: none; color: var(--ink); box-shadow: 0 4px 12px rgba(17,17,17,.04); transition: transform .18s var(--ease-out), box-shadow .18s var(--ease-out); }
+.day-row:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(17,17,17,.09); }
+.day-date { font: 9px var(--mono); letter-spacing: .06em; color: var(--muted); white-space: nowrap; }
+.day-date b { display: block; font: 700 11px var(--mono); color: var(--ink); }
+.day-date small { font: 8px var(--mono); }
+.day-letter { display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid var(--line2); border-radius: 6px; font: 800 12px var(--mono); }
+.day-line { min-width: 0; font: 11.5px/1.55 var(--mono); color: var(--ink); overflow-wrap: anywhere; }
+.day-line b { font-weight: 700; }
+.day-open { font: 700 9px var(--mono); letter-spacing: .08em; color: var(--ink); white-space: nowrap; }
+.session-head { position: relative; margin: 10px 0 16px; padding: 18px 16px 14px; border: 1px solid var(--line-soft); border-radius: 12px; background: linear-gradient(160deg, #FFFFFF, #FAF9F4); box-shadow: 0 8px 20px rgba(17,17,17,.05); }
+.session-band { position: absolute; inset: 0 0 auto; height: 4px; border-radius: 12px 12px 0 0; background: var(--band, var(--accent)); }
+.session-fact { margin: 8px 0 0; font: 12px/1.65 var(--mono); color: var(--ink); overflow-wrap: anywhere; }
+.session-fact b { font-weight: 700; }
+.session-head small { display: block; margin-top: 8px; font: 9px var(--mono); letter-spacing: .08em; color: var(--muted); }
+.day-recovery { margin: 20px 0 0; padding: 0 12px; border: 1px solid var(--line-soft); border-radius: 12px; background: #FFFFFF; }
+.day-recovery summary { display: flex; align-items: center; min-height: 48px; font: 700 9px var(--mono); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
+.day-recovery[open] { padding-bottom: 14px; }
 .week-aside { margin-top: 24px; }
-.day-card.rest { border-style: dashed; border-left-width: 1px; background: transparent; box-shadow: none; opacity: .68; }
-.day-card.rest:hover { transform: none; box-shadow: none; }
-.rest-row { min-height: 44px; display: flex; justify-content: space-between; align-items: center; padding: 0 14px; color: var(--muted); font-size: 10px; }
+.rest-row { min-height: 44px; display: flex; justify-content: space-between; align-items: center; padding: 0 14px; color: var(--muted); font-size: 10px; border: 1px dashed var(--line-soft); border-radius: 10px; }
 .week-capacity { margin-top: 24px; }
 .volume-row { padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
 .volume-row header { display: grid; grid-template-columns: minmax(0,1fr) auto auto; gap: 8px; align-items: baseline; font-size: 10px; }

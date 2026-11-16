@@ -6,17 +6,17 @@
 
 ---
 
-## 0 · 状态快照（2026-11-16 · 0.49）
+## 0 · 状态快照（2026-11-16 · 0.51）
 
 | 项 | 值 |
 |---|---|
-| 版本 | `web/package.json` = **0.0.49**；本地提交；**未部署**，**未 push** |
+| 版本 | `web/package.json` = **0.0.51**；本地提交；**未部署**，**未 push** |
 | 工作树 | 以本节所在提交为准 |
-| 最近提交 | `252871e` 0.49 · `83e8440` 0.48（前序 0.41–0.48 见 `git log`） |
-| 门禁 | 0.49：`verify.js` exit 0（6814 检查、356 用例）；`build` exit 0；`browser.mjs` 24 项 exit 0；`--sabotage` exit 1 |
+| 最近提交 | `0.50`（纯度·入口与导航）· `252871e` 0.49 · `83e8440` 0.48 |
+| 门禁 | 0.51：`verify.js` exit 0（6800 检查、356 用例）；`build` exit 0（132.13 kB css / 326.46 kB js）；`browser.mjs` 25 项 exit 0；`browser --sabotage` exit 1 |
 | 红基线 | 无 |
-| 发布 | 0.45 已部署上线；0.46–0.49 依用户指令仅本地提交与截图验证，未部署、未 push |
-| 证据落点 | `RR\shots\0.49\`（24 项浏览器检查、7 张全量视口截图） |
+| 发布 | 0.45 已部署上线；0.46–0.51 依用户指令仅本地提交与截图验证，未部署、未 push |
+| 证据落点 | `RR\shots\0.51\`（25 项浏览器检查、7 张视口截图） |
 | 老项目 | 两个老项目已迁 `RR\ref-projects\`；`rplref` 瘦身记录见 `RR\ref-projects\rplref\_repo\MIRROR_SLIMMED.md` |
 
 **长期边界**：只做 Web（Vue 3 + Vite + Motion One + FastAPI + SQLite）；界面英文、对话中文；`Ref/` 与两个老项目只读；不手改 `data/plan.json` 与 `web/dist/`；不弱化断言、不中和 sabotage。
@@ -95,11 +95,11 @@
 
 | 版本 | 主题 | 范围 | 验收 |
 |---|---|---|---|
-| **0.50** | 纯度 · 入口与导航 | 删主导航 ORACLE 与 `/questionnaire` 页（`QuestionnaireView`/`AiOutlook` 断引用）、`WarmupSuggestions`、`GearPlates` + 赛扣开关 + `gear-settings.js`、`ShareButton`/`ShareCard`/`share.js`、`CyclePrestart` 与 `cycle-prestart-band`、`/cycle` 日历跳转（入口移入 Vault） | `verify.js`/`browser.mjs` 中已下线功能的断言删除或改写；无残留渲染 |
-| **0.51** | 13 周丝带全局统一 | `BlockWeekNav` 在 Cycle/Block/Week/Day（含 Today）恒定单行 13 方块，几何锁定；当前周反色、deload 斜纹、test 双描边；删 `CycleStrip` | 四层级截图几何一致，`--count` 不随层级变化 |
-| **0.52** | Block 单周一行 | `.week-deck` 改单列大卡；4px 顶部强度线四色（`#2E6B65` ≤70% / `#1D4ED8` 71–76% / `#6D28D9` 77–82% / `#B91C1C` >82% 或 Test）；衬线周标题、SBD 比例芯片、等宽吨位/组数/课次/峰值 %1RM | 单行渲染，颜色由 `topPct` 决定，无 150px 窄网格残留 |
-| **0.53** | Week 单日一行 | `.day-stack` 单列单行；折叠态只留 `动作 · 重量 · 组次 TOP/BACK-OFF` 与右侧 `OPEN SESSION →`；清掉次要标签与徽章 | 折叠行高度与信息量实测，文案零冗余 |
-| **0.54** | Day 独立训练台 | `planView === 'day'` 走独立模板：会话头（动作/重量/TOP-BACK-OFF）、`ExerciseRows` 置顶、`DailyRecord` 收敛置底抽屉、侧栏日级 `MuscleMap [THIS SESSION]` + `WeekCapacity [SESSION CAPACITY]`、返回周视图入口；消灭展开长面条 | 日页无周级内容串入，返回路径可用 |
+| **0.50** ✅ | 纯度 · 入口与导航 | 已交付：删主导航 ORACLE 与 `/questionnaire`（`/questionnaire`、`/oracle` 重定向到 `/analysis`）、`WarmupSuggestions`、`GearPlates` + 赛扣开关 + `gear-settings.js`、`ShareButton`/`ShareCard`/`share.js`、`CyclePrestart` 与 `countdown` 带、`/cycle` 日历跳转（入口移入 Vault）、`PrescriptionSettings`、落地页会员矩阵 | `verify.js` exit 0（6794 检查）；`browser.mjs` 23 项 exit 0；`--sabotage` exit 1 |
+| **0.51** ✓ | 13 周丝带 + 单行层级 | `BlockWeekNav` 接入 Today（Today 从 `CycleStrip` 迁走）；Block 周卡改单列行（4px 顶部强度线四色、衬线周标题、SBD 比例芯片、吨位/组数/课次/峰值四格）；Week 日卡改单行折叠（`动作 · 重量 · 组次` + `OPEN SESSION →`）；Day 独立 `/cycle/week/:w/day/:d` 页：会话头 + `ExerciseRows` 置顶 + 晨脉抽屉 + 日级 `MuscleMap`/`WeekCapacity` + 返回周入口 | `verify.js` exit 0（6800 检查 / 356 用例，含新增 `pureViewCheck`）；`build` exit 0；`browser.mjs` 25 项 exit 0（`RR\shots\0.51\`）；`--sabotage` exit 1 |
+| ~~0.52~~ ✅ | Block 单周一行（并入 0.51 交付） | `.week-deck` 改单列行；`.week-band` 4px 顶部强度线四色（`#2E6B65` ≤70% / `#1D4ED8` 71–76% / `#6D28D9` 77–82% / `#B91C1C` >82% 或 Test）；衬线周标题、SBD 比例芯片、等宽吨位/组数/课次/峰值 %1RM | `browser.mjs` 实测 B1 四卡四行、左缘同一列、色带 `rgb(29,78,216)/rgb(109,40,217)×2/rgb(46,107,101)` |
+| ~~0.53~~ ✅ | Week 单日一行（并入 0.51 交付） | `.day-stack` 单列行；折叠态只留 `动作 · 重量 · 组次 TOP/BACK-OFF` 与右侧 `OPEN SESSION →`；删除卡内 `day-detail`/`ExerciseRows`/`DailyRecord` 展开 | 实测 W1 四行四顶：`High-bar Squat · 110.5 kg · 1×3 WORK` / `Mid-grip Bench · 73 kg · 1×6 TOP, 3×6 BACK-OFF` / `Conventional Deadlift · 133 kg · 1×4 TOP, 3×4 BACK-OFF` / `Accessory / conditioning` |
+| ~~0.54~~ ✅ | Day 独立训练台（并入 0.51 交付） | `planView === 'day'` 独立模板：`.session-head`（动作/重量/%1RM/组次 + `17 SETS · 6 PRESCRIBED ROWS`）、`ExerciseRows` 置顶、`details.day-recovery` 收晨脉、日级 `MuscleMap [THIS SESSION]` + `WeekCapacity [SESSION CAPACITY]`、面包屑返回周 | 实测 `/cycle/week/1/day/A`：会话 17 组、6 行、`cap=session`、`kicker=SESSION CAPACITY`、`map=THIS SESSION`，无周级内容串入 |
 | **0.55** | 三支柱一等公民 | SBD 容量 Main/变式/辅助分报 + MEV/MRV 标尺；16-leaf 肌群热图；`LoadProfile` 周吨位阶梯 + 峰值强度天花板；Block 详情与周期总览双映射 | 三视窗读数与 API 一致，日视图自动切 session |
 | **0.56** | 门禁重写 | `verify.js` 断言语义对齐重建后的界面（下线功能断言换纯度断言）；`browser.mjs` 重写 day/ribbon/len/纯度分组 | 两套门禁 exit 0，`--sabotage` exit 1 |
 | **0.57** | 响应式与主题 | 421 / 320 / 1280 双主题截图，实测 `scrollWidth - clientWidth`、控件 44px | 无横向溢出，两主题几何稳定 |

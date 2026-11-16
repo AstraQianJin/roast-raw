@@ -385,6 +385,37 @@ function copyAndLabelsCheck() {
   console.log('PASS copy and labels: plurals, sign out, row tags, capacity axis, glossary');
 }
 
+function pureViewCheck() {
+  // 0.50/0.51: the training surface carries training and nothing else. Every removed
+  // feature is pinned as absent here so a stray import cannot creep back in.
+  const app = readFileSync(join(root, 'web', 'src', 'App.vue'), 'utf8');
+  const style = readFileSync(join(root, 'web', 'src', 'style.css'), 'utf8');
+  ['CyclePrestart', 'WarmupSuggestions', 'GearPlates', 'ShareButton', 'ShareCard', 'QuestionnaireView', 'AiOutlook', 'MembershipMatrix', 'PrescriptionSettings', 'cycle-prestart-band'].forEach(name => {
+    assert.ok(!app.includes(name), `${name} is gone from the training surface`);
+  });
+  checks++;
+  const nav = app.match(/<nav v-if="!isPublic" class="primary-nav"[^>]*>(.*?)<\/nav>/s);
+  assert.ok(nav, 'the primary nav exists');
+  assert.equal((nav[1].match(/<RouterLink/g) || []).length, 3, 'the primary nav carries three sections, not four');
+  checks++;
+  assert.ok(!app.includes('/questionnaire') && !app.includes('ORACLE'), 'ORACLE has no route, tab or copy left');
+  checks++;
+  // 0.51: the intensity scale is the owner's four bands, in one place.
+  ['#2E6B65', '#1D4ED8', '#6D28D9', '#B91C1C'].forEach(hex => {
+    assert.ok(app.includes(hex), `the intensity scale carries ${hex}`);
+  });
+  checks++;
+  assert.ok(style.includes('.week-deck { display: grid; gap: 8px;'), 'weeks deck as one column of rows');
+  assert.ok(style.includes('.week-band { position: absolute; inset: 0 0 auto; height: 4px;'), 'the week row carries a 4 px top intensity line');
+  assert.ok(style.includes('.day-row { display: grid;'), 'days stack as rows');
+  checks++;
+  // 0.54: a day is its own page, with the record on top and the pulse folded at the bottom.
+  assert.ok(app.includes("planView === 'day'"), 'the day route resolves to its own template');
+  assert.ok(app.includes('data-testid="session-head"') && app.includes('class="day-recovery"'), 'the session page leads with its head and folds the pulse record');
+  checks++;
+  console.log('PASS pure view: three sections, four intensity bands, weeks and days as rows, a session page of its own');
+}
+
 function logicAffordanceCheck() {
   // 0.43: the attempt ladder may not tie, a history row may not be a dead button,
   // and the calendar detail may not label a session by her lift letters alone.
@@ -540,6 +571,7 @@ try {
     blockTestDateCheck();
     logicAffordanceCheck();
     copyAndLabelsCheck();
+    pureViewCheck();
     planCalendarCheck();
     testPlanCheck();
     completionCheck();

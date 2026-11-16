@@ -381,7 +381,7 @@ try {
     kicker: document.querySelector('.week-capacity .section-kicker')?.innerText.replace(/\\s+/g, ' ').trim() || '',
     map: document.querySelector('[data-testid=muscle-week]')?.innerText.trim() || '',
     total: document.querySelector('[data-testid=weekly-total]')?.innerText.trim() || '',
-    weekTotal: document.querySelector('.day-detail-head')?.innerText.replace(/\\s+/g, ' ').trim() || '',
+    weekTotal: document.querySelector('.session-head')?.innerText.replace(/\\s+/g, ' ').trim() || '',
   }))()`);
   assert.equal(scope.cap, 'session', 'an open day swaps the weekly board for its own capacity');
   assert.match(scope.kicker, /SESSION CAPACITY/, 'the day labels its capacity as a session');
@@ -428,7 +428,7 @@ try {
   const handCycleT = (plan.workouts.reduce((sum, row) => sum + (row.tonnageKg || 0), 0) / 1000).toFixed(1);
   const blockWeeks = plan.weeks.filter(week => week.blockId === plan.blocks[0].id).map(week => week.n);
   const handBlockT = (plan.workouts.filter(row => blockWeeks.includes(row.week)).reduce((sum, row) => sum + (row.tonnageKg || 0), 0) / 1000).toFixed(2);
-  const dayHead = await browser.evaluate(`document.querySelector('.day-detail-head').innerText.replace(/\\s+/g, ' ').trim()`);
+  const dayHead = await browser.evaluate(`document.querySelector('.session-head').innerText.replace(/\\s+/g, ' ').trim()`);
   assert.ok(dayHead.includes(`${handDaySets} SETS · ${rowsW1A.length} PRESCRIBED ROWS`), 'the day header counts the rows it lists');
   await browser.navigate(`${base}/cycle`);
   await browser.waitFor('Boolean(document.querySelector("[data-testid=load-profile]"))', 20000);
@@ -456,18 +456,42 @@ try {
   assert.equal(squares.labelled, 0, 'no dot or kind label sits inside the squares');
   assert.ok(squares.ratio >= 0.9 && squares.ratio <= 1.1, `the squares stay square (${squares.ratio})`);
   ok('the week row is one line of numbered squares', squares);
+  // 0.51: a block is a ladder of rows, one week each, coloured only by its ceiling.
+  const weekRows = await browser.evaluate(`(() => {
+    const cards = [...document.querySelectorAll('.week-card')];
+    return { count: cards.length,
+      rows: new Set(cards.map(n => Math.round(n.getBoundingClientRect().top))).size,
+      lefts: new Set(cards.map(n => Math.round(n.getBoundingClientRect().left))).size,
+      bands: cards.map(n => getComputedStyle(n.querySelector('.week-band')).backgroundColor) };
+  })()`);
+  assert.equal(weekRows.rows, weekRows.count, 'one week takes one row');
+  assert.equal(weekRows.lefts, 1, 'week rows share one left edge instead of a narrow grid');
+  assert.ok(new Set(weekRows.bands).size >= 2, 'the intensity bands differ across phases');
+  ok('weeks read as a ladder of rows', weekRows);
   const blockTestLine = await browser.evaluate(`[...document.querySelectorAll('.load .note')].map(n => n.innerText.trim()).find(text => /test/i.test(text)) || ''`);
   assert.equal(blockTestLine, 'No test in this block', 'B1 shows no test day: the test week belongs to another block');
   const blockPageText = await browser.evaluate(`document.querySelector('.load').innerText.replace(/\\s+/g, ' ')`);
   const testDate = plan.testPlan?.dates?.sbd;
   assert.ok(!blockPageText.includes('2027'), `the block page does not print the global test day ${testDate}`);
-  const weekCard = await browser.evaluate(`[...document.querySelectorAll('.week-card')].find(n => n.innerText.includes('W01')).querySelector('.week-stats').innerText.replace(/\\s+/g, ' ').trim()`);
+  const weekCard = await browser.evaluate(`[...document.querySelectorAll('.week-card')][0].querySelector('.week-stats').innerText.replace(/\\s+/g, ' ').trim()`);
   assert.ok(weekCard.includes(`${handWeekT} t`), 'the week card tonnage carries two decimals');
   assert.ok(new RegExp(`\\b${handWeekSets}\\b`).test(weekCard), 'the week card counts the same sets as its rows');
   await browser.navigate(`${base}/cycle/week/1`);
   await browser.waitFor('Boolean(document.querySelector(".seg-brief"))', 20000);
   const weekHead = await browser.evaluate(`document.querySelector('.seg-brief .seg-facts').innerText.replace(/\\s+/g, ' ').trim()`);
   assert.ok(weekHead.includes(`${handWeekT} t`), 'the week brief tonnage matches the week card to 0.01 t');
+  // 0.53: one day per row, folded to movement · load · scheme plus an open link.
+  const dayRows = await browser.evaluate(`(() => {
+    const rows = [...document.querySelectorAll('.day-row')];
+    return { count: rows.length,
+      rows: new Set(rows.map(n => Math.round(n.getBoundingClientRect().top))).size,
+      text: rows.map(n => n.innerText.replace(/\\s+/g, ' ').trim()) };
+  })()`);
+  assert.ok(dayRows.count >= 3, 'the week lists its sessions as rows');
+  assert.equal(dayRows.rows, dayRows.count, 'one day takes one row');
+  assert.ok(dayRows.text.every(text => /kg ·|Accessory|conditioning/.test(text)), 'a folded day states movement, load and scheme only');
+  assert.ok(dayRows.text.every(text => /OPEN SESSION/.test(text)), 'every day row keeps one open entry');
+  ok('days read as folded rows', dayRows);
   await shot('totals-week');
   ok('one number on every page', { day: `${handDaySets} sets`, week: `${handWeekSets} sets / ${handWeekT} t`, cycle: `${handCycleSets} sets / ${handCycleT} t`, block: `${handBlockT} t` });
 
