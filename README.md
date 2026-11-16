@@ -1,6 +1,6 @@
 # Roast Raw
 
-A single-user powerlifting training journal: cycle plan, day-by-day prescription, logged sets, analysis, review export and a share card. Vue 3 + Vite + Motion One on the front end, FastAPI + SQLite on the back end. Web only — no Android app, no offline cache, no sync service.
+A single-user powerlifting training journal: cycle plan, day-by-day prescription, logged sets, analysis and review export — a pure training view. Vue 3 + Vite + Motion One on the front end, FastAPI + SQLite on the back end. Web only — no Android app, no offline cache, no sync service.
 
 **Status (2026-11-15).** The live site is the 0.20 build at <http://82.157.146.30/>: public landing page, journal API behind account sign-in. Local development has reached `0.0.28` and version `0.29` (security and first-screen work) is in progress; nothing is pushed or deployed until the owner says so. The version label shown in the UI is the patch of `web/package.json` (`0.0.2` displays as `0.02`).
 

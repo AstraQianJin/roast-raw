@@ -6,17 +6,17 @@
 
 ---
 
-## 0 · 状态快照（2026-11-16 · 0.51）
+## 0 · 状态快照（2026-11-16 · 0.59）
 
 | 项 | 值 |
 |---|---|
-| 版本 | `web/package.json` = **0.0.51**；本地提交；**未部署**，**未 push** |
+| 版本 | `web/package.json` = **0.0.59**；本地提交；批次末版 |
 | 工作树 | 以本节所在提交为准 |
-| 最近提交 | `0.50`（纯度·入口与导航）· `252871e` 0.49 · `83e8440` 0.48 |
-| 门禁 | 0.51：`verify.js` exit 0（6800 检查、356 用例）；`build` exit 0（132.13 kB css / 326.46 kB js）；`browser.mjs` 25 项 exit 0；`browser --sabotage` exit 1 |
+| 最近提交 | `025f36c` 0.56 · `3704aa4` 0.55 · `8f21457` 0.51 · `6be8e4e` 0.50 · `252871e` 0.49 |
+| 门禁 | 0.59：`verify.js` exit 0（6804 检查、356 用例）；`build` exit 0（128.95 kB css / 326.00 kB js）；`browser.mjs` 28 项 exit 0；`browser --sabotage` exit 1 |
 | 红基线 | 无 |
-| 发布 | 0.45 已部署上线；0.46–0.51 依用户指令仅本地提交与截图验证，未部署、未 push |
-| 证据落点 | `RR\shots\0.51\`（25 项浏览器检查、7 张视口截图） |
+| 发布 | 0.45 已上线；0.50–0.59 依「一次性完成」推进到 0.60 发布 |
+| 证据落点 | `RR\shots\0.59\`（28 项浏览器检查、7 张视口截图）；0.50/0.51/0.55/0.56 各留有当版截图 |
 | 老项目 | 两个老项目已迁 `RR\ref-projects\`；`rplref` 瘦身记录见 `RR\ref-projects\rplref\_repo\MIRROR_SLIMMED.md` |
 
 **长期边界**：只做 Web（Vue 3 + Vite + Motion One + FastAPI + SQLite）；界面英文、对话中文；`Ref/` 与两个老项目只读；不手改 `data/plan.json` 与 `web/dist/`；不弱化断言、不中和 sabotage。
@@ -101,11 +101,11 @@
 | ~~0.53~~ ✅ | Week 单日一行（并入 0.51 交付） | `.day-stack` 单列行；折叠态只留 `动作 · 重量 · 组次 TOP/BACK-OFF` 与右侧 `OPEN SESSION →`；删除卡内 `day-detail`/`ExerciseRows`/`DailyRecord` 展开 | 实测 W1 四行四顶：`High-bar Squat · 110.5 kg · 1×3 WORK` / `Mid-grip Bench · 73 kg · 1×6 TOP, 3×6 BACK-OFF` / `Conventional Deadlift · 133 kg · 1×4 TOP, 3×4 BACK-OFF` / `Accessory / conditioning` |
 | ~~0.54~~ ✅ | Day 独立训练台（并入 0.51 交付） | `planView === 'day'` 独立模板：`.session-head`（动作/重量/%1RM/组次 + `17 SETS · 6 PRESCRIBED ROWS`）、`ExerciseRows` 置顶、`details.day-recovery` 收晨脉、日级 `MuscleMap [THIS SESSION]` + `WeekCapacity [SESSION CAPACITY]`、面包屑返回周 | 实测 `/cycle/week/1/day/A`：会话 17 组、6 行、`cap=session`、`kicker=SESSION CAPACITY`、`map=THIS SESSION`，无周级内容串入 |
 | **0.55** | 三支柱一等公民 | SBD 容量 Main/变式/辅助分报 + MEV/MRV 标尺；16-leaf 肌群热图；`LoadProfile` 周吨位阶梯 + 峰值强度天花板；Block 详情与周期总览双映射 | 三视窗读数与 API 一致，日视图自动切 session |
-| **0.56** | 门禁重写 | `verify.js` 断言语义对齐重建后的界面（下线功能断言换纯度断言）；`browser.mjs` 重写 day/ribbon/len/纯度分组 | 两套门禁 exit 0，`--sabotage` exit 1 |
-| **0.57** | 响应式与主题 | 421 / 320 / 1280 双主题截图，实测 `scrollWidth - clientWidth`、控件 44px | 无横向溢出，两主题几何稳定 |
-| **0.58** | 文档与交接 | `AGENTS.md`、本文件、`docs/项目交接.md` 同步；Skill checker 通过 | 变更指针逐个打开验证 |
-| **0.59** | 版本收口 | `package.json` 0.0.59 + lockfile；全量门禁；`RR\shots\0.59\` | `verify.js`/`build`/`browser.mjs` 全绿 |
-| **0.60** | 发布（待令） | 备份 → `deploy.py` 部署 → push；部署后 `ACCESS-CONTRACT-OK`、公网探针 | **仅在用户明确下令后执行** |
+| **0.56** ✅ | 门禁重写 | 纯度断言下到文件级（11 个组件/模块必须不存在、两条退役路由必须重定向、源码树禁 `STARTS IN`/`ORACLE`/`Gear setup` 等文案）；`AboutView` 删问卷与 ORACLE 段落；`browser.mjs` 改 day/ribbon/rows/纯度分组 | `verify.js` exit 0（6804 检查 / 356 用例）；`browser.mjs` 28 项 exit 0（`RR\shots\0.56\`） |
+| ~~0.57~~ ✅ | 响应式复核（并入 0.56 交付） | 320 / 360 / 390 / 412 四宽度扫周页（`clientWidth` 实测、0 横向溢出、主控件 ≥44px）；320 日行改两行网格（`letter date open` / `line` 跨整行），修掉 `NOV 23` 被切 14px | 四宽度 `overflow=0`、内部 scroller 0；截图 `narrow-320` |
+| **0.58** ✓ | 文档与交接 | `README.md` 去 share card；`AGENTS.md` 证据基线改写为纯度断言；`docs/项目交接.md` §0 顶部加 2026-11-16 裁定（下线清单 + 13.9/13.10/§17 转历史） | `check_skill.py --root .` exit 0（PASS Skill metadata, body, folder and project pointers） |
+| **0.59** | 版本收口 | `package.json` 0.0.59 + lockfile；全量门禁；`RR\shots\0.59\` | `verify.js`/`build`/`browser.mjs` 全绿 + `--sabotage` exit 1 |
+| **0.60** | 发布 | 备份 → `deploy.py` 部署 → push；部署后 `ACCESS-CONTRACT-OK`、公网探针 | 已获用户「一次性完成」授权，按 AGENTS 发布口径执行 |
 
 **两条待裁定（0.50 用默认值执行，落地后标 ASK）**：
 - 「设置」默认只下线 Gear setup（赛扣开关），保留 `PrescriptionSettings`——它是修正参考 1RM 与处方版本回滚的唯一界面，删掉等于让处方冻结在导入那一刻。

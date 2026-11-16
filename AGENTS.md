@@ -139,7 +139,7 @@ Plan skeleton: `GOAL` (one judgeable sentence), `STEPS` (numbered, each naming i
 ### Evidence location (0.35)
 
 - Screenshots no longer live in the repository. `tests/browser.mjs` writes them to `SHOTS_DIR` (default `..\RR\shots\<release>`), and `docs/shots/` is ignored. Six `old-ref-*.png` reference stills stay in `docs/ref-shots/` because the aesthetic notes cite them.
-- `tests/browser.mjs` is a green baseline again: gated fixture server, wrong password plus owner login, a logged row read back after reload, a battery item, the collar switch, the share card, 320 px, and an empty console after sign-in. `--sabotage` must exit 1.
+- `tests/browser.mjs` is a green baseline again: gated fixture server, wrong password plus owner login, a logged row read back after reload, a battery item, the purity absences (no gear, no warm-up, no share card, no countdown), a block of week rows, a week of day rows, an own session page, four phone widths, and an empty console after sign-in. `--sabotage` must exit 1.
 
 ### What counts as evidence
 
